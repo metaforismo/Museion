@@ -3,6 +3,7 @@ import type { Lesson } from "../types";
 const lesson = {
   id: "linear-equations-intro",
   title: "Solving Linear Equations",
+  track: "Algebra",
   description:
     "Learn to solve one-variable linear equations by keeping both sides balanced, one verified step at a time.",
   concepts: ["balance-principle", "inverse-operations", "combining-like-terms"],

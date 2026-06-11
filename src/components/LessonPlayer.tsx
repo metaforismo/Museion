@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import MaiaPanel from "@/components/MaiaPanel";
+import MaiaPanel, { type ChatMessage } from "@/components/MaiaPanel";
 import type { PublicLesson, PublicStep } from "@/lib/content/types";
+
+interface SessionStats {
+  steps: number;
+  totalAttempts: number;
+  firstTryCorrect: number;
+  hintsUsed: number;
+  conceptMastery: Record<string, number>;
+}
 
 interface AnswerOutcome {
   correct: boolean;
@@ -14,34 +22,69 @@ interface AnswerOutcome {
   mastery: number;
   scaffolding: string;
   stepIndex: number;
+  solution: string | null;
+  stats: SessionStats | null;
 }
 
 type Feedback =
-  | { kind: "correct"; mastery: number }
+  | { kind: "correct"; mastery: number; solution: string | null }
   | { kind: "wrong"; attempts: number }
   | null;
+
+const storageKey = (lessonId: string) => `museion-session-${lessonId}`;
 
 export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [complete, setComplete] = useState(false);
+  const [stats, setStats] = useState<SessionStats | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [showSolution, setShowSolution] = useState(false);
   const [hints, setHints] = useState<string[]>([]);
   const [hintNote, setHintNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [maiaNudge, setMaiaNudge] = useState(0);
+  const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
+  const [shakeTick, setShakeTick] = useState(0);
 
+  // Open a session: resume from localStorage when the server still
+  // remembers it, otherwise start fresh.
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lessonId: lesson.id }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) setSessionId(data.sessionId);
+
+    async function createSession() {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId: lesson.id }),
       });
+      const data = await res.json();
+      if (cancelled) return;
+      localStorage.setItem(storageKey(lesson.id), data.sessionId);
+      setSessionId(data.sessionId);
+    }
+
+    async function open() {
+      const saved = localStorage.getItem(storageKey(lesson.id));
+      if (saved) {
+        const res = await fetch(`/api/sessions/${saved}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (cancelled) return;
+          setStepIndex(data.stepIndex);
+          setComplete(data.complete);
+          setStats(data.stats);
+          setHints(data.revealedHints);
+          setInitialChat(data.chatHistory);
+          setSessionId(saved);
+          return;
+        }
+        localStorage.removeItem(storageKey(lesson.id));
+      }
+      await createSession();
+    }
+
+    void open();
     return () => {
       cancelled = true;
     };
@@ -62,11 +105,18 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
         if (!res.ok) return;
         const outcome = (await res.json()) as AnswerOutcome;
         if (outcome.correct) {
-          setFeedback({ kind: "correct", mastery: outcome.mastery });
+          setFeedback({
+            kind: "correct",
+            mastery: outcome.mastery,
+            solution: outcome.solution,
+          });
+          setShowSolution(false);
+          if (outcome.stats) setStats(outcome.stats);
+          if (outcome.lessonComplete) setComplete(true);
         } else {
           setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep });
+          setShakeTick((t) => t + 1);
         }
-        if (outcome.lessonComplete) setComplete(true);
       } finally {
         setBusy(false);
       }
@@ -77,6 +127,7 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
   const advance = useCallback(() => {
     setStepIndex((i) => i + 1);
     setFeedback(null);
+    setShowSolution(false);
     setHints([]);
     setHintNote(null);
   }, []);
@@ -107,22 +158,7 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
   }
 
   if (complete) {
-    return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-20 text-center">
-        <p className="font-display text-3xl font-semibold">Lesson complete 🎓</p>
-        <p className="mt-3 text-ink-soft">
-          You worked through every step of “{lesson.title}”. The real test is
-          what stays with you — come back in a few days and try it without
-          Maia.
-        </p>
-        <Link
-          href="/"
-          className="mt-8 inline-block rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
-        >
-          Back to lessons
-        </Link>
-      </div>
-    );
+    return <CompletionScreen lesson={lesson} stats={stats} />;
   }
 
   return (
@@ -141,7 +177,7 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
             {lesson.steps.map((s, i) => (
               <div
                 key={s.id}
-                className={`h-1.5 flex-1 rounded-full ${
+                className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
                   i < stepIndex
                     ? "bg-gold"
                     : i === stepIndex
@@ -155,7 +191,12 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
 
         {/* Step card */}
         {step && (
-          <div className="rounded-xl border border-ink/10 bg-surface p-6 shadow-sm">
+          <div
+            key={`${step.id}-${shakeTick > 0 && feedback?.kind === "wrong" ? shakeTick : "steady"}`}
+            className={`rounded-xl border border-ink/10 bg-surface p-6 shadow-sm ${
+              feedback?.kind === "wrong" ? "animate-shake" : "animate-fade-up"
+            }`}
+          >
             <p className="text-lg leading-relaxed">{step.prompt}</p>
 
             <div className="mt-6">
@@ -168,20 +209,37 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
             </div>
 
             {feedback?.kind === "correct" && (
-              <div className="mt-4 flex items-center justify-between rounded-lg bg-correct-soft px-4 py-3">
-                <p className="font-medium text-correct">
-                  Correct — nice reasoning.
-                  <span className="ml-2 text-sm font-normal">
-                    mastery {feedback.mastery.toFixed(2)}
-                  </span>
-                </p>
-                {!complete && (
-                  <button
-                    onClick={advance}
-                    className="rounded-lg bg-correct px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
-                  >
-                    Continue →
-                  </button>
+              <div className="mt-4 rounded-lg bg-correct-soft px-4 py-3 animate-fade-up">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-correct">
+                    Correct — nice reasoning.
+                    <span className="ml-2 text-sm font-normal">
+                      mastery {feedback.mastery.toFixed(2)}
+                    </span>
+                  </p>
+                  {!complete && (
+                    <button
+                      onClick={advance}
+                      className="rounded-lg bg-correct px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
+                    >
+                      Continue →
+                    </button>
+                  )}
+                </div>
+                {feedback.solution && (
+                  <div className="mt-2">
+                    <button
+                      onClick={() => setShowSolution((s) => !s)}
+                      className="text-sm font-medium text-correct underline-offset-2 hover:underline"
+                    >
+                      {showSolution ? "Hide why it works" : "See why it works"}
+                    </button>
+                    {showSolution && (
+                      <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm leading-relaxed text-ink animate-fade-up">
+                        {feedback.solution}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -219,7 +277,7 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
               {hints.map((hint, i) => (
                 <p
                   key={i}
-                  className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-sm"
+                  className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-sm animate-fade-up"
                 >
                   <span className="mr-2 font-semibold text-gold">{i + 1}.</span>
                   {hint}
@@ -233,7 +291,82 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
         )}
       </div>
 
-      <MaiaPanel sessionId={sessionId} nudge={maiaNudge} />
+      <MaiaPanel
+        sessionId={sessionId}
+        nudge={maiaNudge}
+        initialMessages={initialChat}
+      />
+    </div>
+  );
+}
+
+function CompletionScreen({
+  lesson,
+  stats,
+}: {
+  lesson: PublicLesson;
+  stats: SessionStats | null;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 py-16 text-center animate-fade-up">
+      <p className="font-display text-3xl font-semibold">Lesson complete 🎓</p>
+      <p className="mt-3 text-ink-soft">
+        You worked through every step of “{lesson.title}”. The real test is
+        what stays with you — come back in a few days and try it without Maia.
+      </p>
+
+      {stats && (
+        <>
+          <div className="mt-8 grid grid-cols-3 gap-3">
+            <StatCard
+              label="First-try steps"
+              value={`${stats.firstTryCorrect}/${stats.steps}`}
+            />
+            <StatCard label="Total attempts" value={String(stats.totalAttempts)} />
+            <StatCard label="Hints used" value={String(stats.hintsUsed)} />
+          </div>
+
+          <div className="mt-8 rounded-xl border border-ink/10 bg-surface p-6 text-left">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-ink-soft">
+              Concept mastery
+            </h2>
+            {Object.entries(stats.conceptMastery).map(([concept, mastery]) => (
+              <div key={concept} className="mb-3 last:mb-0">
+                <div className="mb-1 flex justify-between text-sm">
+                  <span>{concept}</span>
+                  <span className="text-ink-soft">
+                    {(mastery * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-ink/10">
+                  <div
+                    className="h-2 rounded-full bg-gold animate-grow-bar"
+                    style={{ width: `${Math.max(mastery * 100, 2)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <Link
+        href="/"
+        className="mt-8 inline-block rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
+      >
+        Back to lessons
+      </Link>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-ink/10 bg-surface p-4">
+      <p className="font-display text-2xl font-semibold text-lapis-dark">
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-ink-soft">{label}</p>
     </div>
   );
 }
@@ -252,7 +385,7 @@ function AnswerControl({
 
   if (step.kind === "multipleChoice" && step.options) {
     return (
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col gap-2.5">
         {step.options.map((option, i) => (
           <button
             key={option}
@@ -261,13 +394,22 @@ function AnswerControl({
               setSelected(i);
               onSubmit(String(i));
             }}
-            className={`rounded-lg border px-5 py-2.5 font-medium capitalize transition disabled:opacity-60 ${
+            className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left font-medium transition disabled:opacity-60 ${
               selected === i
                 ? "border-lapis bg-lapis-soft text-lapis-dark"
                 : "border-ink/15 bg-surface hover:border-lapis"
             }`}
           >
-            {option}
+            <span
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm font-semibold ${
+                selected === i
+                  ? "bg-lapis text-white"
+                  : "bg-paper text-ink-soft"
+              }`}
+            >
+              {String.fromCharCode(65 + i)}
+            </span>
+            <span className="capitalize">{option}</span>
           </button>
         ))}
       </div>
@@ -286,6 +428,7 @@ function AnswerControl({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={disabled}
+        autoFocus
         placeholder={step.kind === "expression" ? "e.g. 5/6" : "Your answer"}
         className="w-44 rounded-lg border border-ink/15 bg-surface px-4 py-2.5 outline-none transition focus:border-lapis disabled:opacity-60"
       />

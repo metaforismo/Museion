@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-interface ChatMessage {
+export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
@@ -12,11 +12,13 @@ const NUDGE_MESSAGE = "I just answered wrong and I'm not sure why. Can you help 
 export default function MaiaPanel({
   sessionId,
   nudge,
+  initialMessages = [],
 }: {
   sessionId: string;
   nudge: number;
+  initialMessages?: ChatMessage[];
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,6 +40,18 @@ export default function MaiaPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message }),
         });
+        if (res.status === 429) {
+          setMessages((m) => {
+            const next = [...m];
+            next[next.length - 1] = {
+              role: "assistant",
+              content:
+                "We've talked a lot this session — time to trust your own reasoning. Try the step with what you've got.",
+            };
+            return next;
+          });
+          return;
+        }
         if (!res.ok || !res.body) {
           throw new Error(`Maia request failed (${res.status})`);
         }

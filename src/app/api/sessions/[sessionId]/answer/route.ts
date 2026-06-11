@@ -18,6 +18,16 @@ export async function POST(
   if (typeof body.answer !== "string" || body.answer.trim() === "") {
     return NextResponse.json({ error: "Missing answer" }, { status: 400 });
   }
+
+  const step = session.currentStep;
   const outcome = session.submitAnswer(body.answer);
-  return NextResponse.json({ ...outcome, stepIndex: session.stepIndex });
+  return NextResponse.json({
+    ...outcome,
+    stepIndex: session.stepIndex,
+    // The verified solution is revealed only AFTER the step is solved:
+    // a worked explanation reinforces learning once the reasoning work
+    // has been done — never before.
+    solution: outcome.correct ? step.solution : null,
+    stats: outcome.lessonComplete ? session.stats() : null,
+  });
 }

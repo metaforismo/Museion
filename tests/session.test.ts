@@ -70,6 +70,35 @@ describe("LearnerSession", () => {
     ]);
   });
 
+  it("reports revealed hints for resume", () => {
+    const session = newSession();
+    expect(session.revealedHints()).toEqual([]);
+    session.requestHint();
+    session.requestHint();
+    expect(session.revealedHints()).toHaveLength(2);
+    expect(session.revealedHints()[0]).toContain("left side");
+  });
+
+  it("aggregates completion stats", () => {
+    const session = newSession();
+    session.submitAnswer("2"); // wrong
+    session.requestHint();
+    session.submitAnswer("6"); // correct, assisted
+    session.submitAnswer("4"); // first-try
+    session.submitAnswer("5"); // first-try
+    session.submitAnswer("3"); // first-try
+    const stats = session.stats();
+    expect(stats.steps).toBe(4);
+    expect(stats.totalAttempts).toBe(5);
+    expect(stats.firstTryCorrect).toBe(3);
+    expect(stats.hintsUsed).toBe(1);
+    expect(Object.keys(stats.conceptMastery)).toEqual([
+      "balance-principle",
+      "inverse-operations",
+      "combining-like-terms",
+    ]);
+  });
+
   it("refuses answers after completion", () => {
     const session = newSession();
     for (const answer of ["6", "4", "5", "3"]) session.submitAnswer(answer);

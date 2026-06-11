@@ -62,9 +62,12 @@ export interface Step {
   hints: string[];
 }
 
+export type Track = "Algebra" | "Arithmetic" | "Computer Science";
+
 export interface Lesson {
   id: string;
   title: string;
+  track: Track;
   description: string;
   concepts: string[];
   steps: Step[];
@@ -81,6 +84,7 @@ export interface PublicStep {
 export interface PublicLesson {
   id: string;
   title: string;
+  track: Track;
   description: string;
   concepts: string[];
   steps: PublicStep[];
@@ -90,6 +94,7 @@ export function toPublicLesson(lesson: Lesson): PublicLesson {
   return {
     id: lesson.id,
     title: lesson.title,
+    track: lesson.track,
     description: lesson.description,
     concepts: lesson.concepts,
     steps: lesson.steps.map((step) => ({

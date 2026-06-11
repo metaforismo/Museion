@@ -17,16 +17,20 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Lesson player UI: progress bar, answer controls per step kind, feedback, hint ladder
 - [x] Maia side panel: chat, quick suggestions, "ask Maia why" after a wrong answer
 - [x] Vitest suite (engine, prompt, sanitization)
-- [x] Two bundled lessons (linear equations, fractions with unlike denominators)
+- [x] Five bundled lessons across three tracks (Algebra, Arithmetic, Computer Science)
+- [x] Lesson resume: sessions restorable after reload (localStorage + resume endpoint)
+- [x] Post-solve solution reveal ("see why it works" — worked example after the reasoning, never before)
+- [x] Completion screen with per-concept mastery bars and session stats
+- [x] Content authoring validation: every misconception trigger proven NOT to verify as correct
+- [x] Maia conversation cap per session (bounds avoidance and API spend)
 
 ## v0.3 — Make it real
 
 - [ ] Persistence: sessions, mastery, and event logs in a database (Supabase/Postgres); replace the in-memory store
 - [ ] Learner accounts and auth
-- [ ] Resume in-progress lessons; mastery persists across sessions
+- [ ] Mastery persists across sessions and lessons (per-learner profile)
 - [ ] Maia red-team test harness: adversarial "just tell me the answer" prompts, automated leak detection on outputs
 - [ ] Expression verifier upgrade: real symbolic equivalence instead of normalized string match
-- [ ] Content authoring validation: hints must not contain the answer, misconception triggers must not equal the correct answer
 - [ ] Deploy (Vercel) with rate limiting on the Maia route
 
 ## v0.4 — The interactive moat

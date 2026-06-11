@@ -43,6 +43,14 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface SessionStats {
+  steps: number;
+  totalAttempts: number;
+  firstTryCorrect: number;
+  hintsUsed: number;
+  conceptMastery: Record<string, number>;
+}
+
 export interface SessionSnapshot {
   lessonTitle: string;
   stepPrompt: string;
@@ -170,6 +178,44 @@ export class LearnerSession {
       hintsUsed: record.hintsUsed,
       mastery: this.mastery.mastery(step.concept),
       scaffolding: this.mastery.scaffoldingLevel(step.concept),
+    };
+  }
+
+  /** Hint texts already granted for the current step (for resume). */
+  revealedHints(): string[] {
+    if (this.complete) return [];
+    const step = this.currentStep;
+    return step.hints.slice(0, this.recordFor(step).hintsUsed);
+  }
+
+  /** Aggregate session statistics for the completion screen. */
+  stats(): SessionStats {
+    let totalAttempts = 0;
+    let firstTryCorrect = 0;
+    let hintsUsed = 0;
+    for (const step of this.lesson.steps) {
+      const record = this.records.get(step.id);
+      if (!record) continue;
+      totalAttempts += record.attempts.length;
+      hintsUsed += record.hintsUsed;
+      if (
+        record.attempts.length === 1 &&
+        record.attempts[0].correct &&
+        record.hintsUsed === 0
+      ) {
+        firstTryCorrect += 1;
+      }
+    }
+    const conceptMastery: Record<string, number> = {};
+    for (const concept of this.lesson.concepts) {
+      conceptMastery[concept] = this.mastery.mastery(concept);
+    }
+    return {
+      steps: this.lesson.steps.length,
+      totalAttempts,
+      firstTryCorrect,
+      hintsUsed,
+      conceptMastery,
     };
   }
 

@@ -3,6 +3,7 @@ import type { Lesson } from "../types";
 const lesson = {
   id: "fractions-unlike-denominators",
   title: "Adding Fractions with Unlike Denominators",
+  track: "Arithmetic",
   description:
     "Discover why fractions need a common denominator before they can be added, and how to find one.",
   concepts: ["common-denominator", "equivalent-fractions"],

@@ -19,6 +19,15 @@ export async function POST(
   if (typeof body.message !== "string" || body.message.trim() === "") {
     return NextResponse.json({ error: "Missing message" }, { status: 400 });
   }
+  // Cap the conversation per session: past a point, more tutoring talk
+  // is avoidance of the step — and it bounds API spend.
+  const learnerTurns = session.chatHistory.filter((m) => m.role === "user").length;
+  if (learnerTurns >= 30) {
+    return NextResponse.json(
+      { error: "Conversation limit reached for this session" },
+      { status: 429 },
+    );
+  }
 
   return new Response(maiaRespond(session, body.message), {
     headers: {
