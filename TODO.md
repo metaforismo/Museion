@@ -52,7 +52,7 @@ Status legend: `[x]` done · `[ ]` planned
 
 ## Engineering hygiene (ongoing)
 
-- [ ] CI: vitest + lint + build on every push (GitHub Actions)
+- [x] CI: vitest + lint + build on every push (GitHub Actions)
 - [ ] E2E tests (Playwright) for the lesson player flow
 - [ ] Structured logging and request tracing on API routes
 - [ ] Prompt-cache hit-rate instrumentation (verify the persona block actually caches)
