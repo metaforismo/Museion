@@ -34,17 +34,19 @@ Status legend: `[x]` done · `[ ]` planned
 
 ## v0.3 — Accounts & persistence
 
+- [x] Anonymous learner identity (httpOnly cookie) — database-ready profile shape
+- [x] Per-learner mastery profile that persists across sessions and lessons (sessions share the profile's mastery model, so fading carries over)
+- [x] "My progress" page: per-concept mastery bars grouped by lesson, completion + practice-run badges, scaffolding labels
 - [ ] Database persistence (Supabase/Postgres): sessions, mastery, event logs — replace the in-memory store
-- [ ] Learner accounts and auth (start with magic-link email)
-- [ ] Per-learner mastery profile that persists across sessions and lessons
-- [ ] "My progress" page: mastery per concept across all lessons, streaks of unassisted correct answers
+- [ ] Learner accounts and auth (upgrade the anonymous cookie id, start with magic-link email)
 - [ ] Migrate localStorage resume to server-backed learner state
 - [ ] Session expiry / cleanup policy for abandoned sessions
 - [ ] Deploy to Vercel with environment-based config
 
 ## v0.4 — Maia hardening & quality
 
-- [ ] Red-team test harness: adversarial "just tell me the answer" prompt suite, automated answer-leak detection on Maia outputs (string + numeric-equivalence checks against the step's answer spec)
+- [x] Answer-leak detector (`src/lib/maia/leak.ts`): numeric-equivalence + assertive-phrasing checks against the step's answer spec; runtime instrumentation logs flagged Maia turns
+- [x] Red-team suite (`npm run redteam`): 8 adversarial prompt attacks asserted leak-free against the live model (auto-skipped without an API key)
 - [ ] Rate limiting on the Maia route (per-IP and per-session)
 - [ ] Maia streaming over SSE with structured events (text, done, error) instead of raw text
 - [ ] Conversation summarization for long sessions (keep prompt size bounded)
@@ -88,8 +90,9 @@ Status legend: `[x]` done · `[ ]` planned
 ## Engineering hygiene (ongoing)
 
 - [ ] E2E tests (Playwright): onboarding → lesson → practice happy path
-- [ ] Typecheck script (`tsc --noEmit`) as a separate CI step for faster failure
+- [x] Typecheck script (`npm run typecheck`)
 - [ ] Structured logging and request tracing on API routes
-- [ ] Error boundaries + not-found pages with friendly copy
-- [ ] Accessibility pass: keyboard navigation through the player, ARIA on chat, reduced-motion support
+- [x] Error boundary + not-found page with friendly copy
+- [x] Reduced-motion support (animations disabled under `prefers-reduced-motion`)
+- [ ] Accessibility pass: keyboard navigation through the player, ARIA on chat
 - [ ] Bundle/lighthouse audit

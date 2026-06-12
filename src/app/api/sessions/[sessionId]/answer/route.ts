@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSession } from "@/lib/store";
+import { getSession, getSessionLearner, recordCompletion } from "@/lib/store";
 
 export async function POST(
   request: Request,
@@ -21,6 +21,17 @@ export async function POST(
 
   const step = session.currentStep;
   const outcome = session.submitAnswer(body.answer);
+
+  if (outcome.lessonComplete) {
+    const learnerId = getSessionLearner(sessionId);
+    if (learnerId) {
+      // For practice the synthetic id carries a ::practice suffix —
+      // record against the original lesson.
+      const lessonId = session.lesson.id.replace(/::practice$/, "");
+      recordCompletion(learnerId, lessonId, session.mode);
+    }
+  }
+
   return NextResponse.json({
     ...outcome,
     stepIndex: session.stepIndex,

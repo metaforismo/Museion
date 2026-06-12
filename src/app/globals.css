@@ -67,3 +67,11 @@ body {
 .animate-grow-bar {
   animation: grow-bar 0.8s ease-out both;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake,
+  .animate-fade-up,
+  .animate-grow-bar {
+    animation: none;
+  }
+}

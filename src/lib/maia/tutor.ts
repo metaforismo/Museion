@@ -9,6 +9,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 import type { LearnerSession } from "../engine/session";
+import { revealsAnswer } from "./leak";
 import { buildSystemPrompt } from "./prompt";
 
 const MODEL = "claude-opus-4-8";
@@ -78,6 +79,15 @@ export function maiaRespond(
           .trim();
         session.chatHistory.push({ role: "assistant", content: reply });
         session.log("maia_turn", { learner: learnerMessage });
+        // Instrumentation, not a block: numeric steps whose answer also
+        // appears in the prompt can trigger false positives, so flagged
+        // turns are logged for audit rather than redacted.
+        if (!session.complete && revealsAnswer(session.currentStep, reply)) {
+          session.log("maia_possible_leak", {
+            stepId: session.currentStep.id,
+            reply,
+          });
+        }
         controller.close();
       } catch (error) {
         // Drop the unanswered user turn so history stays consistent.

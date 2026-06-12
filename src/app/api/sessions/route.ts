@@ -4,7 +4,8 @@ import { buildSessionState } from "@/lib/api-types";
 import { getLesson, toPublicLesson } from "@/lib/content";
 import { buildPracticeLesson, hasPractice } from "@/lib/engine/practice";
 import { LearnerSession, type SessionMode } from "@/lib/engine/session";
-import { saveSession } from "@/lib/store";
+import { resolveLearnerId, setLearnerCookie } from "@/lib/server/learner";
+import { getOrCreateProfile, saveSession } from "@/lib/store";
 
 interface CreateSessionBody {
   lessonId?: string;
@@ -26,11 +27,19 @@ export async function POST(request: Request) {
     );
   }
 
+  const { learnerId, isNew } = await resolveLearnerId();
+  const profile = getOrCreateProfile(learnerId);
+
   const sessionLesson =
     mode === "practice" ? buildPracticeLesson(lesson) : lesson;
-  const session = new LearnerSession(sessionLesson, mode);
-  saveSession(session);
-  return NextResponse.json(
+  // The session shares the profile's mastery model, so scaffolding
+  // fades across sessions and lessons, not just within one run.
+  const session = new LearnerSession(sessionLesson, mode, profile.mastery);
+  saveSession(session, learnerId);
+
+  const response = NextResponse.json(
     buildSessionState(session, toPublicLesson(sessionLesson)),
   );
+  if (isNew) setLearnerCookie(response, learnerId);
+  return response;
 }

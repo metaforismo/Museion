@@ -51,6 +51,12 @@ export default function RootLayout({
                 Lessons
               </Link>
               <Link
+                href="/progress"
+                className="font-medium text-ink-soft transition hover:text-lapis-dark"
+              >
+                Progress
+              </Link>
+              <Link
                 href="/about"
                 className="font-medium text-ink-soft transition hover:text-lapis-dark"
               >

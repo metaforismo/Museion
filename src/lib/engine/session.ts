@@ -69,16 +69,22 @@ export class LearnerSession {
   readonly sessionId: string;
   readonly lesson: Lesson;
   readonly mode: SessionMode;
-  readonly mastery = new MasteryModel();
+  /** Shared with the learner's profile so mastery persists across sessions. */
+  readonly mastery: MasteryModel;
   readonly events: SessionEvent[] = [];
   readonly chatHistory: ChatMessage[] = [];
   stepIndex = 0;
   private records = new Map<string, StepRecord>();
 
-  constructor(lesson: Lesson, mode: SessionMode = "lesson") {
+  constructor(
+    lesson: Lesson,
+    mode: SessionMode = "lesson",
+    mastery: MasteryModel = new MasteryModel(),
+  ) {
     this.sessionId = crypto.randomUUID();
     this.lesson = lesson;
     this.mode = mode;
+    this.mastery = mastery;
   }
 
   get complete(): boolean {
