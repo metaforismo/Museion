@@ -13,5 +13,5 @@ export default async function LessonPage({
   if (!lesson) notFound();
   // Only the sanitized lesson crosses to the browser: prompts and option
   // texts, never answers, solutions, or hints.
-  return <LessonPlayer lesson={toPublicLesson(lesson)} />;
+  return <LessonPlayer lesson={toPublicLesson(lesson)} mode="lesson" />;
 }

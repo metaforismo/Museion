@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
+import type { ChatMessage } from "@/lib/api-types";
 
 const NUDGE_MESSAGE = "I just answered wrong and I'm not sure why. Can you help me see it?";
 

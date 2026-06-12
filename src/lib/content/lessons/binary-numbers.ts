@@ -107,6 +107,68 @@ const lesson = {
       ],
     },
   ],
+  practice: [
+    {
+      id: "practice-1",
+      concept: "binary-to-decimal",
+      prompt: "What is binary 111 in decimal?",
+      answer: { kind: "numeric", value: 7, tolerance: 0 },
+      solution: "Places 4, 2, 1 — all hold a 1: 4 + 2 + 1 = 7.",
+      misconceptions: [
+        {
+          id: "reads-as-decimal",
+          triggerAnswers: ["111"],
+          description: "The learner read the digits as decimal one hundred eleven.",
+          remediationFocus:
+            "Weight each digit by its base-2 place value: 4, 2, 1.",
+        },
+        {
+          id: "counts-the-ones",
+          triggerAnswers: ["3"],
+          description:
+            "The learner counted the 1-digits instead of adding their place values.",
+          remediationFocus:
+            "Each 1 contributes its place's value: 4, 2 and 1 — not just 'one' each.",
+        },
+      ],
+      hints: ["Three places: 4, 2, 1. Which hold a 1?"],
+    },
+    {
+      id: "practice-2",
+      concept: "binary-to-decimal",
+      prompt: "What is binary 1010 in decimal?",
+      answer: { kind: "numeric", value: 10, tolerance: 0 },
+      solution: "Places 8, 4, 2, 1. Ones sit in the 8s and 2s places: 8 + 2 = 10.",
+      misconceptions: [
+        {
+          id: "reads-as-decimal",
+          triggerAnswers: ["1010"],
+          description: "The learner read the digits as a decimal number.",
+          remediationFocus:
+            "Four binary places are worth 8, 4, 2, 1 — add the ones' places.",
+        },
+      ],
+      hints: ["Write 8, 4, 2, 1 above the digits."],
+    },
+    {
+      id: "practice-3",
+      concept: "decimal-to-binary",
+      prompt: "Write the decimal number 9 in binary.",
+      answer: { kind: "expression", acceptedForms: ["1001", "01001"] },
+      solution:
+        "9 = 8 + 1, so there's a 1 in the eights place, 0s in the fours and twos places, and a 1 in the ones place: 1001.",
+      misconceptions: [
+        {
+          id: "writes-decimal",
+          triggerAnswers: ["9"],
+          description: "The learner wrote the decimal digit 9.",
+          remediationFocus:
+            "Binary has only 0 and 1 — build 9 from powers of 2: which of 8, 4, 2, 1 add to 9?",
+        },
+      ],
+      hints: ["Which powers of 2 sum to 9?"],
+    },
+  ],
 } satisfies Lesson;
 
 export default lesson;

@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import OnboardingRedirect from "@/components/OnboardingRedirect";
 import { lessonsByTrack } from "@/lib/content";
+import { hasPractice } from "@/lib/engine/practice";
 
 const TRACK_ICONS: Record<string, string> = {
   Algebra: "∑",
@@ -27,6 +29,7 @@ export default function HomePage() {
   const tracks = lessonsByTrack();
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-12">
+      <OnboardingRedirect />
       <section className="mb-10 max-w-2xl">
         <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
           Learn by reasoning,
@@ -86,8 +89,13 @@ export default function HomePage() {
                     </span>
                   ))}
                 </div>
-                <p className="mt-4 text-sm font-medium text-lapis">
+                <p className="mt-4 flex items-center gap-3 text-sm font-medium text-lapis">
                   {lesson.steps.length} steps →
+                  {hasPractice(lesson) && (
+                    <span className="rounded-full bg-gold-soft px-2 py-0.5 text-xs font-medium text-ink">
+                      practice available
+                    </span>
+                  )}
                 </p>
               </Link>
             ))}

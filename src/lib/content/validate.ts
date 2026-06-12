@@ -20,7 +20,8 @@ export function validateLesson(lesson: Lesson): string[] {
   }
 
   const stepIds = new Set<string>();
-  for (const step of lesson.steps) {
+  const allSteps = [...lesson.steps, ...(lesson.practice ?? [])];
+  for (const step of allSteps) {
     if (stepIds.has(step.id)) {
       issues.push(`${where(step.id)}: duplicate step id`);
     }

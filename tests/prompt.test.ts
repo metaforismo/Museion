@@ -51,5 +51,8 @@ describe("public lesson sanitization", () => {
     expect(serialized).not.toContain("misconception");
     expect(serialized).not.toContain("correctIndex");
     expect(serialized).not.toContain('"value"');
+    // Practice bank contents must not leak either — only the flag.
+    expect(serialized).not.toContain('"practice"');
+    expect(toPublicLesson(lesson).practiceAvailable).toBe(true);
   });
 });

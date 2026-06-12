@@ -3,38 +3,34 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import MaiaPanel, { type ChatMessage } from "@/components/MaiaPanel";
+import MaiaPanel from "@/components/MaiaPanel";
+import type {
+  AnswerResponse,
+  ChatMessage,
+  HintResponse,
+  SessionMode,
+  SessionStateResponse,
+  SessionStats,
+} from "@/lib/api-types";
+import { sessionStorageKey } from "@/lib/client/storage";
 import type { PublicLesson, PublicStep } from "@/lib/content/types";
-
-interface SessionStats {
-  steps: number;
-  totalAttempts: number;
-  firstTryCorrect: number;
-  hintsUsed: number;
-  conceptMastery: Record<string, number>;
-}
-
-interface AnswerOutcome {
-  correct: boolean;
-  attemptsOnStep: number;
-  lessonComplete: boolean;
-  misconceptionId: string | null;
-  mastery: number;
-  scaffolding: string;
-  stepIndex: number;
-  solution: string | null;
-  stats: SessionStats | null;
-}
 
 type Feedback =
   | { kind: "correct"; mastery: number; solution: string | null }
   | { kind: "wrong"; attempts: number }
   | null;
 
-const storageKey = (lessonId: string) => `museion-session-${lessonId}`;
+interface PlayerProps {
+  /** The statically-known lesson; practice sessions override its steps. */
+  lesson: PublicLesson;
+  mode: SessionMode;
+}
 
-export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
+export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  // The authoritative lesson comes from the session (shuffled in
+  // practice mode); the prop only covers the loading state.
+  const [activeLesson, setActiveLesson] = useState<PublicLesson>(lesson);
   const [stepIndex, setStepIndex] = useState(0);
   const [complete, setComplete] = useState(false);
   const [stats, setStats] = useState<SessionStats | null>(null);
@@ -47,39 +43,45 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
 
+  const applyState = useCallback((state: SessionStateResponse) => {
+    setActiveLesson(state.lesson);
+    setStepIndex(state.stepIndex);
+    setComplete(state.complete);
+    setStats(state.stats);
+    setHints(state.revealedHints);
+    setInitialChat(state.chatHistory);
+    setSessionId(state.sessionId);
+  }, []);
+
   // Open a session: resume from localStorage when the server still
   // remembers it, otherwise start fresh.
   useEffect(() => {
     let cancelled = false;
+    const storeKey = sessionStorageKey(lesson.id, mode);
 
-    async function createSession() {
+    async function createSession(): Promise<void> {
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId: lesson.id }),
+        body: JSON.stringify({ lessonId: lesson.id, mode }),
       });
-      const data = await res.json();
+      if (!res.ok) return;
+      const state = (await res.json()) as SessionStateResponse;
       if (cancelled) return;
-      localStorage.setItem(storageKey(lesson.id), data.sessionId);
-      setSessionId(data.sessionId);
+      localStorage.setItem(storeKey, state.sessionId);
+      applyState(state);
     }
 
-    async function open() {
-      const saved = localStorage.getItem(storageKey(lesson.id));
+    async function open(): Promise<void> {
+      const saved = localStorage.getItem(storeKey);
       if (saved) {
         const res = await fetch(`/api/sessions/${saved}`);
         if (res.ok) {
-          const data = await res.json();
-          if (cancelled) return;
-          setStepIndex(data.stepIndex);
-          setComplete(data.complete);
-          setStats(data.stats);
-          setHints(data.revealedHints);
-          setInitialChat(data.chatHistory);
-          setSessionId(saved);
+          const state = (await res.json()) as SessionStateResponse;
+          if (!cancelled) applyState(state);
           return;
         }
-        localStorage.removeItem(storageKey(lesson.id));
+        localStorage.removeItem(storeKey);
       }
       await createSession();
     }
@@ -88,9 +90,9 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
     return () => {
       cancelled = true;
     };
-  }, [lesson.id]);
+  }, [lesson.id, mode, applyState]);
 
-  const step: PublicStep | undefined = lesson.steps[stepIndex];
+  const step: PublicStep | undefined = activeLesson.steps[stepIndex];
 
   const submitAnswer = useCallback(
     async (answer: string) => {
@@ -103,7 +105,7 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
           body: JSON.stringify({ answer }),
         });
         if (!res.ok) return;
-        const outcome = (await res.json()) as AnswerOutcome;
+        const outcome = (await res.json()) as AnswerResponse;
         if (outcome.correct) {
           setFeedback({
             kind: "correct",
@@ -138,9 +140,10 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
       method: "POST",
     });
     if (!res.ok) return;
-    const data = (await res.json()) as { hint: string | null; granted: boolean };
+    const data = (await res.json()) as HintResponse;
     if (data.granted && data.hint) {
-      setHints((current) => [...current, data.hint!]);
+      const granted = data.hint;
+      setHints((current) => [...current, granted]);
       setHintNote(null);
     } else {
       setHintNote(
@@ -149,16 +152,28 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
     }
   }, [sessionId, busy]);
 
+  const restartPractice = useCallback(() => {
+    localStorage.removeItem(sessionStorageKey(lesson.id, mode));
+    window.location.reload();
+  }, [lesson.id, mode]);
+
   if (!sessionId) {
     return (
       <div className="flex h-64 items-center justify-center text-ink-soft">
-        Opening the lesson…
+        Opening {mode === "practice" ? "practice" : "the lesson"}…
       </div>
     );
   }
 
   if (complete) {
-    return <CompletionScreen lesson={lesson} stats={stats} />;
+    return (
+      <CompletionScreen
+        lesson={lesson}
+        mode={mode}
+        stats={stats}
+        onRestartPractice={restartPractice}
+      />
+    );
   }
 
   return (
@@ -167,14 +182,16 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
         {/* Progress */}
         <div className="mb-6">
           <div className="mb-2 flex items-baseline justify-between">
-            <h1 className="font-display text-2xl font-semibold">{lesson.title}</h1>
+            <h1 className="font-display text-2xl font-semibold">
+              {activeLesson.title}
+            </h1>
             <span className="text-sm text-ink-soft">
-              Step {Math.min(stepIndex + 1, lesson.steps.length)} of{" "}
-              {lesson.steps.length}
+              Step {Math.min(stepIndex + 1, activeLesson.steps.length)} of{" "}
+              {activeLesson.steps.length}
             </span>
           </div>
           <div className="flex gap-1.5">
-            {lesson.steps.map((s, i) => (
+            {activeLesson.steps.map((s, i) => (
               <div
                 key={s.id}
                 className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
@@ -187,6 +204,12 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
               />
             ))}
           </div>
+          {mode === "practice" && (
+            <p className="mt-2 text-xs text-ink-soft">
+              Practice mode: no hint ladder — retrieval is the workout. Maia is
+              still here if you need a question answered with a question.
+            </p>
+          )}
         </div>
 
         {/* Step card */}
@@ -248,7 +271,7 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
               <div className="mt-4 rounded-lg bg-wrong-soft px-4 py-3">
                 <p className="font-medium text-wrong">Not yet — stay with it.</p>
                 <p className="mt-1 text-sm text-ink-soft">
-                  Try again, take a hint, or{" "}
+                  Try again{mode === "lesson" ? ", take a hint," : ""} or{" "}
                   <button
                     onClick={() => setMaiaNudge((n) => n + 1)}
                     className="font-medium text-lapis underline-offset-2 hover:underline"
@@ -260,33 +283,35 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
               </div>
             )}
 
-            {/* Hints */}
-            <div className="mt-6 border-t border-ink/10 pt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-ink-soft">
-                  Hint ladder
-                </span>
-                <button
-                  onClick={requestHint}
-                  disabled={busy || feedback?.kind === "correct"}
-                  className="rounded-lg border border-gold bg-gold-soft px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-gold/20 disabled:opacity-50"
-                >
-                  Take a hint
-                </button>
+            {/* Hint ladder: lesson mode only — practice is unassisted. */}
+            {mode === "lesson" && (
+              <div className="mt-6 border-t border-ink/10 pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-ink-soft">
+                    Hint ladder
+                  </span>
+                  <button
+                    onClick={requestHint}
+                    disabled={busy || feedback?.kind === "correct"}
+                    className="rounded-lg border border-gold bg-gold-soft px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-gold/20 disabled:opacity-50"
+                  >
+                    Take a hint
+                  </button>
+                </div>
+                {hints.map((hint, i) => (
+                  <p
+                    key={i}
+                    className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-sm animate-fade-up"
+                  >
+                    <span className="mr-2 font-semibold text-gold">{i + 1}.</span>
+                    {hint}
+                  </p>
+                ))}
+                {hintNote && (
+                  <p className="mt-3 text-sm italic text-ink-soft">{hintNote}</p>
+                )}
               </div>
-              {hints.map((hint, i) => (
-                <p
-                  key={i}
-                  className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-sm animate-fade-up"
-                >
-                  <span className="mr-2 font-semibold text-gold">{i + 1}.</span>
-                  {hint}
-                </p>
-              ))}
-              {hintNote && (
-                <p className="mt-3 text-sm italic text-ink-soft">{hintNote}</p>
-              )}
-            </div>
+            )}
           </div>
         )}
       </div>
@@ -302,17 +327,25 @@ export default function LessonPlayer({ lesson }: { lesson: PublicLesson }) {
 
 function CompletionScreen({
   lesson,
+  mode,
   stats,
+  onRestartPractice,
 }: {
   lesson: PublicLesson;
+  mode: SessionMode;
   stats: SessionStats | null;
+  onRestartPractice: () => void;
 }) {
+  const practiceDone = mode === "practice";
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-16 text-center animate-fade-up">
-      <p className="font-display text-3xl font-semibold">Lesson complete 🎓</p>
+      <p className="font-display text-3xl font-semibold">
+        {practiceDone ? "Practice complete 💪" : "Lesson complete 🎓"}
+      </p>
       <p className="mt-3 text-ink-soft">
-        You worked through every step of “{lesson.title}”. The real test is
-        what stays with you — come back in a few days and try it without Maia.
+        {practiceDone
+          ? `Unassisted reps on “${lesson.title}” — this is the work that sticks.`
+          : `You worked through every step of “${lesson.title}”. The real test is what stays with you — come back in a few days and try it without Maia.`}
       </p>
 
       {stats && (
@@ -350,12 +383,31 @@ function CompletionScreen({
         </>
       )}
 
-      <Link
-        href="/"
-        className="mt-8 inline-block rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
-      >
-        Back to lessons
-      </Link>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        {practiceDone ? (
+          <button
+            onClick={onRestartPractice}
+            className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
+          >
+            Practice again ↻
+          </button>
+        ) : (
+          lesson.practiceAvailable && (
+            <Link
+              href={`/lessons/${lesson.id}/practice`}
+              className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
+            >
+              Try practice mode →
+            </Link>
+          )
+        )}
+        <Link
+          href="/"
+          className="rounded-lg border border-ink/15 bg-surface px-5 py-2.5 font-medium text-ink transition hover:border-lapis"
+        >
+          Back to lessons
+        </Link>
+      </div>
     </div>
   );
 }

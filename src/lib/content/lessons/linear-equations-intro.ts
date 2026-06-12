@@ -117,6 +117,64 @@ const lesson = {
       ],
     },
   ],
+  practice: [
+    {
+      id: "practice-1",
+      concept: "balance-principle",
+      prompt: "Solve 3x + 5 = 20 for x.",
+      answer: { kind: "numeric", value: 5, tolerance: 0 },
+      solution:
+        "Subtract 5 from both sides: 3x = 15. Divide both sides by 3: x = 5. Check: 3(5) + 5 = 20.",
+      misconceptions: [
+        {
+          id: "wrong-order-divides-first",
+          triggerAnswers: ["20/3"],
+          description:
+            "The learner divided by 3 before removing the +5.",
+          remediationFocus:
+            "Undo the added constant before undoing the coefficient.",
+        },
+      ],
+      hints: ["Undo the +5 first, then deal with the 3."],
+    },
+    {
+      id: "practice-2",
+      concept: "combining-like-terms",
+      prompt: "Simplify and solve: 4x + x = 30. What is x?",
+      answer: { kind: "numeric", value: 6, tolerance: 0 },
+      solution:
+        "4x + x = 5x (a bare x has coefficient 1). So 5x = 30 and x = 6.",
+      misconceptions: [
+        {
+          id: "treats-x-as-zero",
+          triggerAnswers: ["7.5"],
+          description:
+            "The learner combined 4x + x into 4x, treating the bare x as having no coefficient.",
+          remediationFocus: "A bare x means 1x — it counts.",
+        },
+      ],
+      hints: ["What is the coefficient of a bare x?"],
+    },
+    {
+      id: "practice-3",
+      concept: "inverse-operations",
+      prompt: "Solve 2x - 7 = 9 for x.",
+      answer: { kind: "numeric", value: 8, tolerance: 0 },
+      solution:
+        "Add 7 to both sides: 2x = 16. Divide both sides by 2: x = 8. Check: 2(8) - 7 = 9.",
+      misconceptions: [
+        {
+          id: "subtracts-the-constant-again",
+          triggerAnswers: ["1"],
+          description:
+            "The learner subtracted 7 instead of adding it, getting 2x = 2.",
+          remediationFocus:
+            "The inverse of subtracting 7 is ADDING 7 — move against the operation, not with it.",
+        },
+      ],
+      hints: ["The constant is being SUBTRACTED. What undoes a subtraction?"],
+    },
+  ],
 } satisfies Lesson;
 
 export default lesson;

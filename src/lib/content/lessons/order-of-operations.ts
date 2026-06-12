@@ -98,6 +98,62 @@ const lesson = {
       ],
     },
   ],
+  practice: [
+    {
+      id: "practice-1",
+      concept: "operation-precedence",
+      prompt: "Compute 10 − 2 × 3.",
+      answer: { kind: "numeric", value: 4, tolerance: 0 },
+      solution: "Multiplication first: 2 × 3 = 6, then 10 − 6 = 4.",
+      misconceptions: [
+        {
+          id: "left-to-right",
+          triggerAnswers: ["24"],
+          description: "The learner computed (10 − 2) × 3 left to right.",
+          remediationFocus:
+            "Multiplication happens before subtraction regardless of position.",
+        },
+      ],
+      hints: ["Which operation has higher precedence?"],
+    },
+    {
+      id: "practice-2",
+      concept: "parentheses-first",
+      prompt: "Compute 5 × (8 − 6)².",
+      answer: { kind: "numeric", value: 20, tolerance: 0 },
+      solution:
+        "Parentheses first: 8 − 6 = 2. Then the exponent: 2² = 4. Then multiply: 5 × 4 = 20.",
+      misconceptions: [
+        {
+          id: "squares-the-product",
+          triggerAnswers: ["100"],
+          description:
+            "The learner multiplied 5 × 2 first and squared the result: (5 × 2)² = 100.",
+          remediationFocus:
+            "The exponent applies only to the parenthesized group, not to the whole product.",
+        },
+      ],
+      hints: ["Parentheses, then exponents, then multiplication."],
+    },
+    {
+      id: "practice-3",
+      concept: "exponent-precedence",
+      prompt: "Compute 100 ÷ 5².",
+      answer: { kind: "numeric", value: 4, tolerance: 0 },
+      solution: "Exponent first: 5² = 25, then 100 ÷ 25 = 4.",
+      misconceptions: [
+        {
+          id: "divides-first",
+          triggerAnswers: ["400"],
+          description:
+            "The learner divided first and squared the result: (100 ÷ 5)² = 400.",
+          remediationFocus:
+            "Exponents bind tighter than division: evaluate 5² before dividing.",
+        },
+      ],
+      hints: ["Does the ÷ or the ² happen first?"],
+    },
+  ],
 } satisfies Lesson;
 
 export default lesson;

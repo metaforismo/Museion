@@ -63,18 +63,22 @@ export interface SessionSnapshot {
   scaffolding: ScaffoldingLevel;
 }
 
+export type SessionMode = "lesson" | "practice";
+
 export class LearnerSession {
   readonly sessionId: string;
   readonly lesson: Lesson;
+  readonly mode: SessionMode;
   readonly mastery = new MasteryModel();
   readonly events: SessionEvent[] = [];
   readonly chatHistory: ChatMessage[] = [];
   stepIndex = 0;
   private records = new Map<string, StepRecord>();
 
-  constructor(lesson: Lesson) {
+  constructor(lesson: Lesson, mode: SessionMode = "lesson") {
     this.sessionId = crypto.randomUUID();
     this.lesson = lesson;
+    this.mode = mode;
   }
 
   get complete(): boolean {

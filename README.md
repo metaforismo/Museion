@@ -83,15 +83,17 @@ npm run build   # production build
 
 ```
 src/
-├── app/                  # Pages (catalog, lesson player) + API routes
-│   └── api/sessions/     # create / answer / hint / maia (streaming)
-├── components/           # LessonPlayer, MaiaPanel (client)
+├── app/                  # Pages: catalog, lesson player, practice, about, welcome
+│   └── api/sessions/     # create+resume / answer / hint / maia (streaming)
+├── components/           # LessonPlayer, MaiaPanel, OnboardingTour (client)
 └── lib/
-    ├── content/          # Ground truth: types + lessons as checked TS data
-    ├── engine/           # Deterministic core: verifier, mastery, session
+    ├── api-types.ts      # Wire contracts shared by routes and components
+    ├── client/           # Browser-only helpers (storage keys, onboarding flag)
+    ├── content/          # Ground truth: types, validation, lessons as checked TS data
+    ├── engine/           # Deterministic core: verifier, mastery, session, practice
     ├── maia/             # LLM layer: guardrailed prompt builder, tutor
     └── store.ts          # In-memory session store (persistence on roadmap)
-tests/                    # Vitest suite for engine, prompt, sanitization
+tests/                    # Vitest suite: engine, content validation, prompt, sanitization
 ```
 
 ## Design notes
@@ -102,6 +104,8 @@ tests/                    # Vitest suite for engine, prompt, sanitization
 - **Mastery discounts assisted success.** Solving on a later attempt or after hints moves mastery half as much as clean first-attempt success — performance with a crutch is weak evidence of learning.
 - **Event log first.** Every answer, hint, and tutor turn is recorded, because the metric that validates Museion is delayed, unassisted transfer — not how many problems were solved with Maia present.
 - **Prompt caching by construction.** Maia's persona (stable, cacheable) is separated from the per-turn lesson state (volatile), so the guardrails ride the prompt cache.
+- **Practice mode is unassisted on purpose.** Each lesson can ship an exercise bank served shuffled with no hint ladder — retrieval practice (the testing effect) is what turns in-session performance into durable learning. Maia stays available, still under the guardrail.
+- **The name is the thesis.** `/about` tells the story: the Mouseion of Alexandria as the house of knowledge, and Maia — from maieutics, Socrates' midwifery of ideas — as the guide who asks instead of telling. First-time visitors get a short onboarding tour that sets the same expectation: she will never give you the answer.
 
 ## Roadmap
 

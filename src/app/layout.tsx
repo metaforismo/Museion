@@ -43,9 +43,23 @@ export default function RootLayout({
                 seat of the Muses
               </span>
             </Link>
-            <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-medium text-ink">
-              with Maia, your Socratic tutor
-            </span>
+            <nav className="flex items-center gap-4 text-sm">
+              <Link
+                href="/"
+                className="font-medium text-ink-soft transition hover:text-lapis-dark"
+              >
+                Lessons
+              </Link>
+              <Link
+                href="/about"
+                className="font-medium text-ink-soft transition hover:text-lapis-dark"
+              >
+                About
+              </Link>
+              <span className="hidden rounded-full bg-gold-soft px-3 py-1 text-xs font-medium text-ink sm:inline">
+                with Maia, your Socratic tutor
+              </span>
+            </nav>
           </div>
         </header>
         <main className="flex-1">{children}</main>

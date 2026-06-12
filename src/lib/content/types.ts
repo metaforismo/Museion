@@ -71,6 +71,12 @@ export interface Lesson {
   description: string;
   concepts: string[];
   steps: Step[];
+  /**
+   * Optional exercise bank for practice mode: extra steps served in
+   * random order with no hint ladder (retrieval practice — the testing
+   * effect). Same authoring standard as lesson steps.
+   */
+  practice?: Step[];
 }
 
 /** What the browser is allowed to see: prompts only, never answers. */
@@ -88,6 +94,7 @@ export interface PublicLesson {
   description: string;
   concepts: string[];
   steps: PublicStep[];
+  practiceAvailable: boolean;
 }
 
 export function toPublicLesson(lesson: Lesson): PublicLesson {
@@ -97,6 +104,7 @@ export function toPublicLesson(lesson: Lesson): PublicLesson {
     track: lesson.track,
     description: lesson.description,
     concepts: lesson.concepts,
+    practiceAvailable: (lesson.practice?.length ?? 0) > 0,
     steps: lesson.steps.map((step) => ({
       id: step.id,
       prompt: step.prompt,

@@ -106,6 +106,63 @@ const lesson = {
       ],
     },
   ],
+  practice: [
+    {
+      id: "practice-1",
+      concept: "adding-negatives",
+      prompt: "Compute (−7) + 4.",
+      answer: { kind: "numeric", value: -3, tolerance: 0 },
+      solution:
+        "Start at −7 and move 4 to the right: −7 + 4 = −3. Four of the steps move toward zero but don't reach it.",
+      misconceptions: [
+        {
+          id: "adds-magnitudes",
+          triggerAnswers: ["11", "-11"],
+          description:
+            "The learner combined the magnitudes (7 + 4) instead of moving along the number line.",
+          remediationFocus:
+            "Opposite signs work against each other: the result is the DIFFERENCE of magnitudes, with the sign of the larger.",
+        },
+      ],
+      hints: ["Start at −7 on the number line. Move 4 which way?"],
+    },
+    {
+      id: "practice-2",
+      concept: "subtracting-negatives",
+      prompt: "Compute 2 − (−5).",
+      answer: { kind: "numeric", value: 7, tolerance: 0 },
+      solution: "Subtracting a negative is adding: 2 − (−5) = 2 + 5 = 7.",
+      misconceptions: [
+        {
+          id: "ignores-double-negative",
+          triggerAnswers: ["-3"],
+          description: "The learner computed 2 − 5, dropping the double negative.",
+          remediationFocus:
+            "The two minus signs flip into a plus: − (−5) becomes + 5.",
+        },
+      ],
+      hints: ["Two minus signs in a row — what do they become?"],
+    },
+    {
+      id: "practice-3",
+      concept: "multiplying-negatives",
+      prompt: "Compute (−3) × 4 × (−2).",
+      answer: { kind: "numeric", value: 24, tolerance: 0 },
+      solution:
+        "Magnitudes: 3 × 4 × 2 = 24. Signs: two negative factors mean two flips, which cancel — the result is positive 24.",
+      misconceptions: [
+        {
+          id: "keeps-negative-sign",
+          triggerAnswers: ["-24"],
+          description:
+            "The learner computed the right magnitude but miscounted the sign flips.",
+          remediationFocus:
+            "Count the negative factors: an EVEN count of negatives makes the product positive.",
+        },
+      ],
+      hints: ["How many negative factors are there? Even or odd?"],
+    },
+  ],
 } satisfies Lesson;
 
 export default lesson;
