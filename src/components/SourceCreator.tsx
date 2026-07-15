@@ -26,6 +26,9 @@ type CompilerJob = {
   completedStages: number;
   totalStages: number;
   error: string | null;
+  retryable: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const COMPILE_STAGES = [
@@ -39,6 +42,21 @@ const COMPILE_STAGES = [
 function errorMessage(error: unknown): string {
   if (error instanceof SourceIngestionError) return error.message;
   return "The source could not be normalized. Check the file and try again.";
+}
+
+function compilerErrorMessage(code: string | null): string {
+  const messages: Record<string, string> = {
+    COMPILATION_REJECTED: "The generated course did not pass publication validation.",
+    COMPILER_JOB_ALREADY_RUNNING: "A compilation is already running in this browser session.",
+    COMPILER_RUN_QUOTA_EXCEEDED: "The local run history is full. Wait for older runs to expire, then try again.",
+    LIVE_COMPILER_NOT_CONFIGURED: "Live compilation is unavailable here. Connect Codex in Settings or use the verified replay.",
+  };
+  return messages[code ?? ""] ?? "Compilation stopped safely before publication.";
+}
+
+function elapsedLabel(createdAt: string): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - Date.parse(createdAt)) / 1_000));
+  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
 export default function SourceCreator() {
@@ -57,6 +75,9 @@ export default function SourceCreator() {
   const [compiling, setCompiling] = useState(false);
   const [templateId, setTemplateId] = useState<CourseTemplateId>("socratic-foundations");
   const [warningsAccepted, setWarningsAccepted] = useState(false);
+  const [sourceAuthorized, setSourceAuthorized] = useState(false);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const [job, setJob] = useState<CompilerJob | null>(null);
 
   const restoreDraft = () => {
@@ -65,9 +86,25 @@ export default function SourceCreator() {
       if (!saved) return;
       if (typeof saved.title === "string") setTitle(saved.title);
       if (typeof saved.text === "string") setText(saved.text);
+      if (saved.mediaType === "text/plain" || saved.mediaType === "text/markdown") setMediaType(saved.mediaType);
       if (["socratic-foundations", "exam-practice", "teach-it-back"].includes(String(saved.templateId))) setTemplateId(saved.templateId as CourseTemplateId);
       if (typeof saved.learnerGoal === "string") setLearnerGoal(saved.learnerGoal);
+      if (["novice", "intermediate", "advanced"].includes(String(saved.level))) setLevel(saved.level as typeof level);
+      if (typeof saved.language === "string") setLanguage(saved.language);
+      if (typeof saved.targetMinutes === "number") setTargetMinutes(saved.targetMinutes);
+      setError(null);
     } catch { /* Ignore an invalid local draft. */ }
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    sessionStorage.removeItem(ACTIVE_RUN_KEY);
+    setText("");
+    setTitle("Untitled source");
+    setDocument(null);
+    setJob(null);
+    setSourceAuthorized(false);
+    setError(null);
   };
 
   useEffect(() => {
@@ -75,8 +112,11 @@ export default function SourceCreator() {
       draftInitialized.current = true;
       return;
     }
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, text, templateId, learnerGoal }));
-  }, [learnerGoal, templateId, text, title]);
+    const timer = window.setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, text, mediaType, templateId, learnerGoal, level, language, targetMinutes }));
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [language, learnerGoal, level, mediaType, targetMinutes, templateId, text, title]);
 
   useEffect(() => {
     const runId = sessionStorage.getItem(ACTIVE_RUN_KEY);
@@ -86,6 +126,7 @@ export default function SourceCreator() {
       const payload = await response.json().catch(() => null) as CompilerJob | null;
       if (!response.ok || !payload) {
         sessionStorage.removeItem(ACTIVE_RUN_KEY);
+        setError("The previous compilation is no longer available. Your text draft is still saved locally.");
         return;
       }
       if (!payload.status || payload.status === "succeeded") {
@@ -94,39 +135,49 @@ export default function SourceCreator() {
       }
       setJob(payload);
       setCompiling(["queued", "running"].includes(payload.status));
+      if (["failed", "cancelled"].includes(payload.status)) setError(compilerErrorMessage(payload.error));
     }).catch(() => undefined);
     return () => controller.abort();
   }, []);
 
+  const activeRunId = job?.runId;
+  const activeRunStatus = job?.status;
+
   useEffect(() => {
-    if (!job || !["queued", "running"].includes(job.status)) return;
-    const timer = window.setInterval(async () => {
-      const response = await fetch(`/api/compiler/runs/${job.runId}`, { cache: "no-store" });
-      const payload = await response.json().catch(() => null) as CompilerJob | null;
-      if (!response.ok || !payload) {
-        sessionStorage.removeItem(ACTIVE_RUN_KEY);
-        setError("Compilation progress could not be restored. The source draft remains available.");
-        setCompiling(false);
-        return;
+    if (!activeRunId || !activeRunStatus || !["queued", "running"].includes(activeRunStatus)) return;
+    const controller = new AbortController();
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/compiler/runs/${activeRunId}`, { cache: "no-store", signal: controller.signal });
+        const payload = await response.json().catch(() => null) as CompilerJob | null;
+        if (!response.ok || !payload) throw new Error("PROGRESS_UNAVAILABLE");
+        setJob(payload);
+        setError(null);
+        if (payload.status === "succeeded") {
+          sessionStorage.removeItem(ACTIVE_RUN_KEY);
+          location.assign(`/create/review/${activeRunId}`);
+          return;
+        }
+        if (["failed", "cancelled"].includes(payload.status)) {
+          sessionStorage.removeItem(ACTIVE_RUN_KEY);
+          setCompiling(false);
+          setError(payload.status === "cancelled" ? "Compilation was cancelled. Your source and learning brief are still here." : `${compilerErrorMessage(payload.error)} No partial course was published.`);
+          return;
+        }
+        timer = window.setTimeout(() => void poll(), 1_200);
+      } catch (cause) {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        setError("Compilation progress is temporarily unavailable. Refresh to reconnect; the source draft remains saved.");
+        timer = window.setTimeout(() => void poll(), 2_500);
       }
-      if (!payload.status) {
-        sessionStorage.removeItem(ACTIVE_RUN_KEY);
-        location.assign(`/create/review/${job.runId}`);
-        return;
-      }
-      setJob(payload);
-      if (payload.status === "succeeded") {
-        sessionStorage.removeItem(ACTIVE_RUN_KEY);
-        location.assign(`/create/review/${job.runId}`);
-      }
-      if (["failed", "cancelled"].includes(payload.status)) {
-        sessionStorage.removeItem(ACTIVE_RUN_KEY);
-        setCompiling(false);
-        setError(payload.status === "cancelled" ? "Compilation was cancelled. Your source and learning brief are still here." : `Compilation stopped safely (${payload.error ?? "COMPILATION_FAILED"}). No partial course was published.`);
-      }
-    }, 1_200);
-    return () => window.clearInterval(timer);
-  }, [job]);
+    };
+    timer = window.setTimeout(() => void poll(), 400);
+    return () => {
+      controller.abort();
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [activeRunId, activeRunStatus]);
 
   const acceptDocument = (next: SourceDocument) => {
     setDocument(next);
@@ -134,6 +185,8 @@ export default function SourceCreator() {
     setTitle(next.title);
     setError(null);
     setWarningsAccepted(next.warnings.length === 0);
+    setSourceAuthorized(false);
+    setCopyNotice(null);
     if (next.sha256 === GOLDEN_SOURCE_SHA256) {
       setLevel("novice");
       setLanguage("en");
@@ -174,7 +227,7 @@ export default function SourceCreator() {
   );
 
   const compile = async () => {
-    if (!document) return;
+    if (!document || !sourceAuthorized || (job && ["queued", "running"].includes(job.status))) return;
     setCompiling(true);
     setError(null);
     try {
@@ -185,11 +238,7 @@ export default function SourceCreator() {
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(payload?.error === "LIVE_COMPILER_NOT_CONFIGURED"
-          ? "Live compilation is not configured on this deployment. The normalized source is safe, but no course was published."
-          : payload?.error === "COMPILATION_REJECTED"
-            ? `Compilation stopped safely at ${payload.stage}. No partial course was published.`
-            : "Compilation failed safely. No partial course was published.");
+        throw new Error(`${compilerErrorMessage(payload?.error)} No partial course was published.`);
       }
       setJob(payload as CompilerJob);
       sessionStorage.setItem(ACTIVE_RUN_KEY, (payload as CompilerJob).runId);
@@ -202,11 +251,32 @@ export default function SourceCreator() {
 
   const cancelCompilation = async () => {
     if (!job) return;
-    await fetch(`/api/compiler/runs/${job.runId}`, { method: "DELETE" }).catch(() => undefined);
-    setJob({ ...job, status: "cancelled" });
-    sessionStorage.removeItem(ACTIVE_RUN_KEY);
-    setCompiling(false);
+    setCancelBusy(true);
+    try {
+      const response = await fetch(`/api/compiler/runs/${job.runId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("The compiler had already finished or could not be cancelled.");
+      setJob({ ...job, status: "cancelled" });
+      sessionStorage.removeItem(ACTIVE_RUN_KEY);
+      setCompiling(false);
+      setError("Compilation was cancelled. Your source and learning brief are still here.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Cancellation failed. Check the run status and try again.");
+    } finally {
+      setCancelBusy(false);
+    }
   };
+
+  const copyHash = async () => {
+    if (!document) return;
+    try {
+      await navigator.clipboard.writeText(document.sha256);
+      setCopyNotice("Hash copied.");
+    } catch {
+      setCopyNotice("Copy failed. Select the hash manually.");
+    }
+  };
+
+  const activeJob = Boolean(job && ["queued", "running"].includes(job.status));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
@@ -221,8 +291,21 @@ export default function SourceCreator() {
           Museion first normalizes the source, fixes page boundaries and hashes
           every page. Nothing is compiled until you can inspect that record.
         </p>
-        <button type="button" onClick={restoreDraft} className="mt-4 text-sm font-semibold text-lapis-dark underline">Restore saved text draft</button>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+          <button type="button" disabled={activeJob} onClick={restoreDraft} className="font-semibold text-lapis-dark underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40">Restore local draft</button>
+          <button type="button" disabled={activeJob} onClick={clearDraft} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
+          <span className="text-xs text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
+        </div>
       </div>
+
+      {error && (
+        <div role="alert" className="mt-7 flex items-start justify-between gap-4 rounded-xl border border-wrong/20 bg-wrong-soft px-4 py-3 text-sm text-wrong">
+          <p>{error}</p>
+          <button type="button" onClick={() => setError(null)} className="shrink-0 font-semibold underline underline-offset-4">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section className="premium-surface rounded-[1.6rem] border border-white/80 p-6 sm:p-7">
@@ -299,11 +382,6 @@ export default function SourceCreator() {
             pages, {MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")} normalized characters.
           </p>
 
-          {error && (
-            <p role="alert" className="mt-4 rounded-lg bg-wrong-soft px-4 py-3 text-sm text-wrong">
-              {error}
-            </p>
-          )}
         </section>
 
         <section
@@ -328,9 +406,13 @@ export default function SourceCreator() {
                   <dd className="mt-1 font-semibold">{document.charCount.toLocaleString()}</dd>
                 </div>
               </dl>
-              <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-2 text-xs">
-                <p className="text-ink-soft">Document SHA-256</p>
-                <code className="mt-1 block overflow-x-auto font-mono">{document.sha256}</code>
+              <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-3 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-ink-soft">Document SHA-256</p>
+                  <button type="button" onClick={() => void copyHash()} className="font-semibold text-lapis-dark underline underline-offset-4">Copy hash</button>
+                </div>
+                <code className="mt-2 block overflow-x-auto font-mono">{document.sha256}</code>
+                {copyNotice && <p role="status" aria-live="polite" className="mt-2 text-ink-soft">{copyNotice}</p>}
               </div>
 
               {document.warnings.length > 0 && (
@@ -349,6 +431,11 @@ export default function SourceCreator() {
                   </label>
                 </div>
               )}
+
+              <label className="mt-4 flex items-start gap-3 rounded-xl border border-ink/10 bg-surface px-4 py-3 text-sm font-medium">
+                <input type="checkbox" checked={sourceAuthorized} onChange={(event) => setSourceAuthorized(event.target.checked)} className="mt-1" />
+                <span><span className="block">I am allowed to use this source.</span><span className="mt-1 block font-normal leading-5 text-ink-soft">Museion keeps provenance, but authorization and copyright remain the creator’s responsibility.</span></span>
+              </label>
 
               <div className="mt-5 flex flex-wrap gap-2" aria-label="Source pages">
                 {document.pages.map((sourcePage) => (
@@ -381,8 +468,9 @@ export default function SourceCreator() {
                 <div className="mt-4 grid gap-3">
                   {(Object.entries(COURSE_TEMPLATES) as Array<[CourseTemplateId, (typeof COURSE_TEMPLATES)[CourseTemplateId]]>).map(([id, template]) => (
                     <button key={id} type="button" aria-pressed={templateId === id} onClick={() => setTemplateId(id)} className={`rounded-xl border p-4 text-left transition ${templateId === id ? "border-lapis bg-lapis-soft shadow-[0_8px_28px_rgba(43,74,203,0.10)]" : "border-ink/10 bg-surface hover:border-lapis/40"}`}>
-                      <span className="font-semibold">{template.name}</span>
+                      <span className="flex items-center justify-between gap-3"><span className="font-semibold">{template.name}</span>{templateId === id && <span className="rounded-md bg-surface px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wide text-lapis-dark">Selected</span>}</span>
                       <span className="mt-1 block text-sm leading-6 text-ink-soft">{template.description}</span>
+                      <span className="mt-2 block text-xs text-ink-soft">Required mix: {template.requiredKinds.join(" · ")}</span>
                     </button>
                   ))}
                 </div>
@@ -395,16 +483,17 @@ export default function SourceCreator() {
                 <label className="mt-3 block text-sm">Learner goal<textarea value={learnerGoal} maxLength={600} rows={3} onChange={(event) => setLearnerGoal(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /></label>
               </div>
               {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-lg border border-lapis px-5 py-2.5 text-center font-medium text-lapis">Open checked golden review</Link>}
-              {job && ["queued", "running"].includes(job.status) && <div className="mt-5 rounded-2xl bg-ink p-5 text-white" aria-live="polite">
-                <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">3. Compile</p><p className="mt-1 font-semibold">Building a grounded course</p></div><span className="font-mono text-sm">{job.completedStages}/{job.totalStages}</span></div>
+              {activeJob && job && <div className="mt-5 rounded-2xl bg-ink p-5 text-white" aria-live="polite">
+                <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">3. Compile</p><p className="mt-1 font-semibold">Building a grounded course</p><p className="mt-1 text-xs text-white/55">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-sm">{job.completedStages}/{job.totalStages}</span></div>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${Math.max(7, (job.completedStages / job.totalStages) * 100)}%` }} /></div>
                 <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/40"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-xs">{stage.model}</span></li>; })}</ol>
-                <button type="button" onClick={() => void cancelCompilation()} className="mt-4 text-sm font-semibold text-white/75 underline hover:text-white">Cancel compilation</button>
+                <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
               </div>}
-              <button type="button" disabled={compiling || !warningsAccepted || !learnerGoal.trim() || !language.trim() || targetMinutes < 3 || targetMinutes > 60} onClick={() => void compile()} className="mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white transition hover:bg-lapis disabled:opacity-45">
-                {compiling ? "Compilation in progress…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : "Compile this source"}
+              <button type="button" disabled={compiling || activeJob || !sourceAuthorized || !warningsAccepted || !learnerGoal.trim() || !language.trim() || targetMinutes < 3 || targetMinutes > 60} onClick={() => void compile()} className="sticky bottom-3 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[0_12px_32px_rgba(19,28,49,0.18)] transition hover:bg-lapis disabled:opacity-45 lg:static lg:shadow-none">
+                {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
               </button>
-              <p className="mt-2 text-center text-xs text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
+              {!sourceAuthorized && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Confirm source authorization to continue.</p>}
+              <p className="mt-1 text-center text-xs text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
             </>
           )}
         </section>

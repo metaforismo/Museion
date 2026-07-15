@@ -278,6 +278,7 @@ async function desktopFlow() {
     page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }),
     "six-page PDF record",
   );
+  await page.getByLabel("I am allowed to use this source.").check();
   await page.getByRole("button", { name: "Create verified replay run" }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
   await expectVisible(page.getByText("Accepted for learning"), "accepted compiler validation");
