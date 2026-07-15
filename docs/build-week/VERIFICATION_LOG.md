@@ -88,3 +88,4 @@ The first complete judge browser attempt exposed cross-block React state reuse: 
 - Remote `main` was fast-forwarded to that commit and set as the GitHub default branch.
 - Both removed remote branches (`build-week/gpt56-course-compiler`, `claude/eloquent-allen-d54lbo`) were proven ancestors of `main` before deletion.
 - After fetch/prune, local and remote branch listings contained only `main` and `origin/main`.
+- The first publication CI passed but warned that checkout/setup-node v4 action runtimes used deprecated Node 20; both actions were updated to their official current v7 releases and re-verified.
