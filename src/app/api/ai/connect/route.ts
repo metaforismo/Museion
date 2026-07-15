@@ -11,4 +11,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "CODEX_CONNECTION_FAILED" }, { status: 503 });
   }
 }
-

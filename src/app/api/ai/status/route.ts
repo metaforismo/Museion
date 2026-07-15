@@ -27,7 +27,6 @@ export async function GET() {
           : null,
   }, { headers: { "Cache-Control": "no-store" } });
 }
-
 export async function PATCH(request: Request) {
   const { localAiRequestAllowed } = await import("@/lib/ai/request-guard");
   if (!localAiRequestAllowed(request)) return NextResponse.json({ error: "LOCAL_AI_UNAVAILABLE" }, { status: 403 });
@@ -39,4 +38,3 @@ export async function PATCH(request: Request) {
   }
   return NextResponse.json(updateAiSettings(parsed.data), { headers: { "Cache-Control": "no-store" } });
 }
-

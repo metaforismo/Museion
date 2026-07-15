@@ -16,7 +16,6 @@ function stagePrompt(stage: CompilerStage, input: unknown): string {
     `COMPILER_INPUT_JSON\n${JSON.stringify(input)}\nEND_COMPILER_INPUT_JSON`,
   ].join("\n\n");
 }
-
 export class CodexCompilerProvider implements CompilerProvider {
   readonly id = "openai-codex-subscription-compiler-v1";
   readonly mode = "live" as const;
@@ -53,4 +52,3 @@ export class CodexCompilerProvider implements CompilerProvider {
     throw lastError;
   }
 }
-

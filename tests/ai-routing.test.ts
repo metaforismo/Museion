@@ -54,4 +54,3 @@ describe("Build Week GPT-5.6 routing", () => {
     expect(localAiRequestAllowed(new Request("http://localhost:3000/api/ai/status"))).toBe(false);
   });
 });
-

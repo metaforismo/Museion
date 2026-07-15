@@ -10,4 +10,3 @@ export default function SettingsPage() {
     <div className="mt-10"><AiSettingsPanel /></div>
   </div>;
 }
-

@@ -35,7 +35,6 @@ export function compilerModelForStage(
   ModelRoutingPolicySchema.parse(policy);
   return BALANCED_COMPILER_ROUTING[stage];
 }
-
 export function familyFallbacks(model: Gpt56Model): readonly Gpt56Model[] {
   if (model === GPT56_MODELS.luna) return [GPT56_MODELS.terra, GPT56_MODELS.sol];
   if (model === GPT56_MODELS.terra) return [GPT56_MODELS.sol];
@@ -45,4 +44,3 @@ export function familyFallbacks(model: Gpt56Model): readonly Gpt56Model[] {
 export function isGpt56Model(model: string): model is Gpt56Model {
   return Gpt56ModelSchema.safeParse(model).success;
 }
-

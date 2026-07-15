@@ -36,4 +36,3 @@ export const COURSE_TEMPLATES = {
 export function courseTemplate(id: CourseTemplateId) {
   return COURSE_TEMPLATES[id];
 }
-
