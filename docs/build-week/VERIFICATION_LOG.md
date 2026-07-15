@@ -79,3 +79,12 @@ All five authored lessons adapt without mutation. Public serialization rejects u
 | `git diff --check` | Pass | No whitespace errors |
 
 The first complete judge browser attempt exposed cross-block React state reuse: SequenceBuilder inherited an empty array from PredictionChoice. Keying the interactive renderer by block id fixed it; the full 20/20 run then passed. `.next/static` measured 2.8 MB. No live model call, hosted deployment, or learning-outcome study was performed.
+
+## 2026-07-15 12:23–12:29 CEST — Frontend and GitHub publication
+
+- Redesign gate: lint, strict TypeScript, 118 offline tests, production build, zero-vulnerability audit, and `git diff --check` passed.
+- Production Chrome gate: redesigned homepage/header, skip navigation, active-route state, Privacy/Terms, reduced motion, legacy lesson/source path, 20/20 judge runs, and 320 px path passed with no overflow, console/page errors, or HTTP 5xx.
+- Consolidated implementation commit: `cb669f1b0ad76a9817a05082cf47028aec1d02a6`.
+- Remote `main` was fast-forwarded to that commit and set as the GitHub default branch.
+- Both removed remote branches (`build-week/gpt56-course-compiler`, `claude/eloquent-allen-d54lbo`) were proven ancestors of `main` before deletion.
+- After fetch/prune, local and remote branch listings contained only `main` and `origin/main`.

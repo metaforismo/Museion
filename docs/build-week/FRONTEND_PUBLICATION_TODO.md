@@ -8,7 +8,7 @@ This ledger covers the final visual-quality pass and the authorized GitHub conso
 - [x] Confirm all existing remote branches currently point to the same baseline commit.
 - [x] Confirm the entire dirty worktree belongs to the Museion Build Week scope.
 - [x] Move the dirty worktree to local `main` without losing changes.
-- [ ] Re-run containment checks immediately before branch deletion.
+- [x] Re-run containment checks immediately before branch deletion.
 
 ## B. Navigation and accessibility
 
@@ -72,13 +72,13 @@ This ledger covers the final visual-quality pass and the authorized GitHub conso
 
 ## H. GitHub consolidation
 
-- [ ] Review the complete staged diff and exclude generated runtime output.
-- [ ] Create one intentional consolidated commit on `main`.
-- [ ] Push `main` to `metaforismo/Museion`.
-- [ ] Verify remote `main` resolves to the new commit.
-- [ ] Set the GitHub default branch to `main` if it is not already.
-- [ ] Delete remote `build-week/gpt56-course-compiler` only after containment proof.
-- [ ] Delete remote `claude/eloquent-allen-d54lbo` only after containment proof.
-- [ ] Delete corresponding local non-main branches only after containment proof.
-- [ ] Fetch/prune and prove local and remote branch listings contain only `main`.
-- [ ] Leave the final worktree clean and tracking `origin/main`.
+- [x] Review the complete staged diff and exclude generated runtime output.
+- [x] Create one intentional consolidated implementation commit on `main`.
+- [x] Push `main` to `metaforismo/Museion`.
+- [x] Verify remote `main` resolves to the new commit.
+- [x] Set the GitHub default branch to `main`.
+- [x] Delete remote `build-week/gpt56-course-compiler` only after containment proof.
+- [x] Delete remote `claude/eloquent-allen-d54lbo` only after containment proof.
+- [x] Delete corresponding local non-main branches only after containment proof.
+- [x] Fetch/prune and prove local and remote branch listings contain only `main`.
+- [x] Leave the final worktree clean and tracking `origin/main` after recording this publication result.
