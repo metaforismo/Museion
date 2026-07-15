@@ -130,7 +130,15 @@ The contracts below are implemented internally. Visible Judge integration remain
 - [x] Fail closed with an explicit provider-not-configured state for arbitrary keyless sources.
 - [x] Launch a compatible accepted dynamic artifact into an owner-bound generated learner route.
 
-## I. Verification and release evidence
+## I. State and deployment hardening
+
+- [x] Bound lesson, Judge, and compiler-run retention with owner quotas.
+- [x] Expire abandoned process-local state with explicit TTL cleanup.
+- [x] Add baseline CSP, frame, MIME, referrer, and browser-permission headers.
+- [ ] Replace process-local maps with a durable multi-instance storage adapter.
+- [ ] Verify resume, ownership, idempotency, and cleanup across a cold start.
+
+## J. Verification and release evidence
 
 - [x] Maintain offline Vitest coverage for existing engine and source boundaries.
 - [x] Maintain a repeatable Chrome desktop/mobile smoke.

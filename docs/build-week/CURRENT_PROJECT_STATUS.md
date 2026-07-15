@@ -27,7 +27,7 @@ Verified locally on 2026-07-15. This file is the authoritative implementation-st
 | Locked unassisted transfer | Visible in golden replay | One immediate near-transfer observation, not durable mastery. |
 | Evidence ledger | Visible in golden replay | Transfer event only; guided corrections and confidence are not yet included. |
 | Creator compile runs, review, and learner launch | Visible API + golden replay | Audience-bound owner-scoped run API, sanitized dynamic review, and compatible generated learner route are implemented. Non-golden live compilation requires provider credentials and has not been live-verified. |
-| Persistence | Missing | Session and judge maps are process-local; unsuitable for multi-instance deployment. |
+| Persistence | Partial hardening | Process-local stores now have owner quotas and TTL cleanup, but remain unsuitable for multi-instance deployment or cold starts. |
 | Hosted deployment | Missing | Requires explicit authorization and deployment configuration. |
 | Live GPT-5.6 eval | Missing verification | Eight live tests remain skipped without credentials. |
 | Delayed retention/adaptive practice | Post-hackathon | No longitudinal learning claim is made. |
@@ -35,14 +35,14 @@ Verified locally on 2026-07-15. This file is the authoritative implementation-st
 ## Verified local gates
 
 - Strict TypeScript, ESLint, production build, bundle budgets, and production dependency audit.
-- 134 offline tests; 8 live tests skipped without credentials.
+- 137 offline tests; 8 live tests skipped without credentials.
 - axe WCAG route scans, keyboard-only Judge, route transfer/CLS budgets, desktop Judge 20/20, and 320 px mobile flow.
 - Golden Source Document, Source Graph, Blueprint, Artifact, and replay manifest regenerate without drift.
 
 ## P0 work remaining
 
 1. Finish the live creator path: generated learner route plus a dated non-golden provider run.
-2. Deployment-safe state: persistence or signed stateless replay, TTL, quotas, origin/security headers, and cold-start verification.
+2. Deployment-safe state: replace bounded process-local stores with a durable adapter and verify cold starts. TTLs, owner quotas, and baseline security headers are implemented.
 3. Connect the live provider to the visible runtime Maia snapshot and run the authorized live eval.
 4. Authorized hosted smoke.
 

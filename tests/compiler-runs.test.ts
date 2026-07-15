@@ -54,4 +54,14 @@ describe("compiler run lifecycle", () => {
       "LIVE_COMPILER_NOT_CONFIGURED",
     );
   });
+
+  it("caps retained compiler runs per owner", async () => {
+    const document = SourceDocumentSchema.parse(goldenDocumentJson);
+    for (let index = 0; index < 5; index += 1) {
+      await createCompilerRun("creator-a", document, audience);
+    }
+    await expect(createCompilerRun("creator-a", document, audience)).rejects.toThrow(
+      "COMPILER_RUN_QUOTA_EXCEEDED",
+    );
+  });
 });

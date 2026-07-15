@@ -54,6 +54,16 @@ const store = globalJudgeStore.__museionJudgeStore ?? {
 globalJudgeStore.__museionJudgeStore = store;
 
 const goldenArtifact = CourseArtifactV2Schema.parse(goldenArtifactInput);
+export const JUDGE_SESSION_TTL_MS = 24 * 60 * 60 * 1_000;
+export const MAX_JUDGE_SESSIONS_PER_OWNER = 10;
+
+function pruneJudgeSessions(now = Date.now()): void {
+  for (const [id, record] of store.sessions) {
+    if (now - Date.parse(record.updatedAt) <= JUDGE_SESSION_TTL_MS) continue;
+    store.sessions.delete(id);
+    store.runKeys.delete(`${record.ownerId}:${record.artifact.id}:${record.clientRunId}`);
+  }
+}
 
 function interactiveBlocks(artifact: CourseArtifactV2): InteractiveBlock[] {
   return artifact.lessons.flatMap((lesson) => lesson.blockIds)
@@ -104,11 +114,15 @@ export function createJudgeSession(
   clientRunId: string,
   artifact: CourseArtifactV2 = goldenArtifact,
 ): JudgeSessionView {
+  pruneJudgeSessions();
   const runKey = `${ownerId}:${artifact.id}:${clientRunId}`;
   const existingId = store.runKeys.get(runKey);
   if (existingId) {
     const existing = store.sessions.get(existingId);
     if (existing) return view(existing);
+  }
+  if ([...store.sessions.values()].filter((session) => session.ownerId === ownerId).length >= MAX_JUDGE_SESSIONS_PER_OWNER) {
+    throw new Error("JUDGE_SESSION_QUOTA_EXCEEDED");
   }
   const now = new Date().toISOString();
   const states = Object.fromEntries(
@@ -132,6 +146,7 @@ export function createJudgeSession(
 }
 
 export function getJudgeSession(sessionId: string, ownerId: string): JudgeSessionView {
+  pruneJudgeSessions();
   return view(requireOwnedSession(sessionId, ownerId));
 }
 
@@ -141,6 +156,7 @@ export function dispatchJudgeAction(input: {
   blockId: string;
   action: RuntimeAction;
 }): { session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null } {
+  pruneJudgeSessions();
   const record = requireOwnedSession(input.sessionId, input.ownerId);
   if (record.transfer) throw new Error("TRANSFER_ALREADY_STARTED");
   const block = record.artifact.blocks[input.blockId];
@@ -169,6 +185,7 @@ export async function updateJudgeTransfer(input: {
   attemptId?: string;
   answer?: string;
 }): Promise<JudgeSessionView> {
+  pruneJudgeSessions();
   const record = requireOwnedSession(input.sessionId, input.ownerId);
   if (!interactiveBlocks(record.artifact).every((block) => isComplete(record.states[block.id]))) {
     throw new Error("TRANSFER_LOCKED");

@@ -25,6 +25,7 @@ const globalStore = globalThis as unknown as {
   __museionSessions?: Map<string, LearnerSession>;
   __museionProfiles?: Map<string, LearnerProfile>;
   __museionSessionLearners?: Map<string, string>;
+  __museionSessionTouched?: Map<string, number>;
 };
 
 const sessions =
@@ -39,18 +40,45 @@ const sessionLearners =
   globalStore.__museionSessionLearners ?? new Map<string, string>();
 globalStore.__museionSessionLearners = sessionLearners;
 
+const sessionTouched = globalStore.__museionSessionTouched ?? new Map<string, number>();
+globalStore.__museionSessionTouched = sessionTouched;
+export const LEARNER_SESSION_TTL_MS = 24 * 60 * 60 * 1_000;
+export const MAX_SESSIONS_PER_LEARNER = 20;
+
+function deleteSession(sessionId: string): void {
+  sessions.delete(sessionId);
+  sessionLearners.delete(sessionId);
+  sessionTouched.delete(sessionId);
+}
+
+function pruneSessions(now = Date.now()): void {
+  for (const [id, touchedAt] of sessionTouched) {
+    if (now - touchedAt > LEARNER_SESSION_TTL_MS) deleteSession(id);
+  }
+}
+
 // -- sessions ------------------------------------------------------------
 
 export function saveSession(session: LearnerSession, learnerId: string): void {
+  pruneSessions();
+  const owned = [...sessionLearners.entries()]
+    .filter(([, owner]) => owner === learnerId)
+    .sort(([a], [b]) => (sessionTouched.get(a) ?? 0) - (sessionTouched.get(b) ?? 0));
+  while (owned.length >= MAX_SESSIONS_PER_LEARNER) deleteSession(owned.shift()![0]);
   sessions.set(session.sessionId, session);
   sessionLearners.set(session.sessionId, learnerId);
+  sessionTouched.set(session.sessionId, Date.now());
 }
 
 export function getSession(sessionId: string): LearnerSession | undefined {
-  return sessions.get(sessionId);
+  pruneSessions();
+  const session = sessions.get(sessionId);
+  if (session) sessionTouched.set(sessionId, Date.now());
+  return session;
 }
 
 export function getSessionLearner(sessionId: string): string | undefined {
+  pruneSessions();
   return sessionLearners.get(sessionId);
 }
 
@@ -59,8 +87,11 @@ export function getSessionForLearner(
   sessionId: string,
   learnerId: string,
 ): LearnerSession | undefined {
+  pruneSessions();
   if (sessionLearners.get(sessionId) !== learnerId) return undefined;
-  return sessions.get(sessionId);
+  const session = sessions.get(sessionId);
+  if (session) sessionTouched.set(sessionId, Date.now());
+  return session;
 }
 
 // -- learner profiles ----------------------------------------------------

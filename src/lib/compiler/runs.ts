@@ -8,6 +8,8 @@ import { GoldenReplayCompilerProvider } from "./providers/replay";
 import { toPublicCourseArtifact } from "./public-artifact";
 
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
+export const COMPILER_RUN_TTL_MS = 60 * 60 * 1_000;
+export const MAX_COMPILER_RUNS_PER_OWNER = 5;
 
 export const CompileAudienceSchema = z.object({
   level: z.enum(["novice", "intermediate", "advanced"]),
@@ -62,6 +64,10 @@ export async function createCompilerRun(
   document: SourceDocument,
   audience: CompileAudience,
 ): Promise<CompilerRunView> {
+  pruneCompilerRuns();
+  if ([...runs.values()].filter((run) => run.ownerId === ownerId).length >= MAX_COMPILER_RUNS_PER_OWNER) {
+    throw new Error("COMPILER_RUN_QUOTA_EXCEEDED");
+  }
   const provider = document.sha256 === GOLDEN_SOURCE_SHA256
     ? new GoldenReplayCompilerProvider()
     : new OpenAICompilerProvider();
@@ -82,12 +88,14 @@ export async function createCompilerRun(
 }
 
 export function getCompilerRun(runId: string, ownerId: string): CompilerRunView {
+  pruneCompilerRuns();
   const record = runs.get(runId);
   if (!record || record.ownerId !== ownerId) throw new Error("COMPILER_RUN_NOT_FOUND");
   return compilerRunView(record);
 }
 
 export function getPrivateCompilerRun(runId: string, ownerId: string): CompilerRunRecord {
+  pruneCompilerRuns();
   const record = runs.get(runId);
   if (!record || record.ownerId !== ownerId) throw new Error("COMPILER_RUN_NOT_FOUND");
   return record;
@@ -98,7 +106,13 @@ export function compilerFailurePayload(error: unknown) {
     return { error: "COMPILATION_REJECTED", stage: error.stage, issues: error.issues, telemetry: error.telemetry };
   }
   const code = error instanceof Error ? error.message : "COMPILATION_FAILED";
-  return { error: code === "LIVE_COMPILER_NOT_CONFIGURED" ? code : "COMPILATION_FAILED" };
+  return { error: ["LIVE_COMPILER_NOT_CONFIGURED", "COMPILER_RUN_QUOTA_EXCEEDED"].includes(code) ? code : "COMPILATION_FAILED" };
+}
+
+export function pruneCompilerRuns(now = Date.now()): void {
+  for (const [id, run] of runs) {
+    if (now - Date.parse(run.createdAt) > COMPILER_RUN_TTL_MS) runs.delete(id);
+  }
 }
 
 export function resetCompilerRunsForTests(): void {

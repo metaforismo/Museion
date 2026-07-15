@@ -8,6 +8,7 @@ import {
   getSessionLearner,
   recordCompletion,
   saveSession,
+  MAX_SESSIONS_PER_LEARNER,
 } from "@/lib/store";
 
 describe("learner profiles", () => {
@@ -46,5 +47,16 @@ describe("learner profiles", () => {
     saveSession(session, "learner-d");
     expect(getSession(session.sessionId)).toBe(session);
     expect(getSessionLearner(session.sessionId)).toBe("learner-d");
+  });
+
+  it("bounds retained lesson sessions per learner", () => {
+    const created: LearnerSession[] = [];
+    for (let index = 0; index <= MAX_SESSIONS_PER_LEARNER; index += 1) {
+      const session = new LearnerSession(getLesson("binary-numbers")!);
+      created.push(session);
+      saveSession(session, "learner-quota");
+    }
+    expect(getSession(created[0].sessionId)).toBeUndefined();
+    expect(getSession(created.at(-1)!.sessionId)).toBe(created.at(-1));
   });
 });

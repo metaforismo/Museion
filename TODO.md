@@ -39,6 +39,7 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Per-learner mastery profile that persists across sessions and lessons (sessions share the profile's mastery model, so fading carries over)
 - [x] "My progress" page: per-concept mastery bars grouped by lesson, completion + practice-run badges, scaffolding labels
 - [ ] Database persistence (Supabase/Postgres): sessions, mastery, event logs — replace the in-memory store
+- [x] Process-local TTL cleanup and per-owner retention quotas as a bounded pre-deployment safeguard
 - [ ] Learner accounts and auth (upgrade the anonymous cookie id, start with magic-link email)
 - [ ] Migrate localStorage resume to server-backed learner state
 - [ ] Session expiry / cleanup policy for abandoned sessions

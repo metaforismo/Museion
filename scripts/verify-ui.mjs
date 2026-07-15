@@ -270,8 +270,7 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Normalize pasted source" }).click();
   await expectVisible(page.getByText("Document SHA-256"), "pasted-source hash");
   await expectVisible(page.getByRole("heading", { name: "Review warnings" }), "instruction-like warning");
-  await page.getByRole("button", { name: "Compile this source" }).click();
-  await expectVisible(page.getByText(/Live compilation is not configured/), "truthful keyless live compiler boundary");
+  await expectVisible(page.getByText(/Other sources require the configured live compiler/), "truthful keyless live compiler boundary");
 
   await page.locator('input[type="file"]').setInputFiles(pdfFixture);
   await expectVisible(

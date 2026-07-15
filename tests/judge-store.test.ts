@@ -73,4 +73,13 @@ describe("verified judge session store", () => {
     expect(deleteJudgeSession(session.sessionId, "learner-a")).toBe(true);
     expect(() => getJudgeSession(session.sessionId, "learner-a")).toThrow("JUDGE_SESSION_NOT_FOUND");
   });
+
+  it("caps retained judge sessions per owner", () => {
+    for (let index = 0; index < 10; index += 1) {
+      createJudgeSession("learner-a", `browser-run-${index}`);
+    }
+    expect(() => createJudgeSession("learner-a", "browser-run-overflow")).toThrow(
+      "JUDGE_SESSION_QUOTA_EXCEEDED",
+    );
+  });
 });

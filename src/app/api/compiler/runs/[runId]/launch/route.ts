@@ -19,7 +19,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ run
       return NextResponse.json({ error: "GENERATED_ROUTE_UNSUPPORTED_BLOCKS" }, { status: 409 });
     }
     return NextResponse.json(createJudgeSession(ownerId, parsed.data.clientRunId, record.result.artifact));
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "JUDGE_SESSION_QUOTA_EXCEEDED") {
+      return NextResponse.json({ error: error.message }, { status: 429 });
+    }
     return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
   }
 }

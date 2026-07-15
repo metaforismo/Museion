@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     const payload = compilerFailurePayload(error);
-    const status = payload.error === "LIVE_COMPILER_NOT_CONFIGURED" ? 503 : 422;
+    const status = payload.error === "LIVE_COMPILER_NOT_CONFIGURED" ? 503 : payload.error === "COMPILER_RUN_QUOTA_EXCEEDED" ? 429 : 422;
     return NextResponse.json(payload, { status });
   }
 }
