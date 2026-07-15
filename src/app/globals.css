@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f4f6fa;
+  --color-surface: #ffffff;
+  --color-ink: #131c31;
+  --color-ink-soft: #5b6478;
+  --color-lapis: #2b4acb;
+  --color-lapis-dark: #20379b;
+  --color-lapis-soft: #e7ecfc;
+  --color-gold: #d9a514;
+  --color-gold-soft: #faf3dd;
+  --color-correct: #15803d;
+  --color-correct-soft: #e7f6ec;
+  --color-wrong: #b42318;
+  --color-wrong-soft: #fdecea;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes grow-bar {
+  from {
+    width: 0;
+  }
+}
+
+.animate-shake {
+  animation: shake 0.35s ease-in-out;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.3s ease-out both;
+}
+
+.animate-grow-bar {
+  animation: grow-bar 0.8s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake,
+  .animate-fade-up,
+  .animate-grow-bar {
+    animation: none;
+  }
+}
