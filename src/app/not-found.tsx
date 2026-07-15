@@ -11,12 +11,20 @@ export default function NotFound() {
         The page you&apos;re looking for isn&apos;t in the collection — maybe
         the lesson moved, or the address has a typo.
       </p>
-      <Link
-        href="/"
-        className="mt-8 inline-block rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
-      >
-        Back to the lessons
-      </Link>
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <Link
+          href="/"
+          className="inline-flex min-h-11 items-center rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
+        >
+          Back to the lessons
+        </Link>
+        <Link
+          href="/create"
+          className="inline-flex min-h-11 items-center rounded-lg px-5 py-2.5 font-medium text-lapis-dark transition hover:bg-lapis-soft"
+        >
+          Create from a source
+        </Link>
+      </div>
     </div>
   );
 }

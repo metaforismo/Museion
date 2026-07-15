@@ -67,19 +67,19 @@ const SLIDES: Slide[] = [
     ),
   },
   {
-    kicker: "Help that fades",
+    kicker: "Adaptive support",
     title: "The goal is to not need us.",
     body: (
       <>
         <p>
           Hints come on a ladder, from a gentle nudge to a concrete pointer.
-          As your mastery of a concept grows, the ladder gets shorter and Maia
-          steps back — support fades as competence rises.
+          As your in-session evidence improves, the ladder gets shorter and Maia
+          steps back. This estimate tunes support; it does not certify mastery.
         </p>
         <p>
           When you finish a lesson, try <strong>practice mode</strong>:
-          shuffled exercises with no hints at all. Unassisted retrieval is
-          what makes learning stick.
+          shuffled exercises with no hints at all. It records a cleaner observation
+          of what you can do without the lesson&apos;s scaffolding.
         </p>
       </>
     ),

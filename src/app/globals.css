@@ -156,22 +156,12 @@ a[class*="bg-"]:active {
   }
 }
 
-@keyframes grow-bar {
-  from {
-    width: 0;
-  }
-}
-
 .animate-shake {
   animation: shake 0.35s ease-in-out;
 }
 
 .animate-fade-up {
   animation: fade-up 0.3s ease-out both;
-}
-
-.animate-grow-bar {
-  animation: grow-bar 0.8s ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -185,8 +175,7 @@ a[class*="bg-"]:active {
   }
 
   .animate-shake,
-  .animate-fade-up,
-  .animate-grow-bar {
+  .animate-fade-up {
     animation: none;
   }
 }

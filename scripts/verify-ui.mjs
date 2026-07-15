@@ -262,6 +262,27 @@ async function desktopFlow() {
   await expectVisible(page.getByText("Every link in the chain is inspectable."), "source-to-evidence narrative");
   const activeLessons = await page.getByRole("link", { name: "Lessons", exact: true }).getAttribute("aria-current");
   if (activeLessons !== "page") failures.push("desktop: Lessons navigation is not marked current");
+
+  await page.keyboard.press("/");
+  const catalogSearch = page.getByLabel("Find a lesson or concept");
+  if (!(await catalogSearch.evaluate((input) => input === document.activeElement))) {
+    failures.push("catalog: slash shortcut did not focus search");
+  }
+  await catalogSearch.fill("binary");
+  await expectVisible(page.getByRole("link", { name: /Binary Numbers/ }), "catalog concept search");
+  if (await page.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
+    failures.push("catalog: search retained a non-matching lesson");
+  }
+  await catalogSearch.fill("concept-that-does-not-exist");
+  await expectVisible(page.getByRole("heading", { name: "No lesson matches yet" }), "catalog empty state");
+  await page.getByRole("button", { name: "Reset the catalog" }).click();
+  await page.getByRole("button", { name: "Computer Science" }).click();
+  await expectVisible(page.getByRole("link", { name: /Binary Numbers/ }), "catalog subject filter");
+  if (await page.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
+    failures.push("catalog: subject filter retained an algebra lesson");
+  }
+  await page.getByRole("button", { name: "Clear search and filters" }).click();
+  await expectVisible(page.getByRole("link", { name: /Solving Linear Equations/ }), "catalog reset");
   await page.screenshot({ path: path.join(outputDir, "desktop-catalog.png"), fullPage: true });
 
   await page.getByRole("link", { name: /Solving Linear Equations/ }).click();

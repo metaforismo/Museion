@@ -1,10 +1,9 @@
 import Link from "next/link";
 
+import LessonCatalog, { type CatalogLesson } from "@/components/LessonCatalog";
 import OnboardingRedirect from "@/components/OnboardingRedirect";
-import { lessonsByTrack } from "@/lib/content";
+import { allLessons } from "@/lib/content";
 import { hasPractice } from "@/lib/engine/practice";
-
-const TRACK_ICONS: Record<string, string> = { Algebra: "∑", Arithmetic: "÷", "Computer Science": "⌘" };
 
 const PIPELINE = [
   { step: "01", title: "Ground the source", body: "Stable pages, hashes, and exact quotations make every generated claim inspectable." },
@@ -14,7 +13,17 @@ const PIPELINE = [
 ];
 
 export default function HomePage() {
-  const tracks = lessonsByTrack();
+  // Keep answer specifications, solutions, and hints on the server. The
+  // interactive catalog receives discovery metadata only.
+  const catalogLessons: CatalogLesson[] = allLessons().map((lesson) => ({
+    id: lesson.id,
+    title: lesson.title,
+    track: lesson.track,
+    description: lesson.description,
+    concepts: lesson.concepts,
+    stepCount: lesson.steps.length,
+    practiceAvailable: hasPractice(lesson),
+  }));
   return (
     <div>
       <OnboardingRedirect />
@@ -66,7 +75,7 @@ export default function HomePage() {
 
       <section className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6 lg:px-8">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Authored collection</p><h2 className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em]">Practice the foundations.</h2></div><p className="max-w-md text-sm leading-6 text-ink-soft">Existing lessons use the same deterministic verifier and fading support model. They remain a separate authored path from the Build Week compiler replay.</p></div>
-        {[...tracks.entries()].map(([track, lessons]) => <section key={track} className="mb-12"><h3 className="mb-4 flex items-center gap-3 text-sm font-semibold text-ink-soft"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink font-mono text-sm text-white">{TRACK_ICONS[track] ?? "•"}</span>{track}</h3><div className="grid gap-4 sm:grid-cols-2">{lessons.map((lesson, index) => <Link key={lesson.id} href={`/lessons/${lesson.id}`} className={`group flex min-h-56 flex-col rounded-[1.4rem] p-6 transition duration-200 hover:-translate-y-1 ${index % 3 === 0 ? "bg-ink text-white shadow-[0_18px_50px_rgba(19,28,49,0.15)]" : "premium-surface border border-white/80"}`}><p className={`text-xs font-semibold uppercase tracking-[0.13em] ${index % 3 === 0 ? "text-gold" : "text-lapis"}`}>{lesson.steps.length} verified steps</p><h4 className="mt-4 font-display text-2xl font-semibold tracking-tight">{lesson.title}</h4><p className={`mt-3 max-w-[50ch] text-sm leading-6 ${index % 3 === 0 ? "text-white/65" : "text-ink-soft"}`}>{lesson.description}</p><div className="mt-auto flex items-end justify-between gap-4 pt-6"><div className="flex flex-wrap gap-2">{lesson.concepts.slice(0, 2).map((concept) => <span key={concept} className={`rounded-md px-2 py-1 text-xs ${index % 3 === 0 ? "bg-white/10 text-white/80" : "bg-lapis-soft text-lapis-dark"}`}>{concept}</span>)}</div><span className="text-xl transition-transform group-hover:translate-x-1" aria-hidden="true">→</span></div>{hasPractice(lesson) && <span className="sr-only">Practice available</span>}</Link>)}</div></section>)}
+        <LessonCatalog lessons={catalogLessons} />
       </section>
     </div>
   );

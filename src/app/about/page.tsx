@@ -10,23 +10,23 @@ export const metadata: Metadata = {
 const PRINCIPLES = [
   {
     title: "The answer is the one thing Maia won't say",
-    body: "Handing over answers feels like help and works like a crutch: in a field study with ~1,000 students, free chatbot access raised in-session scores by 48% — and lowered unassisted exam scores by 17%. Tutors with a no-reveal guardrail erased that harm. Museion makes the guardrail architectural, not optional.",
+    body: "Handing over an answer can improve assisted performance without showing that the learner can reason independently. Museion makes non-revelation an architectural constraint: Maia can guide the next step, while deterministic gates block answer leakage before delivery.",
   },
   {
     title: "Truth lives in code, not in the model",
-    body: "Every answer is graded by the lesson engine against author-verified content. The AI never decides what's mathematically true — it receives the verified solution as context and coaches toward it. Museion cannot get the math wrong the way a chatbot can.",
+    body: "Every registered answer is checked by the lesson engine against author-reviewed content. The model does not grade its own output. Determinism does not make authored material infallible, so generated courses also preserve exact citations and fail closed when validation cannot establish their contract.",
   },
   {
     title: "Feedback lands on the step, not the result",
     body: "Decades of tutoring research show the gains come from intervening where the reasoning breaks — step by step — not from judging the final answer. Every Museion step has its own verified solution and its own library of known wrong turns.",
   },
   {
-    title: "Help fades as mastery grows",
-    body: "Scaffolding that helps a beginner holds back an expert. Museion tracks your mastery of each concept and withdraws support as it grows: full hint ladders for novices, a single Socratic nudge once you're proficient — until the questions you'd ask Maia are the ones you ask yourself.",
+    title: "Help fades as evidence accumulates",
+    body: "Scaffolding that helps a beginner can become unnecessary later. Museion maintains a per-concept support estimate from observed attempts and uses it to shorten hint ladders. The estimate adapts the interface; it is not a grade, certification, or claim of durable mastery.",
   },
   {
     title: "What counts is what remains",
-    body: "Solving problems with help is performance; what you can do later, alone, is learning. That's why practice mode is unassisted, why assisted successes move your mastery less, and why the lesson's last words invite you back in a few days — without Maia.",
+    body: "Solving with help records assisted performance. Practice mode removes the hint ladder and records a narrower unassisted observation. Even a correct run does not establish long-term retention, far transfer, or a general learning gain.",
   },
 ];
 

@@ -244,7 +244,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
         setHints((current) => [...current, granted]);
         setHintNote(null);
       } else {
-        setHintNote("No more hints at your mastery level — trust your reasoning, or ask Maia a question.");
+        setHintNote("No more hints at your current support level — trust your reasoning, or ask Maia a question.");
       }
     } catch {
       setRequestError("The hint could not be requested because the connection failed. Try again.");
@@ -360,9 +360,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="font-medium text-correct">
                     Correct — nice reasoning.
-                    <span className="ml-2 text-sm font-normal">
-                      mastery {feedback.mastery.toFixed(2)}
-                    </span>
+                    <span className="ml-2 text-sm font-normal">Adaptive support updated.</span>
                   </p>
                   {!complete && (
                     <button
@@ -495,9 +493,12 @@ function CompletionScreen({
           </dl>
 
           <div className="mt-10 rounded-[1.4rem] bg-surface p-6 shadow-[0_18px_60px_rgba(35,53,91,0.08)] sm:p-8">
-            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-ink-soft">
-              Concept mastery
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-soft">
+              Adaptive support estimate
             </h2>
+            <p className="mb-5 mt-2 max-w-xl text-sm leading-6 text-ink-soft">
+              This tunes future scaffolding. It is not a grade or proof of retained learning.
+            </p>
             {Object.entries(stats.conceptMastery).map(([concept, mastery]) => (
               <div key={concept} className="mb-3 last:mb-0">
                 <div className="mb-1 flex justify-between text-sm">
@@ -506,10 +507,17 @@ function CompletionScreen({
                     {(mastery * 100).toFixed(0)}%
                   </span>
                 </div>
-                <div className="h-2 rounded-full bg-ink/10">
+                <div
+                  role="progressbar"
+                  aria-label={`${concept} adaptive support estimate`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(mastery * 100)}
+                  className="h-2 overflow-hidden rounded-full bg-ink/10"
+                >
                   <div
-                    className="h-2 rounded-full bg-gold animate-grow-bar"
-                    style={{ width: `${Math.max(mastery * 100, 2)}%` }}
+                    className="h-2 origin-left rounded-full bg-gold transition-transform duration-500 motion-reduce:transition-none"
+                    style={{ transform: `scaleX(${Math.max(mastery, 0.02)})` }}
                   />
                 </div>
               </div>
