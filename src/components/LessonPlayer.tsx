@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import MaiaPanel from "@/components/MaiaPanel";
+import MaiaPanel, { type MaiaOutbox } from "@/components/MaiaPanel";
 import type {
   AnswerResponse,
   ChatMessage,
@@ -19,6 +19,13 @@ type Feedback =
   | { kind: "correct"; mastery: number; solution: string | null }
   | { kind: "wrong"; attempts: number }
   | null;
+
+const ASK_WHY_MESSAGE =
+  "I just answered wrong and I'm not sure why. Can you help me see it?";
+
+const selfExplainMessage = (explanation: string) =>
+  `Here's my one-sentence explanation of why this step works: "${explanation}". ` +
+  "Is my reasoning sound? Reply in one or two sentences.";
 
 interface PlayerProps {
   /** The statically-known lesson; practice sessions override its steps. */
@@ -39,9 +46,15 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const [hints, setHints] = useState<string[]>([]);
   const [hintNote, setHintNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [maiaNudge, setMaiaNudge] = useState(0);
+  const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
+  const outboxSeq = useRef(0);
+
+  const sendToMaia = useCallback((text: string) => {
+    outboxSeq.current += 1;
+    setOutbox({ id: outboxSeq.current, text });
+  }, []);
 
   const applyState = useCallback((state: SessionStateResponse) => {
     setActiveLesson(state.lesson);
@@ -190,7 +203,14 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
               {activeLesson.steps.length}
             </span>
           </div>
-          <div className="flex gap-1.5">
+          <div
+            className="flex gap-1.5"
+            role="progressbar"
+            aria-label="Lesson progress"
+            aria-valuemin={0}
+            aria-valuemax={activeLesson.steps.length}
+            aria-valuenow={stepIndex}
+          >
             {activeLesson.steps.map((s, i) => (
               <div
                 key={s.id}
@@ -264,6 +284,12 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                     )}
                   </div>
                 )}
+                {mode === "lesson" && !complete && (
+                  <SelfExplain
+                    key={step.id}
+                    onSend={(text) => sendToMaia(selfExplainMessage(text))}
+                  />
+                )}
               </div>
             )}
 
@@ -273,7 +299,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                 <p className="mt-1 text-sm text-ink-soft">
                   Try again{mode === "lesson" ? ", take a hint," : ""} or{" "}
                   <button
-                    onClick={() => setMaiaNudge((n) => n + 1)}
+                    onClick={() => sendToMaia(ASK_WHY_MESSAGE)}
                     className="font-medium text-lapis underline-offset-2 hover:underline"
                   >
                     ask Maia why
@@ -318,7 +344,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
 
       <MaiaPanel
         sessionId={sessionId}
-        nudge={maiaNudge}
+        outbox={outbox}
         initialMessages={initialChat}
       />
     </div>
@@ -420,6 +446,59 @@ function StatCard({ label, value }: { label: string; value: string }) {
       </p>
       <p className="mt-1 text-xs text-ink-soft">{label}</p>
     </div>
+  );
+}
+
+/**
+ * The generation effect: putting the "why" into your own words after a
+ * correct answer strengthens the memory far more than re-reading the
+ * solution. Optional, one sentence, checked by Maia.
+ */
+function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
+  const [text, setText] = useState("");
+  const [sent, setSent] = useState(false);
+
+  if (sent) {
+    return (
+      <p className="mt-3 text-sm text-ink-soft animate-fade-up">
+        Sent to Maia — check her reply in the panel, then continue.
+      </p>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        onSend(text.trim());
+        setSent(true);
+      }}
+      className="mt-3 border-t border-correct/20 pt-3"
+    >
+      <label
+        htmlFor="self-explain"
+        className="text-sm font-medium text-correct"
+      >
+        Lock it in: why did that work, in one sentence?
+      </label>
+      <div className="mt-2 flex gap-2">
+        <input
+          id="self-explain"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Because…"
+          className="flex-1 rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none transition focus:border-correct"
+        />
+        <button
+          type="submit"
+          disabled={!text.trim()}
+          className="rounded-lg border border-correct bg-correct-soft px-3 py-2 text-sm font-medium text-correct transition hover:bg-correct/15 disabled:opacity-50"
+        >
+          Check with Maia
+        </button>
+      </div>
+    </form>
   );
 }
 

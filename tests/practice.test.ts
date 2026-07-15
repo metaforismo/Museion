@@ -1,13 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { getLesson } from "@/lib/content";
+import { allLessons, getLesson } from "@/lib/content";
+import type { Lesson } from "@/lib/content/types";
 import { buildPracticeLesson, hasPractice } from "@/lib/engine/practice";
 import { LearnerSession } from "@/lib/engine/session";
 
+const bankless: Lesson = {
+  ...getLesson("linear-equations-intro")!,
+  id: "bankless-fixture",
+  practice: [],
+};
+
 describe("practice mode", () => {
-  it("knows which lessons have practice banks", () => {
-    expect(hasPractice(getLesson("linear-equations-intro")!)).toBe(true);
-    expect(hasPractice(getLesson("fractions-unlike-denominators")!)).toBe(false);
+  it("every bundled lesson ships a practice bank", () => {
+    for (const lesson of allLessons()) {
+      expect(hasPractice(lesson), lesson.id).toBe(true);
+    }
+    expect(hasPractice(bankless)).toBe(false);
   });
 
   it("builds a synthetic lesson from the practice bank", () => {
@@ -31,9 +40,9 @@ describe("practice mode", () => {
   });
 
   it("throws for lessons without a practice bank", () => {
-    expect(() =>
-      buildPracticeLesson(getLesson("fractions-unlike-denominators")!),
-    ).toThrow(/no practice exercises/);
+    expect(() => buildPracticeLesson(bankless)).toThrow(
+      /no practice exercises/,
+    );
   });
 
   it("runs as a normal session with the practice mode flag", () => {

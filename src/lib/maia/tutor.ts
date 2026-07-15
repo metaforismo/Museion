@@ -9,6 +9,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 import type { LearnerSession } from "../engine/session";
+import { log } from "../server/log";
 import { revealsAnswer } from "./leak";
 import { buildSystemPrompt } from "./prompt";
 
@@ -79,6 +80,20 @@ export function maiaRespond(
           .trim();
         session.chatHistory.push({ role: "assistant", content: reply });
         session.log("maia_turn", { learner: learnerMessage });
+        // Token + cache instrumentation: cacheRead > 0 on follow-up
+        // turns confirms the persona block is riding the prompt cache.
+        session.log("maia_usage", {
+          inputTokens: message.usage.input_tokens,
+          outputTokens: message.usage.output_tokens,
+          cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
+          cacheWriteTokens: message.usage.cache_creation_input_tokens ?? 0,
+        });
+        log.info("maia_turn_completed", {
+          sessionId: session.sessionId,
+          inputTokens: message.usage.input_tokens,
+          outputTokens: message.usage.output_tokens,
+          cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
+        });
         // Instrumentation, not a block: numeric steps whose answer also
         // appears in the prompt can trigger false positives, so flagged
         // turns are logged for audit rather than redacted.
@@ -86,6 +101,10 @@ export function maiaRespond(
           session.log("maia_possible_leak", {
             stepId: session.currentStep.id,
             reply,
+          });
+          log.warn("maia_possible_leak", {
+            sessionId: session.sessionId,
+            stepId: session.currentStep.id,
           });
         }
         controller.close();
