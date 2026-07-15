@@ -9,6 +9,8 @@ export interface MaiaOutbox {
   /** Monotonic id so the same text can be sent twice. */
   id: number;
   text: string;
+  /** The lesson step that produced the message. */
+  stepId: string;
 }
 
 export default function MaiaPanel({
@@ -36,6 +38,7 @@ export default function MaiaPanel({
   const lastOutboxId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
   const requestScope = useRef(`${sessionId}:${stepId}`);
+  const sendInFlight = useRef(false);
 
   useLayoutEffect(() => {
     requestScope.current = `${sessionId}:${stepId}`;
@@ -44,9 +47,10 @@ export default function MaiaPanel({
   }, [sessionId, stepId]);
 
   const send = useCallback(
-    async (text: string) => {
+    (text: string) => {
       const message = text.trim();
-      if (!message || streaming) return;
+      if (!message || sendInFlight.current) return false;
+      sendInFlight.current = true;
       const scope = `${sessionId}:${stepId}`;
       setStreaming(true);
       setDeliverySource(null);
@@ -64,67 +68,76 @@ export default function MaiaPanel({
           return next;
         });
 
-      try {
-        const controller = new AbortController();
-        requestController.current = controller;
-        const res = await fetch(`/api/sessions/${sessionId}/maia`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message,
-            expectedStepId: stepId,
-            expectedVersion: sessionVersion,
-            idempotencyKey: crypto.randomUUID(),
-          }),
-          signal: controller.signal,
-        });
-        if (res.status === 429) {
-          // The server explains WHY (burst pause vs conversation cap).
-          const data = (await res.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          setLastAssistantMessage(
-            data?.error ?? "Maia needs a moment — try again shortly.",
-          );
-          setRetryMessage(message);
-          return;
+      void (async () => {
+        try {
+          const controller = new AbortController();
+          requestController.current = controller;
+          const res = await fetch(`/api/sessions/${sessionId}/maia`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message,
+              expectedStepId: stepId,
+              expectedVersion: sessionVersion,
+              idempotencyKey: crypto.randomUUID(),
+            }),
+            signal: controller.signal,
+          });
+          if (res.status === 429) {
+            // The server explains WHY (burst pause vs conversation cap).
+            const data = (await res.json().catch(() => null)) as {
+              error?: string;
+            } | null;
+            setLastAssistantMessage(
+              data?.error ?? "Maia needs a moment — try again shortly.",
+            );
+            setRetryMessage(message);
+            return;
+          }
+          if (!res.ok) {
+            throw new Error(`Maia request failed (${res.status})`);
+          }
+          const delivery = (await res.json()) as MaiaResponse;
+          if (requestScope.current !== scope) {
+            setLastAssistantMessage("The lesson moved to a new step, so I stopped that reply.");
+            return;
+          }
+          onSessionVersion(delivery.sessionVersion);
+          setDeliverySource(delivery.source);
+          setResolvedModel(delivery.resolvedModel ?? null);
+          setLastAssistantMessage(delivery.turn.message);
+        } catch (error) {
+          const cancelled = error instanceof DOMException && error.name === "AbortError";
+          const stale = requestScope.current !== scope;
+          let failureMessage = "Maia couldn't answer just now — try again in a moment.";
+          if (stale) failureMessage = "The lesson moved to a new step, so I stopped that reply.";
+          else if (cancelled) failureMessage = "That request was cancelled. Your lesson state did not change.";
+          setLastAssistantMessage(failureMessage);
+          if (!stale) setRetryMessage(message);
+        } finally {
+          requestController.current = null;
+          sendInFlight.current = false;
+          setStreaming(false);
         }
-        if (!res.ok) {
-          throw new Error(`Maia request failed (${res.status})`);
-        }
-        const delivery = (await res.json()) as MaiaResponse;
-        if (requestScope.current !== scope) {
-          setLastAssistantMessage("The lesson moved to a new step, so I stopped that reply.");
-          return;
-        }
-        onSessionVersion(delivery.sessionVersion);
-        setDeliverySource(delivery.source);
-        setResolvedModel(delivery.resolvedModel ?? null);
-        setLastAssistantMessage(delivery.turn.message);
-      } catch (error) {
-        const cancelled = error instanceof DOMException && error.name === "AbortError";
-        const stale = requestScope.current !== scope;
-        let failureMessage = "Maia couldn't answer just now — try again in a moment.";
-        if (stale) failureMessage = "The lesson moved to a new step, so I stopped that reply.";
-        else if (cancelled) failureMessage = "That request was cancelled. Your lesson state did not change.";
-        setLastAssistantMessage(failureMessage);
-        if (!stale) setRetryMessage(message);
-      } finally {
-        requestController.current = null;
-        setStreaming(false);
-      }
+      })();
+
+      return true;
     },
-    [onSessionVersion, sessionId, sessionVersion, stepId, streaming],
+    [onSessionVersion, sessionId, sessionVersion, stepId],
   );
 
   // Programmatic sends from the lesson player ("ask Maia why",
   // self-explanations).
   useEffect(() => {
-    if (outbox && outbox.id > lastOutboxId.current) {
+    if (!outbox || outbox.id <= lastOutboxId.current) return;
+    if (outbox.stepId !== stepId) {
       lastOutboxId.current = outbox.id;
-      void send(outbox.text);
+      return;
     }
-  }, [outbox, send]);
+    if (!streaming) {
+      if (send(outbox.text)) lastOutboxId.current = outbox.id;
+    }
+  }, [outbox, send, stepId, streaming]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -171,7 +184,7 @@ export default function MaiaPanel({
                 (suggestion) => (
                   <button
                     key={suggestion}
-                    onClick={() => void send(suggestion)}
+                    onClick={() => send(suggestion)}
                     className="rounded-full border border-lapis/30 bg-lapis-soft px-3 py-1 text-xs text-lapis-dark transition hover:border-lapis"
                   >
                     {suggestion}
@@ -199,12 +212,11 @@ export default function MaiaPanel({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void send(input);
-          setInput("");
+          if (send(input)) setInput("");
         }}
         className="border-t border-ink/10 p-3"
       >
-        {retryMessage && !streaming && <button type="button" onClick={() => void send(retryMessage)} className="mb-2 text-xs font-semibold text-lapis-dark underline underline-offset-4">Retry last question</button>}
+        {retryMessage && !streaming && <button type="button" onClick={() => send(retryMessage)} className="mb-2 text-xs font-semibold text-lapis-dark underline underline-offset-4">Retry last question</button>}
         <div className="flex gap-2">
           <input
             value={input}

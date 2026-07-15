@@ -250,6 +250,60 @@ async function staleMaiaFlow() {
   await context.close();
 }
 
+async function queuedMaiaOutboxFlow() {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  watch(page, "queued-maia-outbox");
+  let maiaRequests = 0;
+  await page.route("**/api/sessions/*/maia", async (route) => {
+    maiaRequests += 1;
+    if (maiaRequests === 1) await new Promise((resolve) => setTimeout(resolve, 750));
+    await route.continue();
+  });
+
+  await page.goto(`${baseURL}/lessons/linear-equations-intro`);
+  await submitTextAnswer(page, "2");
+  const askWhy = page.getByRole("button", { name: "ask Maia why" });
+  const firstRequest = page.waitForRequest((request) => request.url().includes("/maia") && request.method() === "POST");
+  await askWhy.click();
+  await firstRequest;
+  await expectVisible(page.getByRole("button", { name: "Cancel" }), "Maia first request in flight");
+
+  const secondRequest = page.waitForRequest((request) => request.url().includes("/maia") && request.method() === "POST");
+  await askWhy.click();
+  await secondRequest;
+  await expectVisible(page.getByText(/I just answered wrong and I'm not sure why/).nth(1), "queued Maia outbox delivery");
+  if (maiaRequests !== 2) failures.push(`queued Maia outbox: expected 2 requests, received ${maiaRequests}`);
+  await context.close();
+}
+
+async function staleQueuedOutboxFlow() {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  watch(page, "stale-queued-outbox");
+  let maiaRequests = 0;
+  await page.route("**/api/sessions/*/maia", async (route) => {
+    maiaRequests += 1;
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+    await route.continue();
+  });
+
+  await page.goto(`${baseURL}/lessons/linear-equations-intro`);
+  await submitTextAnswer(page, "6");
+  await page.getByLabel("Message for Maia").fill("Explain this step without giving the answer");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expectVisible(page.getByRole("button", { name: "Cancel" }), "Maia request before queued self-explanation");
+  await page.getByLabel(/Lock it in/).fill("Subtracting the same amount preserves equality");
+  await page.getByRole("button", { name: "Check with Maia" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expectVisible(page.getByText("Step 2 of 4"), "advance after queued self-explanation");
+  await page.waitForTimeout(3_300);
+  if (maiaRequests !== 1) failures.push(`stale queued outbox: expected 1 request, received ${maiaRequests}`);
+  await context.close();
+}
+
 async function desktopFlow() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -288,8 +342,23 @@ async function desktopFlow() {
   await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
   await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "first lesson step");
 
-  await submitTextAnswer(page, "2");
+  let rapidAnswerRequests = 0;
+  const delayedAnswer = async (route) => {
+    rapidAnswerRequests += 1;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.continue();
+  };
+  await page.route("**/api/sessions/*/answer", delayedAnswer);
+  const answerInput = page.getByPlaceholder("Your answer");
+  await answerInput.fill("2");
+  await page.getByRole("button", { name: "Check" }).evaluate((button) => {
+    button.click();
+    button.click();
+  });
+  await expectVisible(page.getByRole("button", { name: "Checking…" }), "answer pending state");
   await expectVisible(page.getByText("Not yet — stay with it."), "wrong-answer feedback");
+  await page.unroute("**/api/sessions/*/answer", delayedAnswer);
+  if (rapidAnswerRequests !== 1) failures.push(`lesson answer lock: expected 1 request, received ${rapidAnswerRequests}`);
   await page.getByRole("button", { name: "Take a hint" }).click();
   await expectVisible(page.getByText(/^1\./), "first deterministic hint");
 
@@ -536,6 +605,8 @@ try {
     await desktopFlow();
     await learnerRecoveryFlow();
     await staleMaiaFlow();
+    await queuedMaiaOutboxFlow();
+    await staleQueuedOutboxFlow();
     await designSystemFlow();
     await mobileFlow();
     await performanceBudgetFlow();

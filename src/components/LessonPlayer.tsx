@@ -20,6 +20,8 @@ type Feedback =
   | { kind: "wrong"; attempts: number }
   | null;
 
+type PendingAction = "answer" | "advance" | "hint" | null;
+
 const ASK_WHY_MESSAGE =
   "I just answered wrong and I'm not sure why. Can you help me see it?";
 
@@ -79,15 +81,32 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const [hints, setHints] = useState<string[]>([]);
   const [hintNote, setHintNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
   const outboxSeq = useRef(0);
+  const actionInFlight = useRef(false);
 
-  const sendToMaia = useCallback((text: string) => {
+  const beginAction = useCallback((action: Exclude<PendingAction, null>) => {
+    if (actionInFlight.current) return false;
+    actionInFlight.current = true;
+    setBusy(true);
+    setPendingAction(action);
+    setRequestError(null);
+    return true;
+  }, []);
+
+  const finishAction = useCallback(() => {
+    actionInFlight.current = false;
+    setBusy(false);
+    setPendingAction(null);
+  }, []);
+
+  const sendToMaia = useCallback((text: string, targetStepId: string) => {
     outboxSeq.current += 1;
-    setOutbox({ id: outboxSeq.current, text });
+    setOutbox({ id: outboxSeq.current, text, stepId: targetStepId });
   }, []);
 
   const applyState = useCallback((state: SessionStateResponse) => {
@@ -159,14 +178,12 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
 
   const submitAnswer = useCallback(
     async (answer: string) => {
-      if (!sessionId || busy) return;
-      setBusy(true);
-      setRequestError(null);
+      if (!sessionId || !step || !beginAction("answer")) return;
       try {
         const res = await fetch(`/api/sessions/${sessionId}/answer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answer, expectedStepId: step?.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
+          body: JSON.stringify({ answer, expectedStepId: step.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
         });
         if (!res.ok) {
           const failure = await res.json().catch(() => null);
@@ -189,16 +206,17 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
       } catch {
         setRequestError("The answer could not be checked because the connection failed. Your response was not lost; try again.");
       } finally {
-        setBusy(false);
+        finishAction();
       }
     },
-    [sessionId, busy, sessionVersion, step],
+    [beginAction, finishAction, sessionId, sessionVersion, step],
   );
 
   const advance = useCallback(async () => {
-    if (!sessionId || !step || busy) return;
-    setBusy(true);
-    setRequestError(null);
+    if (!sessionId || !step || !beginAction("advance")) return;
+    // A deferred Maia message belongs to the step being left. Invalidate it
+    // immediately instead of waiting for the server response and next render.
+    setOutbox(null);
     try {
       const response = await fetch(`/api/sessions/${sessionId}/advance`, {
         method: "POST",
@@ -217,15 +235,12 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     } catch {
       setRequestError("The next step could not be opened because the connection failed. Try again.");
     } finally {
-      setBusy(false);
+      finishAction();
     }
-  }, [applyState, busy, sessionId, sessionVersion, step]);
+  }, [applyState, beginAction, finishAction, sessionId, sessionVersion, step]);
 
   const requestHint = useCallback(async () => {
-    if (!sessionId || busy) return;
-    if (!step) return;
-    setBusy(true);
-    setRequestError(null);
+    if (!sessionId || !step || !beginAction("hint")) return;
     try {
       const res = await fetch(`/api/sessions/${sessionId}/hint`, {
         method: "POST",
@@ -249,9 +264,9 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     } catch {
       setRequestError("The hint could not be requested because the connection failed. Try again.");
     } finally {
-      setBusy(false);
+      finishAction();
     }
-  }, [sessionId, busy, sessionVersion, step]);
+  }, [beginAction, finishAction, sessionId, sessionVersion, step]);
 
   const restartPractice = useCallback(() => {
     localStorage.removeItem(sessionStorageKey(lesson.id, mode));
@@ -298,6 +313,14 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
         {requestError && <p role="alert" className="mb-4 rounded-lg bg-wrong-soft px-4 py-3 text-sm text-wrong">{requestError}</p>}
         {/* Progress */}
         <div className="mb-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <Link href="/" className="inline-flex min-h-11 items-center font-semibold text-lapis-dark hover:underline">
+              Back to lessons
+            </Link>
+            <span className="rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft">
+              {mode === "practice" ? "Unassisted practice" : activeLesson.track}
+            </span>
+          </div>
           <div className="mb-2 flex items-baseline justify-between">
             <h1 className="font-display text-2xl font-semibold">
               {activeLesson.title}
@@ -340,6 +363,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
         {step && (
           <div
             key={`${step.id}-${shakeTick > 0 && feedback?.kind === "wrong" ? shakeTick : "steady"}`}
+            aria-busy={busy}
             className={`rounded-xl border border-ink/10 bg-surface p-6 shadow-sm ${
               feedback?.kind === "wrong" ? "animate-shake" : "animate-fade-up"
             }`}
@@ -351,6 +375,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                 key={step.id}
                 step={step}
                 disabled={busy || feedback?.kind === "correct"}
+                checking={pendingAction === "answer"}
                 onSubmit={submitAnswer}
               />
             </div>
@@ -365,9 +390,10 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                   {!complete && (
                     <button
                       onClick={advance}
-                      className="rounded-lg bg-correct px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
+                      disabled={busy}
+                      className="rounded-lg bg-correct px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
                     >
-                      Continue →
+                      {pendingAction === "advance" ? "Opening next step…" : "Continue"}
                     </button>
                   )}
                 </div>
@@ -389,7 +415,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                 {mode === "lesson" && !complete && (
                   <SelfExplain
                     key={step.id}
-                    onSend={(text) => sendToMaia(selfExplainMessage(text))}
+                    onSend={(text) => sendToMaia(selfExplainMessage(text), step.id)}
                   />
                 )}
               </div>
@@ -401,7 +427,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                 <p className="mt-1 text-sm text-ink-soft">
                   Try again{mode === "lesson" ? ", take a hint," : ""} or{" "}
                   <button
-                    onClick={() => sendToMaia(ASK_WHY_MESSAGE)}
+                    onClick={() => sendToMaia(ASK_WHY_MESSAGE, step.id)}
                     className="font-medium text-lapis underline-offset-2 hover:underline"
                   >
                     ask Maia why
@@ -423,7 +449,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                     disabled={busy || feedback?.kind === "correct"}
                     className="rounded-lg border border-gold bg-gold-soft px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-gold/20 disabled:opacity-50"
                   >
-                    Take a hint
+                    {pendingAction === "hint" ? "Getting hint…" : "Take a hint"}
                   </button>
                 </div>
                 {hints.map((hint, i) => (
@@ -476,7 +502,7 @@ function CompletionScreen({
       </h1>
       <p className="mt-4 max-w-[62ch] text-lg leading-8 text-ink-soft">
         {practiceDone
-          ? `Unassisted reps on “${lesson.title}” — this is the work that sticks.`
+          ? `You completed an unassisted retrieval run on “${lesson.title}”.`
           : `You worked through every step of “${lesson.title}”. The real test is what stays with you — come back in a few days and try it without Maia.`}
       </p>
 
@@ -611,10 +637,12 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
 function AnswerControl({
   step,
   disabled,
+  checking,
   onSubmit,
 }: {
   step: PublicStep;
   disabled: boolean;
+  checking: boolean;
   onSubmit: (answer: string) => void;
 }) {
   const [value, setValue] = useState("");
@@ -676,7 +704,7 @@ function AnswerControl({
         disabled={disabled || !value.trim()}
         className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50"
       >
-        Check
+        {checking ? "Checking…" : "Check"}
       </button>
     </form>
   );
