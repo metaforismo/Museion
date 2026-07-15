@@ -1,59 +1,51 @@
 # Current Project Status
 
-Verified on 2026-07-15 against baseline commit `c70d594` plus the local, uncommitted Build Week changes mapped in `UNCOMMITTED_CHANGE_MAP.md`.
+Verified locally on 2026-07-15. This file is the authoritative implementation-status matrix; older delta and change-map documents are historical records.
 
-## Product boundary
+## Status vocabulary
 
-Museion is currently a small authored-lesson platform with a deterministic answer verifier, session engine, misconception matching, heuristic mastery/fading, and a GPT-5.6 Maia path with deterministic fallback. It is not yet a source-grounded learning compiler.
+- **Visible:** connected to a user route and covered by browser verification.
+- **Internal:** implemented and unit-tested, but not connected to the visible product path.
+- **Golden replay:** works for the checked binary-search source/artifact only.
+- **Live:** invokes the configured external provider; requires credentials and a dated live verification.
+- **Missing:** not implemented.
+- **Post-hackathon:** intentionally outside the current release slice.
 
-The Build Week vertical slice is one binary-search source compiled into a cited, typed, replayable course with a deterministic interactive activity, a leak-gated GPT-5.6 intervention, and one locked near-transfer observation.
+## Product matrix
 
-## Verified working
+| Capability | Status | Honest boundary |
+| --- | --- | --- |
+| Text, Markdown, selectable-PDF normalization | Visible | Browser-local; no OCR or URL ingestion. |
+| Page/document hashes and exact source spans | Visible | Exact-unique quotes; repeated ambiguous quotes are rejected. |
+| Source Graph, Blueprint, Artifact v2 schemas | Internal + golden replay | Arbitrary creator input is not yet compiled from the UI. |
+| Multi-stage compiler, critic, one typed repair | Internal + golden replay | Live OpenAI provider exists; no dated live compile result. |
+| Compiler truth hardening | Internal + golden replay | Blocking warnings, source/hash binding, citation/transfer gates, server-owned validation/provenance, runtime validators, terminal traces. |
+| Typed interactive reducers | Visible in golden replay | Prediction, range, trace, and sequence only; guided response is not rendered by Judge. |
+| Maia lesson tutor | Visible in authored lessons | GPT-5.6 live when configured; deterministic fallback otherwise. |
+| Runtime Maia snapshot and bounded actions | Internal | Contracts, target gate, and counterexample exist; Judge does not yet render interventions. |
+| Locked unassisted transfer | Visible in golden replay | One immediate near-transfer observation, not durable mastery. |
+| Evidence ledger | Visible in golden replay | Transfer event only; guided corrections and confidence are not yet included. |
+| Creator review | Golden replay | Non-golden sources stop after normalization. |
+| Persistence | Missing | Session and judge maps are process-local; unsuitable for multi-instance deployment. |
+| Hosted deployment | Missing | Requires explicit authorization and deployment configuration. |
+| Live GPT-5.6 eval | Missing verification | Eight live tests remain skipped without credentials. |
+| Delayed retention/adaptive practice | Post-hackathon | No longitudinal learning claim is made. |
 
-- Five authored lessons and practice banks render through the Next.js App Router.
-- Numeric, multiple-choice, and allow-listed expression answers are graded by code.
-- Lesson content is sanitized before reaching the browser; answer specs, solutions, hints, and misconceptions are withheld.
-- Misconception triggers are tested against the real verifier and rejected if they count as correct.
-- Sessions record attempts and hints, share an in-memory mastery model, and support localStorage-based resume while the server process survives.
-- Missing OpenAI credentials produce a deterministic hint-ladder fallback.
-- GPT-5.6 Responses integration now uses a strict Zod turn contract, buffers output, checks answer leaks and UI targets, repairs once, and falls back deterministically.
-- Session read/mutation routes now enforce anonymous-cookie ownership.
-- Practice lesson steps are stripped of deterministic hints on the server.
-- Pasted text, Markdown, and selectable-text PDFs can be normalized in the browser into versioned pages with stable SHA-256 hashes, limits, and instruction-like-content warnings.
-- Exact unique source spans use an explicit UTF-16 offset policy and validate their page slice and hash.
-- `/create` previews canonical pages and hashes before compilation; the future Source Graph action remains visibly disabled.
-- Strict Source Graph, Course Blueprint, private/public Course Artifact v2, closed block registry, reference validation, canonical JSON/SHA-256, and a non-mutating v1 adapter now define the compiler boundary.
-- The public artifact strips answer specs, solutions, hints, misconception details, expected traces, and evaluator rules before browser serialization.
-- Baseline commands pass: `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
+## Verified local gates
 
-## Partial or unverified
+- Strict TypeScript, ESLint, production build, bundle budgets, and production dependency audit.
+- 125 offline tests; 8 live tests skipped without credentials.
+- axe WCAG route scans, keyboard-only Judge, route transfer/CLS budgets, desktop Judge 20/20, and 320 px mobile flow.
+- Golden Source Document, Source Graph, Blueprint, Artifact, and replay manifest regenerate without drift.
 
-- Live red-team coverage is skipped without `OPENAI_API_KEY`; no dated live report is checked in.
-- Progress persists across sessions only inside one server process, not across restarts or instances.
-- Practice has no deterministic hint ladder, but Maia remains available; it is not valid independent-transfer evidence.
-- Accessibility has useful foundations, but dynamic feedback, focus movement, small-screen forms, contrast, and progress semantics need a focused pass.
-- The historical baseline/delta is diffable, but pre-Build-Week provenance is partly self-attested by a consolidation commit.
+## P0 work remaining
 
-## Broken or unsafe behavior
+1. Session protocol v2: awaiting-advance, expected step/version, idempotency, concurrency serialization, and visible request errors.
+2. Interactive Maia in Judge: snapshot after incorrect outcomes, safe tutor turn, semantic highlight/focus/pulse/annotation, and deterministic counterexample.
+3. Live creator path: run record, goal/level/duration/language input, compile API, stage progress, validated review, and generated learner route.
+4. Deployment-safe state: persistence or signed stateless replay, TTL, quotas, origin/security headers, and cold-start verification.
+5. Live provider eval and authorized hosted smoke.
 
-- Learner, lesson, and source state is treated as untrusted data; later compiler stages must preserve that boundary.
-- Malformed JSON and oversized learner inputs are not handled consistently.
-- A failed client session create/resume, answer, or hint request can appear as an endless loading state or a no-op.
-- Completed lesson sessions cannot be restarted from the UI.
+## Submission claim boundary
 
-## Missing submission-critical path
-
-- Compiler-produced Source Graph/Blueprint/Course Artifact instances and their checked-in binary-search replay.
-- Typed interactive registry and the binary-search RangeExplorer/StateTrace flow.
-- Maia environment snapshots and allow-listed UI actions.
-- Locked transfer mode and immutable evidence ledger.
-- Creator compile/review UI, deterministic replay, judge reset, and Playwright judge-path coverage.
-- Deployment evidence, live GPT-5.6 evals, final README, demo video, and Devpost artifacts.
-
-## Submission risks
-
-1. The planning headline “prove you understood it” is stronger than a single near-transfer observation supports.
-2. The default GitHub branch is still `claude/eloquent-allen-d54lbo`, although it points to the same commit as `main`.
-3. The six-page demo PDF is described as five pages in one planning document.
-4. Build Week rules and dates in the archive are a secondary snapshot and must be rechecked before submission.
-5. No live GPT-5.6 structured-output, latency, cost, refusal, or leak-rate result exists yet.
+Museion currently demonstrates a credible, source-grounded binary-search golden replay. It does not yet demonstrate that an arbitrary uploaded source becomes a course, that Maia acts inside the Judge runtime, that sessions survive serverless instance changes, or that GPT-5.6 passed the live red-team suite. Public copy must preserve those distinctions.

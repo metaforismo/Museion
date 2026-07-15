@@ -1,4 +1,4 @@
-import { SourceIngestionError } from "./limits";
+import { MAX_SOURCE_PAGES, SourceIngestionError } from "./limits";
 
 const PDF_WORKER_URL = new URL(
   "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
@@ -8,6 +8,7 @@ const PDF_WORKER_URL = new URL(
 export async function extractSelectablePdfPages(
   bytes: Uint8Array,
 ): Promise<string[]> {
+  let destroyLoadingTask: (() => Promise<void>) | null = null;
   try {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     if (typeof window !== "undefined") {
@@ -17,25 +18,35 @@ export async function extractSelectablePdfPages(
       data: bytes.slice(),
       useSystemFonts: true,
     });
+    destroyLoadingTask = () => loadingTask.destroy();
     const pdf = await loadingTask.promise;
+    if (pdf.numPages > MAX_SOURCE_PAGES) {
+      throw new SourceIngestionError(
+        "too_many_pages",
+        `PDF exceeds the ${MAX_SOURCE_PAGES}-page limit`,
+        { pageCount: pdf.numPages, maxPages: MAX_SOURCE_PAGES },
+      );
+    }
     const pages: string[] = [];
 
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
-      const content = await page.getTextContent();
-      let text = "";
-      for (const item of content.items) {
-        if (!("str" in item)) continue;
-        const fragment = item.str;
-        if (!fragment) continue;
-        if (text && !text.endsWith("\n") && !/^\s/.test(fragment)) text += " ";
-        text += fragment;
-        if (item.hasEOL) text += "\n";
+      try {
+        const content = await page.getTextContent();
+        let text = "";
+        for (const item of content.items) {
+          if (!("str" in item)) continue;
+          const fragment = item.str;
+          if (!fragment) continue;
+          if (text && !text.endsWith("\n") && !/^\s/.test(fragment)) text += " ";
+          text += fragment;
+          if (item.hasEOL) text += "\n";
+        }
+        pages.push(text);
+      } finally {
+        page.cleanup();
       }
-      pages.push(text);
-      page.cleanup();
     }
-    await loadingTask.destroy();
     return pages;
   } catch (error) {
     if (error instanceof SourceIngestionError) throw error;
@@ -44,5 +55,7 @@ export async function extractSelectablePdfPages(
       "The PDF could not be parsed as a selectable-text document.",
       { errorName: error instanceof Error ? error.name : "UnknownError" },
     );
+  } finally {
+    await destroyLoadingTask?.().catch(() => undefined);
   }
 }

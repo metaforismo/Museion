@@ -64,6 +64,18 @@ describe("compiler boundary contracts", () => {
     ).toThrow();
   });
 
+  it("turns a declared blocking source warning into a compiler issue", async () => {
+    const document = SourceDocumentSchema.parse(goldenDocumentJson);
+    const graph = structuredClone(SourceGraphSchema.parse(goldenGraphJson));
+    graph.warnings.push({
+      code: "insufficient_evidence",
+      message: "The requested objective is not supported by this source.",
+      spanIds: [],
+      blocking: true,
+    });
+    expect((await validateSourceGraph(document, graph)).map((issue) => issue.code)).toContain("blocking_source_warning");
+  });
+
   it("validates the checked-in six-page golden Source Graph end to end", async () => {
     const document = SourceDocumentSchema.parse(goldenDocumentJson);
     const graph = SourceGraphSchema.parse(goldenGraphJson);

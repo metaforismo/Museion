@@ -1,4 +1,6 @@
-# Planning Document / Repository Comparison
+# Historical Planning Document / Repository Comparison
+
+This comparison records the pre-implementation baseline and is not a current status report. Use `CURRENT_PROJECT_STATUS.md` for the reconciled state on `main`.
 
 Planning sources are archived read-only in `../docsdoneforplanning/` outside this checkout. Repository and runtime evidence take precedence.
 

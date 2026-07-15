@@ -104,6 +104,8 @@ export const StateTraceBlockSchema = z
     target: z.number(),
     initialState: TraceStateSchema.omit({ comparison: true }),
     expectedStates: z.array(TraceStateSchema).min(1).max(20),
+    midpointPolicy: z.enum(["floor", "ceiling"]),
+    terminalCondition: z.enum(["found", "absent"]),
     responseMode: z.enum(["predict-next-state", "fill-state-table"]),
   })
   .strict();
@@ -179,18 +181,27 @@ export const CourseArtifactV2Schema = z
   .strict();
 
 export type CourseArtifactV2 = z.infer<typeof CourseArtifactV2Schema>;
+export const GeneratedCourseCandidateSchema = CourseArtifactV2Schema.omit({ validation: true, provenance: true }).strict();
+export type GeneratedCourseCandidate = z.infer<typeof GeneratedCourseCandidateSchema>;
 export type LearningBlock = z.infer<typeof LearningBlockSchema>;
 
 export interface ArtifactIssue {
-  code: "record_key_mismatch" | "dangling_reference" | "citation_not_found" | "invalid_answer_spec" | "missing_transfer" | "invalid_source_provenance";
+  code: "record_key_mismatch" | "dangling_reference" | "citation_not_found" | "missing_citation" | "invalid_answer_spec" | "missing_transfer" | "invalid_source_provenance" | "source_id_mismatch" | "source_hash_mismatch" | "source_graph_hash_mismatch";
   path: string;
   message: string;
   severity: "blocking";
 }
 
+export interface ArtifactSourceBinding {
+  sourceId: string;
+  sourceSha256: string;
+  sourceGraphSha256: string;
+}
+
 export function validateArtifactReferences(
   artifact: CourseArtifactV2,
   knownSpanIds: ReadonlySet<string>,
+  binding?: ArtifactSourceBinding,
 ): ArtifactIssue[] {
   const issues: ArtifactIssue[] = [];
   const objectiveIds = new Set(artifact.objectives.map((item) => item.id));
@@ -199,6 +210,11 @@ export function validateArtifactReferences(
   const misconceptionIds = new Set(Object.keys(artifact.misconceptions));
   if ((artifact.source.origin === "source_graph") !== (artifact.source.sourceGraphSha256 !== null)) {
     issues.push({ code: "invalid_source_provenance", path: "source.sourceGraphSha256", message: "Only source-graph artifacts may carry a Source Graph hash", severity: "blocking" });
+  }
+  if (artifact.source.origin === "source_graph" && binding) {
+    if (artifact.source.sourceId !== binding.sourceId) issues.push({ code: "source_id_mismatch", path: "source.sourceId", message: "Artifact source id does not match the validated document", severity: "blocking" });
+    if (artifact.source.sourceSha256 !== binding.sourceSha256) issues.push({ code: "source_hash_mismatch", path: "source.sourceSha256", message: "Artifact source hash does not match the validated document", severity: "blocking" });
+    if (artifact.source.sourceGraphSha256 !== binding.sourceGraphSha256) issues.push({ code: "source_graph_hash_mismatch", path: "source.sourceGraphSha256", message: "Artifact Source Graph hash does not match the validated graph", severity: "blocking" });
   }
   for (const [key, value] of [...Object.entries(artifact.blocks), ...Object.entries(artifact.answerSpecs), ...Object.entries(artifact.misconceptions)]) {
     if (key !== value.id) issues.push({ code: "record_key_mismatch", path: key, message: `Record key ${key} does not match id ${value.id}`, severity: "blocking" });
@@ -222,6 +238,9 @@ export function validateArtifactReferences(
     });
   });
   for (const [blockId, block] of Object.entries(artifact.blocks)) {
+    if (artifact.source.origin === "source_graph" && block.citations.length === 0) {
+      issues.push({ code: "missing_citation", path: `blocks.${blockId}.citations`, message: "Every source-grounded block requires at least one validated citation", severity: "blocking" });
+    }
     block.objectiveIds.forEach((id) => {
       if (!objectiveIds.has(id)) issues.push({ code: "dangling_reference", path: `blocks.${blockId}.objectiveIds`, message: `Unknown objective ${id}`, severity: "blocking" });
     });
@@ -258,5 +277,8 @@ export function validateArtifactReferences(
   artifact.transferBlockIds.forEach((id) => {
     if (artifact.blocks[id]?.kind !== "transfer-challenge") issues.push({ code: "missing_transfer", path: "transferBlockIds", message: `${id} is not a transfer challenge`, severity: "blocking" });
   });
+  if (artifact.source.origin === "source_graph" && artifact.transferBlockIds.length === 0) {
+    issues.push({ code: "missing_transfer", path: "transferBlockIds", message: "Source-grounded artifacts require at least one transfer challenge", severity: "blocking" });
+  }
   return issues;
 }

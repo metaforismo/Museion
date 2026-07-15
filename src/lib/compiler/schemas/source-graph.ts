@@ -77,7 +77,7 @@ export const SourceGraphSchema = z
 export type SourceGraph = z.infer<typeof SourceGraphSchema>;
 
 export interface GraphIssue {
-  code: "source_mismatch" | "invalid_span" | "unknown_span" | "unknown_concept" | "duplicate_id";
+  code: "source_mismatch" | "invalid_span" | "unknown_span" | "unknown_concept" | "duplicate_id" | "blocking_source_warning";
   path: string;
   message: string;
   blocking: true;
@@ -144,6 +144,9 @@ export async function validateSourceGraph(
     }
   });
   graph.warnings.forEach((warning, warningIndex) => {
+    if (warning.blocking) {
+      issues.push({ code: "blocking_source_warning", path: `warnings[${warningIndex}]`, message: warning.message, blocking: true });
+    }
     warning.spanIds.forEach((spanId, spanIndex) => {
       if (!spanIds.has(spanId)) {
         issues.push({ code: "unknown_span", path: `warnings[${warningIndex}].spanIds[${spanIndex}]`, message: `Unknown span ${spanId}`, blocking: true });

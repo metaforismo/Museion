@@ -7,6 +7,8 @@ export interface RuntimeValidationIssue {
 }
 
 const comparison = (value: number, target: number) => value < target ? "less" : value > target ? "greater" : "equal";
+const midpoint = (low: number, high: number, policy: "floor" | "ceiling") =>
+  policy === "floor" ? low + Math.floor((high - low) / 2) : low + Math.ceil((high - low) / 2);
 
 export function validateInteractiveBlock(block: InteractiveBlock): RuntimeValidationIssue[] {
   const issues: RuntimeValidationIssue[] = [];
@@ -15,7 +17,7 @@ export function validateInteractiveBlock(block: InteractiveBlock): RuntimeValida
   }
   if (block.kind === "sequence-builder") {
     const ids = block.items.map((item) => item.id);
-    if (new Set(ids).size !== ids.length || block.correctOrder.length !== ids.length || block.correctOrder.some((id) => !ids.includes(id))) {
+    if (new Set(ids).size !== ids.length || block.correctOrder.length !== ids.length || new Set(block.correctOrder).size !== ids.length || block.correctOrder.some((id) => !ids.includes(id))) {
       issues.push({ code: "invalid_order", path: "correctOrder", message: "Correct order must contain every unique item exactly once." });
     }
   }
@@ -27,7 +29,7 @@ export function validateInteractiveBlock(block: InteractiveBlock): RuntimeValida
     if (low > high || high >= block.values.length) issues.push({ code: "invalid_bounds", path: "initialState", message: "Initial inclusive bounds are outside the values array." });
     let steps = 0;
     while (!issues.length && low <= high && steps <= block.values.length) {
-      const mid = block.midpointPolicy === "floor" ? low + Math.floor((high - low) / 2) : low + Math.ceil((high - low) / 2);
+      const mid = midpoint(low, high, block.midpointPolicy);
       const value = block.values[mid];
       if (value === block.target) break;
       if (value < block.target) low = mid + 1;
@@ -38,18 +40,30 @@ export function validateInteractiveBlock(block: InteractiveBlock): RuntimeValida
   }
   if (block.kind === "state-trace") {
     const expected = block.expectedStates;
+    if (expected.length < 2) {
+      issues.push({ code: "invalid_trace", path: "expectedStates", message: "A predictive trace requires at least one state transition." });
+    }
     if (!expected.length || expected[0].low !== block.initialState.low || expected[0].high !== block.initialState.high || expected[0].mid !== block.initialState.mid) {
       issues.push({ code: "invalid_trace", path: "expectedStates[0]", message: "Trace must begin at initialState." });
     }
     for (let index = 0; index < expected.length; index += 1) {
       const state = expected[index];
-      if (state.mid < state.low || state.mid > state.high || state.high >= block.values.length || comparison(block.values[state.mid], block.target) !== state.comparison) {
+      if (state.step !== index || state.mid < state.low || state.mid > state.high || state.high >= block.values.length || state.mid !== midpoint(state.low, state.high, block.midpointPolicy) || comparison(block.values[state.mid], block.target) !== state.comparison) {
         issues.push({ code: "invalid_trace", path: `expectedStates[${index}]`, message: "Trace comparison or bounds are inconsistent with the values." });
         continue;
       }
       const next = expected[index + 1];
       if (next && (state.comparison === "equal" || (state.comparison === "less" ? next.low !== state.mid + 1 || next.high !== state.high : next.high !== state.mid - 1 || next.low !== state.low))) {
         issues.push({ code: "invalid_trace", path: `expectedStates[${index + 1}]`, message: "Trace does not move the required boundary past mid." });
+      }
+    }
+    const last = expected.at(-1);
+    if (last) {
+      const nextLow = last.comparison === "less" ? last.mid + 1 : last.low;
+      const nextHigh = last.comparison === "greater" ? last.mid - 1 : last.high;
+      const actualTerminal = last.comparison === "equal" ? "found" : nextLow > nextHigh ? "absent" : null;
+      if (actualTerminal !== block.terminalCondition) {
+        issues.push({ code: "invalid_trace", path: "terminalCondition", message: "The final trace state does not prove the declared terminal condition." });
       }
     }
   }

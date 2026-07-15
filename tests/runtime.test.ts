@@ -68,4 +68,16 @@ describe("typed deterministic runtime", () => {
     const prediction = block("prediction-choice");
     expect(reduceBlock(prediction, initializeBlock(prediction), { kind: "execute_javascript", code: "alert(1)" }).accepted).toBe(false);
   });
+
+  it("rejects a sequence order that duplicates one item and omits another", () => {
+    const sequence = structuredClone(block("sequence-builder"));
+    sequence.correctOrder = sequence.correctOrder.map((id, index) => index === 1 ? sequence.correctOrder[0] : id);
+    expect(validateInteractiveBlock(sequence).map((issue) => issue.code)).toContain("invalid_order");
+  });
+
+  it("requires a predictive trace to prove its declared terminal condition", () => {
+    const trace = structuredClone(block("state-trace"));
+    trace.expectedStates = trace.expectedStates.slice(0, 1);
+    expect(validateInteractiveBlock(trace).map((issue) => issue.code)).toContain("invalid_trace");
+  });
 });

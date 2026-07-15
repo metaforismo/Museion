@@ -87,6 +87,8 @@ const blocks = {
       { step: 1, low: 0, high: 1, mid: 0, comparison: "less" },
       { step: 2, low: 1, high: 1, mid: 1, comparison: "less" },
     ],
+    midpointPolicy: "floor",
+    terminalCondition: "absent",
     responseMode: "predict-next-state",
   },
   sequence_reasoning: {

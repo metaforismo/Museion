@@ -56,6 +56,11 @@ This is the execution ledger for the complete binary-search judge slice. A check
 - [x] Record requested/resolved model, prompt/schema versions, usage, duration, input hash, and output hash.
 - [x] Permit exactly one typed patch repair after critic/validation failure.
 - [x] Re-run the entire validator stack after repair.
+- [x] Treat blocking Source Graph warnings as compiler-stopping issues.
+- [x] Bind artifact source id, document hash, and Source Graph hash deterministically.
+- [x] Require citations and transfer coverage for source-grounded artifacts.
+- [x] Make artifact validation and provenance server-owned rather than provider-authored.
+- [x] Run interactive runtime validators before critic acceptance and after repair.
 - [x] Never publish a partially valid artifact.
 - [x] Return stage telemetry and a sanitized fail-closed error instead of a partial artifact.
 - [x] Make deterministic golden replay visibly distinct from live compilation.
@@ -76,6 +81,8 @@ This is the execution ledger for the complete binary-search judge slice. A check
 
 ## F. Maia environment actions
 
+The contracts below are implemented internally. Visible Judge integration remains explicitly open.
+
 - [x] Expose only the versioned public runtime snapshot to Maia.
 - [x] Include last learner action and deterministic misconception identifier.
 - [x] Issue allowed target IDs from the runtime, never accept arbitrary selectors.
@@ -84,6 +91,9 @@ This is the execution ledger for the complete binary-search judge slice. A check
 - [x] Prevent Maia from answering, mutating state, changing score, or navigating.
 - [x] Pair every visual action contract with a textual or accessible target.
 - [x] Add a deterministic local counterexample for the binary-search off-by-one path.
+- [ ] Build a runtime tutor snapshot after an incorrect Judge outcome.
+- [ ] Call the leak-gated runtime tutor and render validated actions in the Judge.
+- [ ] Apply highlight, focus, pulse, annotation, and counterexample effects to semantic targets.
 
 ## G. Locked transfer and evidence
 
@@ -110,6 +120,7 @@ This is the execution ledger for the complete binary-search judge slice. A check
 - [x] Complete interaction, locked transfer, and evidence ledger in one route.
 - [x] Preserve useful state across refresh through an owner-bound session.
 - [x] Provide missing-key fallback, fail-closed corrupt output/timeout tests, and direct-route recovery.
+- [ ] Compile a non-golden normalized source from the Creator into a validated reviewable artifact.
 
 ## I. Verification and release evidence
 

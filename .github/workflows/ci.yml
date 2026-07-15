@@ -6,9 +6,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -23,7 +31,51 @@ jobs:
         run: npm run typecheck
       - name: Test
         run: npm test
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Golden fixture reproducibility
+        run: |
+          npm run generate:golden-source
+          npm run generate:golden-course
+          git diff --exit-code
       - name: Build
         run: npm run build
       - name: Bundle budgets
         run: npm run verify:bundle
+
+  browser:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Start production server
+        run: npm start > /tmp/museion-next.log 2>&1 &
+      - name: Wait for server
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/welcome > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/museion-next.log
+          exit 1
+      - name: WCAG, performance, keyboard, and judge browser gates
+        run: npm run verify:ui
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: museion-browser-evidence
+          path: output/playwright/smoke
+          if-no-files-found: warn
+          retention-days: 7

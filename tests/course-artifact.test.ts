@@ -14,6 +14,7 @@ import {
 import goldenArtifactJson from "./fixtures/binary-search-course-artifact-v2.json";
 import goldenBlueprintJson from "./fixtures/binary-search-blueprint.json";
 import goldenGraphJson from "./fixtures/binary-search-source-graph.json";
+import goldenDocumentJson from "./fixtures/binary-search-source-document.json";
 import replayManifestJson from "./fixtures/binary-search-replay-manifest.json";
 
 const generatedAt = "2026-07-15T00:00:00.000Z";
@@ -97,5 +98,24 @@ describe("Course Artifact v2 private/public boundary", () => {
     for (const restricted of ["answerSpecs", "solution", "hints", "correctIndex", "correctOrder", "expectedStates", "misconceptionRules"]) {
       expect(serialized).not.toContain(`\"${restricted}\"`);
     }
+  });
+
+  it("blocks uncited source-grounded blocks and a missing transfer", () => {
+    const artifact = structuredClone(CourseArtifactV2Schema.parse(goldenArtifactJson));
+    artifact.blocks.explanation_invariant.citations = [];
+    artifact.transferBlockIds = [];
+    const codes = validateArtifactReferences(artifact, new Set(Object.keys(goldenGraphJson.spans))).map((issue) => issue.code);
+    expect(codes).toContain("missing_citation");
+    expect(codes).toContain("missing_transfer");
+  });
+
+  it("binds source-grounded provenance to the validated document and graph", async () => {
+    const artifact = CourseArtifactV2Schema.parse(goldenArtifactJson);
+    const issues = validateArtifactReferences(artifact, new Set(Object.keys(goldenGraphJson.spans)), {
+      sourceId: `${goldenDocumentJson.id}_wrong`,
+      sourceSha256: "b".repeat(64),
+      sourceGraphSha256: "c".repeat(64),
+    });
+    expect(issues.map((issue) => issue.code)).toEqual(expect.arrayContaining(["source_id_mismatch", "source_hash_mismatch", "source_graph_hash_mismatch"]));
   });
 });

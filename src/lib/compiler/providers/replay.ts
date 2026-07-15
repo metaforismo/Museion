@@ -24,7 +24,12 @@ export class GoldenReplayCompilerProvider implements CompilerProvider {
     let output: unknown;
     if (stage === "source_graph") output = clone(goldenGraph);
     else if (stage === "blueprint") output = clone(goldenBlueprint);
-    else if (stage === "course_artifact") output = clone(goldenArtifact);
+    else if (stage === "course_artifact") {
+      const candidate = clone(goldenArtifact) as Record<string, unknown>;
+      delete candidate.validation;
+      delete candidate.provenance;
+      output = candidate;
+    }
     else if (stage === "critic") output = { schemaVersion: "1.0", accepted: true, issues: [] };
     else throw new Error("The accepted golden replay does not require repair");
     return {

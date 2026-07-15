@@ -12,7 +12,7 @@ import {
   type ProviderStageResult,
 } from "../contracts";
 import { CourseBlueprintSchema } from "../schemas/blueprint";
-import { CourseArtifactV2Schema } from "../schemas/course-artifact";
+import { GeneratedCourseCandidateSchema } from "../schemas/course-artifact";
 import { SourceGraphSchema } from "../schemas/source-graph";
 
 export const DEFAULT_COMPILER_MODEL = "gpt-5.6";
@@ -40,7 +40,7 @@ const SourceGraphCandidateSchema = SourceGraphSchema.omit({ spans: true }).exten
 const stageSchemas = {
   source_graph: SourceGraphCandidateSchema,
   blueprint: CourseBlueprintSchema,
-  course_artifact: CourseArtifactV2Schema,
+  course_artifact: GeneratedCourseCandidateSchema,
   critic: CriticReportSchema,
   repair: ArtifactPatchSchema,
 } satisfies Record<CompilerStage, z.ZodType>;

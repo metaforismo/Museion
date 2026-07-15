@@ -3,7 +3,7 @@
 Changes on top of the pre-Build Week baseline (`d52f867`, 2026-07-15).
 Each entry is dated and maps to the roadmap in [`TODO.md`](../TODO.md).
 
-## 2026-07-15 — Codex local extension (uncommitted)
+## 2026-07-15 — Codex Build Week implementation (published on `main`)
 
 - Added an OpenAI GPT-5.6 Responses provider behind a provider-neutral tutor contract.
 - Replaced raw token delivery with a strict Zod tutor turn buffered behind schema, UI-target, and answer-leak checks.
@@ -18,7 +18,7 @@ Each entry is dated and maps to the roadmap in [`TODO.md`](../TODO.md).
 - Added strict Source Graph, Course Blueprint, and private/public Course Artifact v2 contracts with canonical hashing, closed block kinds, semantic reference checks, and an explicit legacy-v1 adapter.
 - Added fail-closed public serialization that omits answer specifications, solutions, hints, misconception internals, expected traces, and diagnostic rules.
 
-Subsequent local work added the checked golden graph/blueprint/artifact, compiler orchestration, interactive runtime, transfer ledger, creator review, and complete judge route. No live GPT-5.6 call, hosted deployment, learning-outcome result, commit, push, PR, or submission is claimed.
+Subsequent work added the checked golden graph/blueprint/artifact, compiler orchestration, interactive runtime, transfer ledger, creator review, complete Judge route, accessibility gates, performance budgets, and compiler truth hardening. These changes are committed and published on `main`. No live GPT-5.6 result, hosted deployment, learning-outcome result, Devpost publication, or final submission is claimed.
 
 ## 2026-07-15 — Tutor hardening, self-explanation, full practice coverage
 

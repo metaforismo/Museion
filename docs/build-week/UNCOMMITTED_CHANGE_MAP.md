@@ -1,4 +1,6 @@
-# Uncommitted Change Map
+# Historical Pre-Publication Change Map
+
+This file is retained as an audit trail of the original local consolidation. The work is now committed on `main`; use Git history and `CURRENT_PROJECT_STATUS.md` for current state.
 
 This file maps local changes to the proposed future PRs. Nothing in this workspace is staged or committed.
 

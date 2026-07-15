@@ -15,7 +15,7 @@ const document = SourceDocumentSchema.parse(goldenDocument);
 
 describe("multi-stage compiler orchestrator", () => {
   it("publishes the validated keyless replay with stage hashes", async () => {
-    const result = await compileCourse(document, new GoldenReplayCompilerProvider());
+    const result = await compileCourse(document, new GoldenReplayCompilerProvider(), { now: "2026-07-15T00:00:00.000Z" });
     expect(result.mode).toBe("replay");
     expect(result.repaired).toBe(false);
     expect(result.artifact.id).toBe("binary_search_golden");
@@ -26,6 +26,26 @@ describe("multi-stage compiler orchestrator", () => {
       "critic",
     ]);
     expect(result.telemetry.every((item) => /^[a-f0-9]{64}$/.test(item.outputSha256))).toBe(true);
+    expect(result.artifact.validation).toMatchObject({ validatorVersion: "museion-artifact-validator-v2", status: "accepted", blockingIssueCount: 0 });
+    expect(result.artifact.provenance).toMatchObject({ compilerVersion: "museion-compiler-v2", model: "deterministic-replay" });
+  });
+
+  it("does not publish an artifact whose interactive runtime is invalid", async () => {
+    const replay = new GoldenReplayCompilerProvider();
+    const provider: CompilerProvider = {
+      id: "invalid-runtime",
+      mode: "replay",
+      async run(stage, input, signal) {
+        const result = await replay.run(stage, input, signal);
+        if (stage === "course_artifact") {
+          const output = structuredClone(result.output) as { blocks: Record<string, { correctOrder?: string[] }> };
+          output.blocks.sequence_reasoning.correctOrder = ["compare_mid", "compare_mid", "move_past_mid", "check_shrink"];
+          return { ...result, output };
+        }
+        return result;
+      },
+    };
+    await expect(compileCourse(document, provider)).rejects.toMatchObject({ name: "CompilerFailure", stage: "repair" });
   });
 
   it("fails closed before publish when a provider forges graph evidence", async () => {

@@ -34,13 +34,13 @@ Codex was used as the primary engineering agent on 2026-07-15 to organize planni
 - Creator review and no-login `/judge` experience with owner-bound refresh/resume and reset.
 - Offline font stacks and a patched transitive PostCSS override for reproducible builds and a zero-advisory audit.
 - A targeted redesign of the existing Tailwind/Next.js interface: active navigation, accessibility skip path, asymmetric homepage, product-route polish, legal routes, social preview, and responsive verification.
-- See `docs/build-week/UNCOMMITTED_CHANGE_MAP.md` for the exact evolving file list.
+- See `docs/build-week/UNCOMMITTED_CHANGE_MAP.md` only as a historical pre-publication file map; current state is recorded in Git history and `CURRENT_PROJECT_STATUS.md`.
 
 ## Verification
 
 - `npm run lint`: passed.
 - `npm run typecheck`: passed.
-- `npm test`: 118 passed, 8 live GPT-5.6 tests skipped.
+- `npm test`: 125 passed, 8 live GPT-5.6 tests skipped after compiler truth-hardening regressions.
 - `npm run build`: passed fully offline without the prior workspace-root or font-fetch dependency.
 - `npm run verify:ui`: legacy smoke plus complete judge flow passed 20× at 1440×1000 and once at 320×700.
 - `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities after the scoped PostCSS override.

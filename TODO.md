@@ -16,7 +16,7 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Maia tutor (OpenAI Responses API) with strict buffered turns, a pre-delivery leak gate, and deterministic offline fallback
 - [x] Lesson player UI: progress bar, answer controls per step kind, feedback, hint ladder
 - [x] Maia side panel: chat, quick suggestions, "ask Maia why" after a wrong answer
-- [x] CI workflow (lint + test + build) with manual dispatch
+- [x] CI workflow with lint, typecheck, tests, production audit, reproducible fixtures, build, bundle budgets, and browser gates
 
 ## v0.2.x — Content, learning loop, story ✅
 
@@ -63,10 +63,14 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Canonical Source Graph and citation contracts
 - [x] Course Blueprint and public/private Course Artifact v2 contract, closed block registry, and v1 adapter
 - [x] Multi-stage GPT-5.6 compiler with typed repair and keyless golden replay
-- [x] Typed deterministic interactive blocks and bounded Maia UI actions
+- [x] Compiler truth hardening: blocking warnings, provenance binding, server-owned reports, citation/transfer gates, runtime validation
+- [x] Typed deterministic interactive blocks and bounded Maia UI-action contracts
 - [x] Locked near-transfer task and versioned evidence ledger
 - [x] Complete local judge path and 20/20 clean-browser runs
 - [x] Deployment and submission drafts with measured claims
+- [ ] Wire bounded Maia observations/actions into the visible Judge runtime
+- [ ] Compile a non-golden Creator source into a validated reviewable course
+- [ ] Replace process-local session maps with deployment-safe state
 - [ ] Hosted deployment verification and final submission (explicit authorization required)
 
 ## v0.5 — Content & exercise depth

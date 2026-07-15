@@ -1,6 +1,6 @@
 # Build Week Execution Plan
 
-Nine future PR-sized goals are proposed. Local work remains uncommitted and is mapped in `UNCOMMITTED_CHANGE_MAP.md`.
+This is the historical nine-goal Build Week plan, reconciled with `main` on 2026-07-15. Statuses distinguish visible golden-replay behavior from internal-only modules and missing live/deployment evidence.
 
 ## 1. Reproducible and honest baseline
 
@@ -58,7 +58,7 @@ Nine future PR-sized goals are proposed. Local work remains uncommitted and is m
 
 ## 5. Multi-stage binary-search compiler and replay artifact
 
-**Priority/status:** P0, pending, submission required.
+**Priority/status:** P0, implemented internally and verified for the golden replay; not wired to arbitrary creator sources.
 **Objective:** compile the golden source without manual JSON editing and save a deterministic judge replay.
 **Scope:** Source Graph candidate, deterministic span resolution, blueprint, misconception/interaction plan, content/answers, transfer candidate, validators, critic, one typed repair, stage telemetry and checked-in golden artifact.
 **Non-goals:** arbitrary-domain reliability or database-backed runs.
@@ -70,7 +70,7 @@ Nine future PR-sized goals are proposed. Local work remains uncommitted and is m
 
 ## 6. Typed deterministic interactive runtime
 
-**Priority/status:** P0, pending, submission required.
+**Priority/status:** P0, visible and verified in the golden Judge replay.
 **Objective:** execute PredictionChoice, RangeExplorer, StateTrace, and SequenceBuilder through registered pure reducers.
 **Scope:** schemas, reducers, reachability/termination validators, answer evaluators, keyboard/text equivalents, public/private state.
 **Non-goals:** model-generated React or additional block families.
@@ -83,7 +83,7 @@ Nine future PR-sized goals are proposed. Local work remains uncommitted and is m
 
 ## 7. Maia environment observation and bounded actions
 
-**Priority/status:** P1, pending, submission required.
+**Priority/status:** P0, contracts and deterministic counterexample implemented internally; not wired into the visible Judge experience.
 **Objective:** let Maia respond to the exact interactive state without owning state transitions.
 **Scope:** versioned snapshot, last action, deterministic misconception, allowed target list, highlight/focus/pulse/annotation actions, target/action validation and local counterexample.
 **Non-goals:** arbitrary DOM selectors, score changes, answer filling, navigation.
@@ -94,7 +94,7 @@ Nine future PR-sized goals are proposed. Local work remains uncommitted and is m
 
 ## 8. Locked transfer and evidence ledger
 
-**Priority/status:** P0, pending, submission required.
+**Priority/status:** P0, visible for one locked golden near-transfer observation; Evidence v2 remains pending.
 **Objective:** record one honest unassisted near-transfer observation instead of a mastery percentage.
 **Scope:** transfer lockout, unseen case, deterministic score, immutable versioned events/evidence, assistance counters, evidence summary statements and citations.
 **Non-goals:** durable psychometrics, delayed scheduler, far-transfer proof.
@@ -106,7 +106,7 @@ Nine future PR-sized goals are proposed. Local work remains uncommitted and is m
 
 ## 9. Creator review, judge path, E2E, deployment, and submission docs
 
-**Priority/status:** P0, pending, submission required.
+**Priority/status:** P0, golden creator review and Judge are visible and locally verified; arbitrary compile, hosted deployment, live eval, and submission remain pending.
 **Objective:** make the complete slice understandable and reproducible in under three minutes.
 **Scope:** source/sample input, compile progress, concepts/citations/issues review, launch, live/replay badge, reset, no-login sample, Playwright desktop/mobile path, error states, README/evals/Codex usage/build log, deployment verification.
 **Non-goals:** auth, dashboards, broad catalog redesign.

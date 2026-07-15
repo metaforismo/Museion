@@ -51,7 +51,7 @@ export default function HomePage() {
 
       <section className="border-y border-ink/10 bg-surface/65">
         <div className="mx-auto grid w-full max-w-6xl gap-px bg-ink/10 sm:grid-cols-3">
-          {[{ value: "118", label: "offline tests passed" }, { value: "20/20", label: "clean desktop judge runs" }, { value: "0", label: "known dependency vulnerabilities" }].map((metric) => <div key={metric.label} className="bg-surface/95 px-6 py-7 text-center sm:text-left"><p className="tabular-nums font-display text-3xl font-semibold tracking-tight">{metric.value}</p><p className="mt-1 text-sm text-ink-soft">{metric.label}</p></div>)}
+          {[{ value: "125", label: "offline tests passed" }, { value: "20/20", label: "clean desktop judge runs" }, { value: "0", label: "known dependency vulnerabilities" }].map((metric) => <div key={metric.label} className="bg-surface/95 px-6 py-7 text-center sm:text-left"><p className="tabular-nums font-display text-3xl font-semibold tracking-tight">{metric.value}</p><p className="mt-1 text-sm text-ink-soft">{metric.label}</p></div>)}
         </div>
       </section>
 

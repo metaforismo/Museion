@@ -1,4 +1,5 @@
 import type { SourceDocument } from "@/lib/source";
+import { validateInteractiveBlock, type InteractiveBlock } from "@/lib/runtime";
 
 import { canonicalSha256 } from "./canonical";
 import {
@@ -12,6 +13,7 @@ import {
 import { CourseBlueprintSchema, type CourseBlueprint } from "./schemas/blueprint";
 import {
   CourseArtifactV2Schema,
+  GeneratedCourseCandidateSchema,
   type CourseArtifactV2,
   validateArtifactReferences,
 } from "./schemas/course-artifact";
@@ -63,7 +65,7 @@ function applyPatch(artifact: CourseArtifactV2, patch: ReturnType<typeof Artifac
 export async function compileCourse(
   document: SourceDocument,
   provider: CompilerProvider,
-  options: { timeoutMs?: number } = {},
+  options: { timeoutMs?: number; now?: string } = {},
 ): Promise<CompileResult> {
   const timeoutMs = options.timeoutMs ?? 20_000;
   const telemetry: CompilerStageTelemetry[] = [];
@@ -132,13 +134,40 @@ export async function compileCourse(
   });
   if (blueprintIssues.length) throw new CompilerFailure("blueprint", blueprintIssues, telemetry);
 
-  let artifact = CourseArtifactV2Schema.parse(
+  const candidate = GeneratedCourseCandidateSchema.parse(
     await runStage("course_artifact", { schemaVersion: "1.0", document: { id: document.id, sha256: document.sha256 }, sourceGraph: graph, blueprint }),
   );
+  const generatedAt = options.now ?? new Date().toISOString();
+  const artifactStage = telemetry.at(-1);
+  const generationRunId = `run_${(await canonicalSha256({ documentSha256: document.sha256, graphSha256, candidate, provider: provider.id })).slice(0, 24)}`;
+  let artifact = CourseArtifactV2Schema.parse({
+    ...candidate,
+    validation: { validatorVersion: "museion-artifact-validator-v2", status: "needs-review", blockingIssueCount: 0, warningCount: 0, validatedAt: generatedAt },
+    provenance: {
+      compilerVersion: "museion-compiler-v2",
+      promptBundleVersion: "museion-compiler-prompts-v1",
+      model: artifactStage?.resolvedModel ?? provider.id,
+      generatedAt,
+      deterministicSeed: document.sha256.slice(0, 16),
+      generationRunId,
+    },
+  });
   const knownSpanIds = new Set(Object.keys(graph.spans));
-  const validateArtifact = () => validateArtifactReferences(artifact, knownSpanIds).map((issue) => ({ ...issue, code: issue.code })) satisfies CompilerIssue[];
+  const validateArtifact = () => {
+    const referenceIssues = validateArtifactReferences(artifact, knownSpanIds, {
+      sourceId: document.id,
+      sourceSha256: document.sha256,
+      sourceGraphSha256: graphSha256,
+    }).map((issue) => ({ ...issue, code: issue.code })) satisfies CompilerIssue[];
+    const runtimeIssues = Object.entries(artifact.blocks).flatMap(([blockId, block]) =>
+      ["prediction-choice", "sequence-builder", "range-explorer", "state-trace"].includes(block.kind)
+        ? validateInteractiveBlock(block as InteractiveBlock).map((issue) => blocking(issue.code, `blocks.${blockId}.${issue.path}`, issue.message))
+        : [],
+    );
+    return [...referenceIssues, ...runtimeIssues];
+  };
   let artifactIssues = validateArtifact();
-  const critic = CriticReportSchema.parse(
+  let critic = CriticReportSchema.parse(
     await runStage("critic", { schemaVersion: "1.0", sourceGraph: graph, blueprint, artifact, validatorIssues: artifactIssues }),
   );
   let combinedIssues = [...artifactIssues, ...critic.issues.filter((issue) => issue.severity === "blocking")];
@@ -162,7 +191,18 @@ export async function compileCourse(
     if (combinedIssues.length || !secondCritic.accepted) {
       throw new CompilerFailure("critic_after_repair", combinedIssues.length ? combinedIssues : [blocking("critic_rejected", "$", "Critic rejected the repaired artifact")], telemetry);
     }
+    critic = secondCritic;
   }
 
+  artifact = CourseArtifactV2Schema.parse({
+    ...artifact,
+    validation: {
+      validatorVersion: "museion-artifact-validator-v2",
+      status: "accepted",
+      blockingIssueCount: 0,
+      warningCount: critic.issues.filter((issue) => issue.severity === "warning").length,
+      validatedAt: generatedAt,
+    },
+  });
   return { mode: provider.mode, sourceGraph: graph, blueprint, artifact, telemetry, repaired };
 }
