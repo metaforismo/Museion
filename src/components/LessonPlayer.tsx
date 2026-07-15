@@ -12,6 +12,10 @@ import type {
   SessionStateResponse,
   SessionStats,
 } from "@/lib/api-types";
+import {
+  fetchWithTimeout,
+  RequestTimeoutError,
+} from "@/lib/client/fetch-with-timeout";
 import { sessionStorageKey } from "@/lib/client/storage";
 import type { PublicLesson, PublicStep } from "@/lib/content/types";
 
@@ -20,7 +24,18 @@ type Feedback =
   | { kind: "wrong"; attempts: number }
   | null;
 
-type PendingAction = "answer" | "advance" | "hint" | null;
+type PendingAction = "answer" | "advance" | "hint" | "recover" | null;
+
+interface MutationCommand {
+  expectedStepId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+}
+
+type RetryableMutation =
+  | ({ kind: "answer"; answer: string } & MutationCommand)
+  | ({ kind: "advance" } & MutationCommand)
+  | ({ kind: "hint" } & MutationCommand);
 
 const ASK_WHY_MESSAGE =
   "I just answered wrong and I'm not sure why. Can you help me see it?";
@@ -51,7 +66,7 @@ function createSessionOnce(
   const pending = pendingSessionCreations.get(storeKey);
   if (pending) return pending;
 
-  const creation = fetch("/api/sessions", {
+  const creation = fetchWithTimeout("/api/sessions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ lessonId, mode }),
@@ -83,6 +98,8 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const [busy, setBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [retryMutation, setRetryMutation] = useState<RetryableMutation | null>(null);
+  const [recoveryNeeded, setRecoveryNeeded] = useState(false);
   const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
@@ -94,7 +111,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     actionInFlight.current = true;
     setBusy(true);
     setPendingAction(action);
-    setRequestError(null);
+    if (action !== "recover") setRequestError(null);
     return true;
   }, []);
 
@@ -127,6 +144,9 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     setHints(state.revealedHints);
     setInitialChat(state.chatHistory);
     setSessionId(state.sessionId);
+    setRequestError(null);
+    setRetryMutation(null);
+    setRecoveryNeeded(false);
   }, []);
 
   // Open a session: resume from localStorage when the server still
@@ -150,7 +170,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
       try {
         const saved = localStorage.getItem(storeKey);
         if (saved) {
-          const res = await fetch(`/api/sessions/${saved}`);
+          const res = await fetchWithTimeout(`/api/sessions/${saved}`);
           if (res.ok) {
             const state = (await res.json()) as SessionStateResponse;
             if (!cancelled) applyState(state);
@@ -177,20 +197,36 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const step: PublicStep | undefined = activeLesson.steps[stepIndex];
 
   const submitAnswer = useCallback(
-    async (answer: string) => {
+    async (answer: string, retry?: Extract<RetryableMutation, { kind: "answer" }>) => {
       if (!sessionId || !step || !beginAction("answer")) return;
+      const mutation: Extract<RetryableMutation, { kind: "answer" }> = retry ?? {
+        kind: "answer",
+        answer,
+        expectedStepId: step.id,
+        expectedVersion: sessionVersion,
+        idempotencyKey: crypto.randomUUID(),
+      };
       try {
-        const res = await fetch(`/api/sessions/${sessionId}/answer`, {
+        const res = await fetchWithTimeout(`/api/sessions/${sessionId}/answer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answer, expectedStepId: step.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
+          body: JSON.stringify({
+            answer: mutation.answer,
+            expectedStepId: mutation.expectedStepId,
+            expectedVersion: mutation.expectedVersion,
+            idempotencyKey: mutation.idempotencyKey,
+          }),
         });
         if (!res.ok) {
           const failure = await res.json().catch(() => null);
           setRequestError(failure?.error ?? "The answer could not be checked.");
+          setRetryMutation(res.status >= 500 ? mutation : null);
+          setRecoveryNeeded(res.status === 404 || res.status === 409 || res.status >= 500);
           return;
         }
         const outcome = (await res.json()) as AnswerResponse;
+        setRetryMutation(null);
+        setRecoveryNeeded(false);
         setSessionVersion(outcome.sessionVersion);
         if (outcome.correct) {
           setFeedback({
@@ -203,8 +239,14 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
           setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep });
           setShakeTick((t) => t + 1);
         }
-      } catch {
-        setRequestError("The answer could not be checked because the connection failed. Your response was not lost; try again.");
+      } catch (error) {
+        setRetryMutation(mutation);
+        setRecoveryNeeded(true);
+        setRequestError(
+          error instanceof RequestTimeoutError
+            ? "Checking the answer timed out. The server may still have accepted it."
+            : "The connection ended before Museion could confirm the answer.",
+        );
       } finally {
         finishAction();
       }
@@ -212,47 +254,81 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     [beginAction, finishAction, sessionId, sessionVersion, step],
   );
 
-  const advance = useCallback(async () => {
+  const advance = useCallback(async (retry?: Extract<RetryableMutation, { kind: "advance" }>) => {
     if (!sessionId || !step || !beginAction("advance")) return;
+    const mutation: Extract<RetryableMutation, { kind: "advance" }> = retry ?? {
+      kind: "advance",
+      expectedStepId: step.id,
+      expectedVersion: sessionVersion,
+      idempotencyKey: crypto.randomUUID(),
+    };
     // A deferred Maia message belongs to the step being left. Invalidate it
     // immediately instead of waiting for the server response and next render.
     setOutbox(null);
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/advance`, {
+      const response = await fetchWithTimeout(`/api/sessions/${sessionId}/advance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedStepId: step.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
+        body: JSON.stringify({
+          expectedStepId: mutation.expectedStepId,
+          expectedVersion: mutation.expectedVersion,
+          idempotencyKey: mutation.idempotencyKey,
+        }),
       });
       if (!response.ok) {
         const failure = await response.json().catch(() => null);
         setRequestError(failure?.error ?? "The next step could not be opened.");
+        setRetryMutation(response.status >= 500 ? mutation : null);
+        setRecoveryNeeded(response.status === 404 || response.status === 409 || response.status >= 500);
         return;
       }
+      setRetryMutation(null);
+      setRecoveryNeeded(false);
       applyState((await response.json()) as SessionStateResponse);
       setFeedback(null);
       setShowSolution(false);
       setHintNote(null);
-    } catch {
-      setRequestError("The next step could not be opened because the connection failed. Try again.");
+    } catch (error) {
+      setRetryMutation(mutation);
+      setRecoveryNeeded(true);
+      setRequestError(
+        error instanceof RequestTimeoutError
+          ? "Opening the next step timed out. The server may already have advanced."
+          : "The connection ended before Museion could confirm the next step.",
+      );
     } finally {
       finishAction();
     }
   }, [applyState, beginAction, finishAction, sessionId, sessionVersion, step]);
 
-  const requestHint = useCallback(async () => {
+  const requestHint = useCallback(async (retry?: Extract<RetryableMutation, { kind: "hint" }>) => {
     if (!sessionId || !step || !beginAction("hint")) return;
+    const mutation: Extract<RetryableMutation, { kind: "hint" }> = retry ?? {
+      kind: "hint",
+      expectedStepId: step.id,
+      expectedVersion: sessionVersion,
+      idempotencyKey: crypto.randomUUID(),
+    };
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/hint`, {
+      const res = await fetchWithTimeout(`/api/sessions/${sessionId}/hint`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedStepId: step.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
+        body: JSON.stringify({
+          expectedStepId: mutation.expectedStepId,
+          expectedVersion: mutation.expectedVersion,
+          idempotencyKey: mutation.idempotencyKey,
+        }),
       });
       if (!res.ok) {
         const failure = await res.json().catch(() => null);
         setRequestError(failure?.error ?? "The hint could not be requested.");
+        setRetryMutation(res.status >= 500 ? mutation : null);
+        setRecoveryNeeded(res.status === 404 || res.status === 409 || res.status >= 500);
         return;
       }
       const data = (await res.json()) as HintResponse;
+      setRetryMutation(null);
+      setRecoveryNeeded(false);
       setSessionVersion(data.sessionVersion);
       if (data.granted && data.hint) {
         const granted = data.hint;
@@ -261,12 +337,58 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
       } else {
         setHintNote("No more hints at your current support level — trust your reasoning, or ask Maia a question.");
       }
-    } catch {
-      setRequestError("The hint could not be requested because the connection failed. Try again.");
+    } catch (error) {
+      setRetryMutation(mutation);
+      setRecoveryNeeded(true);
+      setRequestError(
+        error instanceof RequestTimeoutError
+          ? "The hint request timed out. The server may already have revealed it."
+          : "The connection ended before Museion could confirm the hint.",
+      );
     } finally {
       finishAction();
     }
   }, [beginAction, finishAction, sessionId, sessionVersion, step]);
+
+  const retryFailedMutation = useCallback(() => {
+    if (!retryMutation) return;
+    if (retryMutation.kind === "answer") {
+      void submitAnswer(retryMutation.answer, retryMutation);
+    } else if (retryMutation.kind === "advance") {
+      void advance(retryMutation);
+    } else {
+      void requestHint(retryMutation);
+    }
+  }, [advance, requestHint, retryMutation, submitAnswer]);
+
+  const recoverSession = useCallback(async () => {
+    if (!sessionId || !beginAction("recover")) return;
+    try {
+      const response = await fetchWithTimeout(`/api/sessions/${sessionId}`);
+      if (!response.ok) {
+        setRequestError(
+          response.status === 404 || response.status === 410
+            ? "This saved session has expired. Return to the catalog to start a fresh lesson."
+            : "Museion could not recover the lesson state yet.",
+        );
+        setRetryMutation(null);
+        setRecoveryNeeded(response.status !== 404 && response.status !== 410);
+        return;
+      }
+      applyState((await response.json()) as SessionStateResponse);
+      setShowSolution(false);
+      setHintNote(null);
+    } catch (error) {
+      setRequestError(
+        error instanceof RequestTimeoutError
+          ? "State recovery timed out. Check the connection and try again."
+          : "Museion could not reach the saved lesson state.",
+      );
+      setRecoveryNeeded(true);
+    } finally {
+      finishAction();
+    }
+  }, [applyState, beginAction, finishAction, sessionId]);
 
   const restartPractice = useCallback(() => {
     localStorage.removeItem(sessionStorageKey(lesson.id, mode));
@@ -310,7 +432,35 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px]">
       <div className="min-w-0">
-        {requestError && <p role="alert" className="mb-4 rounded-lg bg-wrong-soft px-4 py-3 text-sm text-wrong">{requestError}</p>}
+        {requestError && (
+          <div role="alert" className="mb-5 border-l-2 border-wrong bg-wrong-soft/70 px-4 py-3">
+            <p className="text-sm font-medium text-wrong">{requestError}</p>
+            {(retryMutation || recoveryNeeded) && (
+              <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                {retryMutation && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={retryFailedMutation}
+                    className="min-h-11 font-semibold text-wrong underline underline-offset-4 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    Retry the same {retryMutation.kind} safely
+                  </button>
+                )}
+                {recoveryNeeded && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void recoverSession()}
+                    className="min-h-11 font-semibold text-lapis-dark underline underline-offset-4 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {pendingAction === "recover" ? "Recovering state…" : "Recover saved state"}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {/* Progress */}
         <div className="mb-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -389,7 +539,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                   </p>
                   {!complete && (
                     <button
-                      onClick={advance}
+                      onClick={() => void advance()}
                       disabled={busy}
                       className="rounded-lg bg-correct px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
                     >
@@ -445,7 +595,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                     Hint ladder
                   </span>
                   <button
-                    onClick={requestHint}
+                    onClick={() => void requestHint()}
                     disabled={busy || feedback?.kind === "correct"}
                     className="rounded-lg border border-gold bg-gold-soft px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-gold/20 disabled:opacity-50"
                   >

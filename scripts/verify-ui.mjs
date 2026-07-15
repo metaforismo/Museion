@@ -304,6 +304,72 @@ async function staleQueuedOutboxFlow() {
   await context.close();
 }
 
+async function safeMutationRetryFlow() {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  page.on("pageerror", (error) => failures.push(`safe-mutation-retry page: ${error.message}`));
+  const commands = [];
+  let answerRequests = 0;
+  await page.route("**/api/sessions/*/answer", async (route) => {
+    answerRequests += 1;
+    commands.push(JSON.parse(route.request().postData() ?? "{}"));
+    if (answerRequests === 1) {
+      await route.fetch();
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "The answer result was temporarily unavailable." }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto(`${baseURL}/lessons/linear-equations-intro`);
+  await submitTextAnswer(page, "2");
+  await expectVisible(page.getByRole("button", { name: "Retry the same answer safely" }), "safe answer retry action");
+  await expectVisible(page.getByRole("button", { name: "Recover saved state" }), "authoritative recovery action");
+  await page.getByRole("button", { name: "Retry the same answer safely" }).click();
+  await expectVisible(page.getByText("Not yet — stay with it."), "idempotent retry outcome");
+
+  if (answerRequests !== 2) failures.push(`safe mutation retry: expected 2 requests, received ${answerRequests}`);
+  if (commands[0]?.idempotencyKey !== commands[1]?.idempotencyKey) {
+    failures.push("safe mutation retry: idempotency key changed between attempts");
+  }
+  await context.close();
+}
+
+async function authoritativeRecoveryFlow() {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  page.on("pageerror", (error) => failures.push(`authoritative-recovery page: ${error.message}`));
+  let answerRequests = 0;
+  await page.route("**/api/sessions/*/answer", async (route) => {
+    answerRequests += 1;
+    if (answerRequests === 1) {
+      await route.fetch();
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "The answer result was temporarily unavailable." }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto(`${baseURL}/lessons/linear-equations-intro`);
+  await submitTextAnswer(page, "2");
+  await page.getByRole("button", { name: "Recover saved state" }).click();
+  await expectVisible(page.getByRole("button", { name: "Check" }), "answer control after state recovery");
+  await submitTextAnswer(page, "6");
+  await expectVisible(page.getByText(/Correct — nice reasoning/), "answer after authoritative recovery");
+  if (answerRequests !== 2) failures.push(`authoritative recovery: expected 2 answer requests, received ${answerRequests}`);
+  await context.close();
+}
+
 async function desktopFlow() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -607,6 +673,8 @@ try {
     await staleMaiaFlow();
     await queuedMaiaOutboxFlow();
     await staleQueuedOutboxFlow();
+    await safeMutationRetryFlow();
+    await authoritativeRecoveryFlow();
     await designSystemFlow();
     await mobileFlow();
     await performanceBudgetFlow();
