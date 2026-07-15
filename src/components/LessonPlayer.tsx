@@ -270,7 +270,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px]">
-      <div>
+      <div className="min-w-0">
         {requestError && <p role="alert" className="mb-4 rounded-lg bg-wrong-soft px-4 py-3 text-sm text-wrong">{requestError}</p>}
         {/* Progress */}
         <div className="mb-6">

@@ -104,7 +104,7 @@ export default function MaiaPanel({
   return (
     <aside
       aria-label="Maia, your tutor"
-      className="flex h-[36rem] flex-col rounded-xl border border-ink/10 bg-surface shadow-sm lg:sticky lg:top-6"
+      className="flex h-[36rem] min-w-0 flex-col rounded-xl border border-ink/10 bg-surface shadow-sm lg:sticky lg:top-6"
     >
       <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
         <span
@@ -178,7 +178,7 @@ export default function MaiaPanel({
           disabled={streaming}
           placeholder="Ask Maia…"
           aria-label="Message for Maia"
-          className="flex-1 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none transition focus:border-lapis disabled:opacity-60"
+          className="min-w-0 flex-1 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none transition focus:border-lapis disabled:opacity-60"
         />
         <button
           type="submit"
