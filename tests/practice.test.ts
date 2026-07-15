@@ -60,6 +60,7 @@ describe("practice mode", () => {
         "practice-3": "1001",
       };
       expect(session.submitAnswer(solutions[step.id]).correct).toBe(true);
+      session.advance();
     }
     expect(session.complete).toBe(true);
   });

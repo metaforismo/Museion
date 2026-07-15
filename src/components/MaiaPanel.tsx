@@ -13,10 +13,16 @@ export interface MaiaOutbox {
 
 export default function MaiaPanel({
   sessionId,
+  stepId,
+  sessionVersion,
+  onSessionVersion,
   outbox,
   initialMessages = [],
 }: {
   sessionId: string;
+  stepId: string;
+  sessionVersion: number;
+  onSessionVersion: (version: number) => void;
   outbox: MaiaOutbox | null;
   initialMessages?: ChatMessage[];
 }) {
@@ -48,7 +54,12 @@ export default function MaiaPanel({
         const res = await fetch(`/api/sessions/${sessionId}/maia`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({
+            message,
+            expectedStepId: stepId,
+            expectedVersion: sessionVersion,
+            idempotencyKey: crypto.randomUUID(),
+          }),
         });
         if (res.status === 429) {
           // The server explains WHY (burst pause vs conversation cap).
@@ -64,6 +75,7 @@ export default function MaiaPanel({
           throw new Error(`Maia request failed (${res.status})`);
         }
         const delivery = (await res.json()) as MaiaResponse;
+        onSessionVersion(delivery.sessionVersion);
         setLastAssistantMessage(delivery.turn.message);
       } catch {
         setLastAssistantMessage(
@@ -73,7 +85,7 @@ export default function MaiaPanel({
         setStreaming(false);
       }
     },
-    [sessionId, streaming],
+    [onSessionVersion, sessionId, sessionVersion, stepId, streaming],
   );
 
   // Programmatic sends from the lesson player ("ask Maia why",

@@ -8,6 +8,9 @@ This is the execution ledger for the complete binary-search judge slice. A check
 - [x] Record baseline commit, branch state, package integrity, and unsupported claims.
 - [x] Add explicit CI typecheck and deterministic Turbopack root.
 - [x] Enforce anonymous learner ownership on session routes.
+- [x] Keep the solved step authoritative until an explicit advance command.
+- [x] Guard session mutations with expected step/version and idempotency keys.
+- [x] Reject stale asynchronous Maia turns and surface recoverable request errors.
 - [x] Remove deterministic hints from practice artifacts server-side.
 - [x] Add provider-neutral Maia contracts and GPT-5.6 Responses integration.
 - [x] Buffer structured tutor turns before delivery.

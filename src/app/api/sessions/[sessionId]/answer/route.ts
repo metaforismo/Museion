@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
-import { log } from "@/lib/server/log";
 import { getOwnedSession } from "@/lib/server/session-access";
-import { getSessionLearner, recordCompletion } from "@/lib/store";
+
+const AnswerCommandSchema = z.object({
+  answer: z.string().trim().min(1).max(1_000),
+  expectedStepId: z.string().min(1).max(200),
+  expectedVersion: z.number().int().nonnegative(),
+  idempotencyKey: z.string().uuid(),
+}).strict();
 
 export async function POST(
   request: Request,
@@ -13,33 +19,17 @@ export async function POST(
   if (!session) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }
-  if (session.complete) {
-    return NextResponse.json({ error: "Lesson already complete" }, { status: 409 });
-  }
-  const body = (await request.json()) as { answer?: string };
-  if (typeof body.answer !== "string" || body.answer.trim() === "") {
-    return NextResponse.json({ error: "Missing answer" }, { status: 400 });
-  }
+  const body = AnswerCommandSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) return NextResponse.json({ error: "Invalid answer command" }, { status: 400 });
 
-  const step = session.currentStep;
-  const outcome = session.submitAnswer(body.answer);
-
-  if (outcome.lessonComplete) {
-    const learnerId = getSessionLearner(sessionId);
-    if (learnerId) {
-      // For practice the synthetic id carries a ::practice suffix —
-      // record against the original lesson.
-      const lessonId = session.lesson.id.replace(/::practice$/, "");
-      recordCompletion(learnerId, lessonId, session.mode);
-      log.info("run_completed", {
-        sessionId,
-        lessonId,
-        mode: session.mode,
-        totalAttempts: session.stats().totalAttempts,
-        hintsUsed: session.stats().hintsUsed,
-      });
-    }
+  let outcome;
+  try {
+    outcome = session.submitAnswer(body.data.answer, body.data);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Session conflict" }, { status: 409 });
   }
+  const step = session.lesson.steps.find((candidate) => candidate.id === outcome.stepId);
+  if (!step) return NextResponse.json({ error: "Session step is unavailable" }, { status: 409 });
 
   return NextResponse.json({
     ...outcome,
@@ -48,6 +38,6 @@ export async function POST(
     // a worked explanation reinforces learning once the reasoning work
     // has been done — never before.
     solution: outcome.correct ? step.solution : null,
-    stats: outcome.lessonComplete ? session.stats() : null,
+    stats: null,
   });
 }

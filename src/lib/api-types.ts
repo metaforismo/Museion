@@ -24,6 +24,11 @@ export interface SessionStateResponse {
   lesson: PublicLesson;
   complete: boolean;
   stepIndex: number;
+  currentStepId: string | null;
+  awaitingAdvance: boolean;
+  sessionVersion: number;
+  /** Post-solve state needed to resume before the explicit advance. */
+  solvedStep: { solution: string; mastery: number } | null;
   revealedHints: string[];
   chatHistory: ChatMessage[];
   stats: SessionStats;
@@ -38,6 +43,9 @@ export interface AnswerResponse {
   mastery: number;
   scaffolding: ScaffoldingLevel;
   stepIndex: number;
+  awaitingAdvance: boolean;
+  sessionVersion: number;
+  finalStepSolved: boolean;
   /** Verified worked solution — present only after a correct answer. */
   solution: string | null;
   /** Session aggregates — present only when the lesson just completed. */
@@ -48,20 +56,31 @@ export interface AnswerResponse {
 export interface HintResponse {
   hint: string | null;
   granted: boolean;
+  sessionVersion: number;
 }
 
-export type MaiaResponse = TutorDelivery;
+export type MaiaResponse = TutorDelivery & { sessionVersion: number };
 
 export function buildSessionState(
   session: LearnerSession,
   lesson: PublicLesson,
 ): SessionStateResponse {
+  const solvedStep = session.awaitingAdvance
+    ? {
+        solution: session.currentStep.solution,
+        mastery: session.mastery.mastery(session.currentStep.concept),
+      }
+    : null;
   return {
     sessionId: session.sessionId,
     mode: session.mode,
     lesson,
     complete: session.complete,
     stepIndex: session.stepIndex,
+    currentStepId: session.complete ? null : session.currentStep.id,
+    awaitingAdvance: session.awaitingAdvance,
+    sessionVersion: session.version,
+    solvedStep,
     revealedHints: session.revealedHints(),
     chatHistory: session.chatHistory,
     stats: session.stats(),

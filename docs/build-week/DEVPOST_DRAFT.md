@@ -14,7 +14,7 @@ The live compiler and tutor providers target GPT-5.6 through the Responses API w
 
 ## Measured local results
 
-- 125 offline tests passed; 8 live-model red-team cases were skipped without credentials.
+- 130 offline tests passed; 8 live-model red-team cases were skipped without credentials.
 - Production build, lint, TypeScript, and dependency audit passed; audit reported zero vulnerabilities.
 - The complete judge path passed 20 independent desktop runs and one 320 px run with no page/console/5xx errors or horizontal overflow.
 - One real six-page PDF regenerates the checked Source Document and exact citation graph deterministically.

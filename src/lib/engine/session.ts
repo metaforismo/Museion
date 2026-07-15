@@ -18,12 +18,34 @@ import { MasteryModel, type ScaffoldingLevel } from "./mastery";
 import { verify, type VerificationResult } from "./verifier";
 
 export interface StepOutcome {
+  stepId: string;
   correct: boolean;
   attemptsOnStep: number;
   lessonComplete: boolean;
   misconceptionId: string | null;
   mastery: number;
   scaffolding: ScaffoldingLevel;
+  awaitingAdvance: boolean;
+  sessionVersion: number;
+  finalStepSolved: boolean;
+}
+
+export interface MutationGuard {
+  expectedStepId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+}
+
+export interface AdvanceOutcome {
+  lessonComplete: boolean;
+  stepIndex: number;
+  sessionVersion: number;
+  replayed: boolean;
+}
+
+export interface HintOutcome {
+  hint: string | null;
+  sessionVersion: number;
 }
 
 export interface StepRecord {
@@ -74,7 +96,12 @@ export class LearnerSession {
   readonly events: SessionEvent[] = [];
   readonly chatHistory: ChatMessage[] = [];
   stepIndex = 0;
+  awaitingAdvance = false;
+  version = 0;
   private records = new Map<string, StepRecord>();
+  private answerResults = new Map<string, StepOutcome>();
+  private advanceResults = new Map<string, AdvanceOutcome>();
+  private hintResults = new Map<string, HintOutcome>();
 
   constructor(
     lesson: Lesson,
@@ -105,7 +132,20 @@ export class LearnerSession {
     return record;
   }
 
-  submitAnswer(rawAnswer: string): StepOutcome {
+  private assertGuard(guard: MutationGuard | undefined): void {
+    if (!guard) return;
+    if (guard.expectedVersion !== this.version) throw new Error("Session version conflict");
+    if (this.complete || guard.expectedStepId !== this.currentStep.id) throw new Error("Session step conflict");
+  }
+
+  assertCurrent(expectedStepId: string, expectedVersion: number): void {
+    this.assertGuard({ expectedStepId, expectedVersion, idempotencyKey: "validation-only" });
+  }
+
+  submitAnswer(rawAnswer: string, guard?: MutationGuard): StepOutcome {
+    if (guard && this.answerResults.has(guard.idempotencyKey)) return this.answerResults.get(guard.idempotencyKey)!;
+    this.assertGuard(guard);
+    if (this.awaitingAdvance) throw new Error("Advance the solved step before answering again");
     const step = this.currentStep;
     const record = this.recordFor(step);
     const result = verify(step, rawAnswer);
@@ -131,17 +171,39 @@ export class LearnerSession {
 
     if (result.correct) {
       record.completed = true;
-      this.stepIndex += 1;
+      this.awaitingAdvance = true;
     }
-
-    return {
+    this.version += 1;
+    const outcome = {
+      stepId: step.id,
       correct: result.correct,
       attemptsOnStep: record.attempts.length,
-      lessonComplete: this.complete,
+      lessonComplete: false,
       misconceptionId: result.misconception?.id ?? null,
       mastery,
       scaffolding: this.mastery.scaffoldingLevel(step.concept),
+      awaitingAdvance: this.awaitingAdvance,
+      sessionVersion: this.version,
+      finalStepSolved: result.correct && this.stepIndex === this.lesson.steps.length - 1,
     };
+    if (guard) this.answerResults.set(guard.idempotencyKey, outcome);
+    return outcome;
+  }
+
+  advance(guard?: MutationGuard): AdvanceOutcome {
+    if (guard && this.advanceResults.has(guard.idempotencyKey)) {
+      return { ...this.advanceResults.get(guard.idempotencyKey)!, replayed: true };
+    }
+    this.assertGuard(guard);
+    if (!this.awaitingAdvance) throw new Error("Current step is not solved");
+    const stepId = this.currentStep.id;
+    this.awaitingAdvance = false;
+    this.stepIndex += 1;
+    this.version += 1;
+    this.log("step_advanced", { stepId, stepIndex: this.stepIndex, sessionVersion: this.version });
+    const outcome = { lessonComplete: this.complete, stepIndex: this.stepIndex, sessionVersion: this.version, replayed: false };
+    if (guard) this.advanceResults.set(guard.idempotencyKey, outcome);
+    return outcome;
   }
 
   /**
@@ -151,7 +213,16 @@ export class LearnerSession {
    * is exhausted or mastery is high enough that the learner should push
    * through unassisted (expertise reversal).
    */
-  requestHint(): string | null {
+  requestHint(guard?: MutationGuard): string | null {
+    return this.requestHintOutcome(guard).hint;
+  }
+
+  requestHintOutcome(guard?: MutationGuard): HintOutcome {
+    if (guard && this.hintResults.has(guard.idempotencyKey)) {
+      return this.hintResults.get(guard.idempotencyKey)!;
+    }
+    this.assertGuard(guard);
+    if (this.awaitingAdvance) throw new Error("Hints are unavailable after the step is solved");
     const step = this.currentStep;
     const record = this.recordFor(step);
     const depthAllowed = Math.min(
@@ -160,12 +231,17 @@ export class LearnerSession {
     );
     if (record.hintsUsed >= depthAllowed) {
       this.log("hint_denied", { stepId: step.id, hintsUsed: record.hintsUsed });
-      return null;
+      const outcome = { hint: null, sessionVersion: this.version };
+      if (guard) this.hintResults.set(guard.idempotencyKey, outcome);
+      return outcome;
     }
     const hint = step.hints[record.hintsUsed];
     record.hintsUsed += 1;
     this.log("hint_given", { stepId: step.id, hintLevel: record.hintsUsed });
-    return hint;
+    this.version += 1;
+    const outcome = { hint, sessionVersion: this.version };
+    if (guard) this.hintResults.set(guard.idempotencyKey, outcome);
+    return outcome;
   }
 
   /** Structured lesson state injected into Maia's context. */

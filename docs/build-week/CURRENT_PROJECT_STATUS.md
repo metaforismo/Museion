@@ -22,6 +22,7 @@ Verified locally on 2026-07-15. This file is the authoritative implementation-st
 | Compiler truth hardening | Internal + golden replay | Blocking warnings, source/hash binding, citation/transfer gates, server-owned validation/provenance, runtime validators, terminal traces. |
 | Typed interactive reducers | Visible in golden replay | Prediction, range, trace, and sequence only; guided response is not rendered by Judge. |
 | Maia lesson tutor | Visible in authored lessons | GPT-5.6 live when configured; deterministic fallback otherwise. |
+| Session protocol v2 | Visible in authored lessons | Correct answers remain on the solved step until explicit advance; answer, hint, advance, and Maia commands are version/step guarded and idempotent. State is still process-local. |
 | Runtime Maia snapshot and bounded actions | Internal | Contracts, target gate, and counterexample exist; Judge does not yet render interventions. |
 | Locked unassisted transfer | Visible in golden replay | One immediate near-transfer observation, not durable mastery. |
 | Evidence ledger | Visible in golden replay | Transfer event only; guided corrections and confidence are not yet included. |
@@ -34,17 +35,16 @@ Verified locally on 2026-07-15. This file is the authoritative implementation-st
 ## Verified local gates
 
 - Strict TypeScript, ESLint, production build, bundle budgets, and production dependency audit.
-- 125 offline tests; 8 live tests skipped without credentials.
+- 130 offline tests; 8 live tests skipped without credentials.
 - axe WCAG route scans, keyboard-only Judge, route transfer/CLS budgets, desktop Judge 20/20, and 320 px mobile flow.
 - Golden Source Document, Source Graph, Blueprint, Artifact, and replay manifest regenerate without drift.
 
 ## P0 work remaining
 
-1. Session protocol v2: awaiting-advance, expected step/version, idempotency, concurrency serialization, and visible request errors.
-2. Interactive Maia in Judge: snapshot after incorrect outcomes, safe tutor turn, semantic highlight/focus/pulse/annotation, and deterministic counterexample.
-3. Live creator path: run record, goal/level/duration/language input, compile API, stage progress, validated review, and generated learner route.
-4. Deployment-safe state: persistence or signed stateless replay, TTL, quotas, origin/security headers, and cold-start verification.
-5. Live provider eval and authorized hosted smoke.
+1. Interactive Maia in Judge: snapshot after incorrect outcomes, safe tutor turn, semantic highlight/focus/pulse/annotation, and deterministic counterexample.
+2. Live creator path: run record, goal/level/duration/language input, compile API, stage progress, validated review, and generated learner route.
+3. Deployment-safe state: persistence or signed stateless replay, TTL, quotas, origin/security headers, and cold-start verification.
+4. Live provider eval and authorized hosted smoke.
 
 ## Submission claim boundary
 

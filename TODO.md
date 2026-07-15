@@ -11,6 +11,7 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Per-concept mastery model that discounts assisted success
 - [x] Contingent fading policy (hint-ladder depth shrinks with mastery)
 - [x] Step-based session state machine with full event log
+- [x] Session protocol v2: explicit post-solve advance, optimistic step/version guards, idempotent mutations, stale Maia rejection, and visible request recovery
 - [x] Client/server truth boundary: browser receives sanitized lessons only (prompts + options), with a regression test
 - [x] Maia prompt builder: solution injection + non-revelation guardrail + scaffolding directive, cache-friendly split
 - [x] Maia tutor (OpenAI Responses API) with strict buffered turns, a pre-delivery leak gate, and deterministic offline fallback

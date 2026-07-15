@@ -41,6 +41,13 @@ function safetyIssues(
 }
 
 function deterministicFallback(session: LearnerSession): TutorTurn {
+  if (session.awaitingAdvance) {
+    return {
+      message: "You solved this step. Explain the key move in your own words, then continue when you are ready.",
+      pedagogicalMove: "request-self-explanation",
+      uiActions: [],
+    };
+  }
   const hint = session.requestHint();
   return {
     message: hint
@@ -94,6 +101,7 @@ export async function maiaRespond(
 ): Promise<TutorDelivery> {
   const step = session.currentStep;
   const stepId = step.id;
+  const startVersion = session.version;
   const allowedUiTargetIds: string[] = [];
 
   if (tutorProvider.available()) {
@@ -118,9 +126,13 @@ export async function maiaRespond(
         issues = safetyIssues(step, result.turn, allowedUiTargetIds);
       }
 
-      const sameStep = !session.complete && session.currentStep.id === stepId;
+      const sameStep =
+        !session.complete &&
+        session.currentStep.id === stepId &&
+        session.version === startVersion;
       if (issues.length === 0 && sameStep) {
         recordSafeLiveTurn(session, learnerMessage, result, repaired);
+        session.version += 1;
         return { turn: result.turn, source: "openai", repaired };
       }
       session.log("maia_turn_rejected", {
@@ -140,11 +152,16 @@ export async function maiaRespond(
     }
   }
 
+  if (session.complete || session.currentStep.id !== stepId || session.version !== startVersion) {
+    throw new Error("Session changed while Maia was responding");
+  }
+
   const turn = deterministicFallback(session);
   session.chatHistory.push(
     { role: "user", content: learnerMessage },
     { role: "assistant", content: turn.message },
   );
   session.log("maia_fallback", { stepId });
+  session.version += 1;
   return { turn, source: "deterministic", repaired: false };
 }

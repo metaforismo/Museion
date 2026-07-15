@@ -71,6 +71,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   // practice mode); the prop only covers the loading state.
   const [activeLesson, setActiveLesson] = useState<PublicLesson>(lesson);
   const [stepIndex, setStepIndex] = useState(0);
+  const [sessionVersion, setSessionVersion] = useState(0);
   const [complete, setComplete] = useState(false);
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -78,6 +79,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const [hints, setHints] = useState<string[]>([]);
   const [hintNote, setHintNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
@@ -91,8 +93,18 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const applyState = useCallback((state: SessionStateResponse) => {
     setActiveLesson(state.lesson);
     setStepIndex(state.stepIndex);
+    setSessionVersion(state.sessionVersion);
     setComplete(state.complete);
     setStats(state.stats);
+    setFeedback(
+      state.awaitingAdvance && state.solvedStep
+        ? {
+            kind: "correct",
+            mastery: state.solvedStep.mastery,
+            solution: state.solvedStep.solution,
+          }
+        : null,
+    );
     setHints(state.revealedHints);
     setInitialChat(state.chatHistory);
     setSessionId(state.sessionId);
@@ -105,25 +117,32 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     const storeKey = sessionStorageKey(lesson.id, mode);
 
     async function createSession(): Promise<void> {
-      const state = await createSessionOnce(storeKey, lesson.id, mode);
-      if (!state) return;
+      const state = await createSessionOnce(storeKey, lesson.id, mode).catch(() => null);
+      if (!state) {
+        if (!cancelled) setRequestError("The lesson session could not be created. Try reloading the page.");
+        return;
+      }
       if (cancelled) return;
       localStorage.setItem(storeKey, state.sessionId);
       applyState(state);
     }
 
     async function open(): Promise<void> {
-      const saved = localStorage.getItem(storeKey);
-      if (saved) {
-        const res = await fetch(`/api/sessions/${saved}`);
-        if (res.ok) {
-          const state = (await res.json()) as SessionStateResponse;
-          if (!cancelled) applyState(state);
-          return;
+      try {
+        const saved = localStorage.getItem(storeKey);
+        if (saved) {
+          const res = await fetch(`/api/sessions/${saved}`);
+          if (res.ok) {
+            const state = (await res.json()) as SessionStateResponse;
+            if (!cancelled) applyState(state);
+            return;
+          }
+          localStorage.removeItem(storeKey);
         }
-        localStorage.removeItem(storeKey);
+        await createSession();
+      } catch {
+        if (!cancelled) setRequestError("The lesson session could not be opened. Try reloading the page.");
       }
-      await createSession();
     }
 
     void open();
@@ -138,14 +157,20 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     async (answer: string) => {
       if (!sessionId || busy) return;
       setBusy(true);
+      setRequestError(null);
       try {
         const res = await fetch(`/api/sessions/${sessionId}/answer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answer }),
+          body: JSON.stringify({ answer, expectedStepId: step?.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          const failure = await res.json().catch(() => null);
+          setRequestError(failure?.error ?? "The answer could not be checked.");
+          return;
+        }
         const outcome = (await res.json()) as AnswerResponse;
+        setSessionVersion(outcome.sessionVersion);
         if (outcome.correct) {
           setFeedback({
             kind: "correct",
@@ -153,8 +178,6 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
             solution: outcome.solution,
           });
           setShowSolution(false);
-          if (outcome.stats) setStats(outcome.stats);
-          if (outcome.lessonComplete) setComplete(true);
         } else {
           setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep });
           setShakeTick((t) => t + 1);
@@ -163,34 +186,62 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
         setBusy(false);
       }
     },
-    [sessionId, busy],
+    [sessionId, busy, sessionVersion, step?.id],
   );
 
-  const advance = useCallback(() => {
-    setStepIndex((i) => i + 1);
-    setFeedback(null);
-    setShowSolution(false);
-    setHints([]);
-    setHintNote(null);
-  }, []);
+  const advance = useCallback(async () => {
+    if (!sessionId || !step || busy) return;
+    setBusy(true);
+    setRequestError(null);
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/advance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedStepId: step.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
+      });
+      if (!response.ok) {
+        const failure = await response.json().catch(() => null);
+        setRequestError(failure?.error ?? "The next step could not be opened.");
+        return;
+      }
+      applyState((await response.json()) as SessionStateResponse);
+      setFeedback(null);
+      setShowSolution(false);
+      setHintNote(null);
+    } finally {
+      setBusy(false);
+    }
+  }, [applyState, busy, sessionId, sessionVersion, step]);
 
   const requestHint = useCallback(async () => {
     if (!sessionId || busy) return;
-    const res = await fetch(`/api/sessions/${sessionId}/hint`, {
-      method: "POST",
-    });
-    if (!res.ok) return;
-    const data = (await res.json()) as HintResponse;
-    if (data.granted && data.hint) {
-      const granted = data.hint;
-      setHints((current) => [...current, granted]);
-      setHintNote(null);
-    } else {
-      setHintNote(
-        "No more hints at your mastery level — trust your reasoning, or ask Maia a question.",
-      );
+    if (!step) return;
+    setBusy(true);
+    setRequestError(null);
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/hint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedStepId: step.id, expectedVersion: sessionVersion, idempotencyKey: crypto.randomUUID() }),
+      });
+      if (!res.ok) {
+        const failure = await res.json().catch(() => null);
+        setRequestError(failure?.error ?? "The hint could not be requested.");
+        return;
+      }
+      const data = (await res.json()) as HintResponse;
+      setSessionVersion(data.sessionVersion);
+      if (data.granted && data.hint) {
+        const granted = data.hint;
+        setHints((current) => [...current, granted]);
+        setHintNote(null);
+      } else {
+        setHintNote("No more hints at your mastery level — trust your reasoning, or ask Maia a question.");
+      }
+    } finally {
+      setBusy(false);
     }
-  }, [sessionId, busy]);
+  }, [sessionId, busy, sessionVersion, step]);
 
   const restartPractice = useCallback(() => {
     localStorage.removeItem(sessionStorageKey(lesson.id, mode));
@@ -199,8 +250,9 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
 
   if (!sessionId) {
     return (
-      <div className="flex h-64 items-center justify-center text-ink-soft">
-        Opening {mode === "practice" ? "practice" : "the lesson"}…
+      <div className="flex h-64 flex-col items-center justify-center gap-3 px-4 text-center text-ink-soft">
+        <p>{requestError ?? `Opening ${mode === "practice" ? "practice" : "the lesson"}…`}</p>
+        {requestError && <button type="button" onClick={() => location.reload()} className="rounded-lg bg-ink px-4 py-2 font-medium text-white">Retry</button>}
       </div>
     );
   }
@@ -219,6 +271,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px]">
       <div>
+        {requestError && <p role="alert" className="mb-4 rounded-lg bg-wrong-soft px-4 py-3 text-sm text-wrong">{requestError}</p>}
         {/* Progress */}
         <div className="mb-6">
           <div className="mb-2 flex items-baseline justify-between">
@@ -371,6 +424,9 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
 
       <MaiaPanel
         sessionId={sessionId}
+        stepId={step?.id ?? ""}
+        sessionVersion={sessionVersion}
+        onSessionVersion={setSessionVersion}
         outbox={outbox}
         initialMessages={initialChat}
       />

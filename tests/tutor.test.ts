@@ -100,4 +100,33 @@ describe("Maia pre-delivery gate", () => {
     expect(provider.calls).toBe(0);
     expect(delivery.source).toBe("deterministic");
   });
+
+  it("does not consume a hint after the learner has solved the step", async () => {
+    const learner = session();
+    learner.submitAnswer("6");
+    const delivery = await maiaRespond(
+      learner,
+      "Here is why it works",
+      new FakeProvider([safeTurn], false),
+    );
+
+    expect(delivery.turn.pedagogicalMove).toBe("request-self-explanation");
+    expect(learner.revealedHints()).toEqual([]);
+  });
+
+  it("rejects a delayed tutor result when the session version changes", async () => {
+    let release!: (value: TutorProviderResult) => void;
+    const delayed: TutorProvider = {
+      id: "delayed",
+      available: () => true,
+      generate: () => new Promise((resolve) => { release = resolve; }),
+    };
+    const learner = session();
+    const pending = maiaRespond(learner, "Help", delayed);
+    learner.submitAnswer("2");
+    release(result(safeTurn));
+
+    await expect(pending).rejects.toThrow(/Session changed/);
+    expect(learner.chatHistory).toEqual([]);
+  });
 });

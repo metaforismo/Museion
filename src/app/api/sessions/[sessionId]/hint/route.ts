@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { getOwnedSession } from "@/lib/server/session-access";
 
+const HintCommandSchema = z.object({ expectedStepId: z.string().min(1).max(200), expectedVersion: z.number().int().nonnegative(), idempotencyKey: z.string().uuid() }).strict();
+
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await params;
@@ -11,9 +14,15 @@ export async function POST(
   if (!session) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }
-  if (session.complete) {
-    return NextResponse.json({ error: "Lesson already complete" }, { status: 409 });
+  const body = HintCommandSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) return NextResponse.json({ error: "Invalid hint command" }, { status: 400 });
+  try {
+    const outcome = session.requestHintOutcome(body.data);
+    return NextResponse.json({
+      ...outcome,
+      granted: outcome.hint !== null,
+    });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Session conflict" }, { status: 409 });
   }
-  const hint = session.requestHint();
-  return NextResponse.json({ hint, granted: hint !== null });
 }

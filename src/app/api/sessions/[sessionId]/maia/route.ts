@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { maiaRespond } from "@/lib/maia/tutor";
 import { log } from "@/lib/server/log";
@@ -11,6 +12,18 @@ const MAX_LEARNER_TURNS = 30;
 const BURST_LIMIT = 6;
 const BURST_WINDOW_MS = 60_000;
 
+const MaiaCommandSchema = z.object({
+  message: z.string().trim().min(1).max(2_000),
+  expectedStepId: z.string().min(1).max(200),
+  expectedVersion: z.number().int().nonnegative(),
+  idempotencyKey: z.string().uuid(),
+}).strict();
+
+type MaiaResult = Awaited<ReturnType<typeof maiaRespond>> & { sessionVersion: number };
+const globalMaia = globalThis as unknown as { __museionMaiaCommands?: Map<string, Promise<MaiaResult>> };
+const maiaCommands = globalMaia.__museionMaiaCommands ?? new Map<string, Promise<MaiaResult>>();
+globalMaia.__museionMaiaCommands = maiaCommands;
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
@@ -20,17 +33,18 @@ export async function POST(
   if (!session) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }
+  const body = MaiaCommandSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) return NextResponse.json({ error: "Invalid Maia command" }, { status: 400 });
+  const commandKey = `${sessionId}:${body.data.idempotencyKey}`;
+  const existing = maiaCommands.get(commandKey);
+  if (existing) return NextResponse.json(await existing, { headers: { "Cache-Control": "no-store" } });
   if (session.complete) {
     return NextResponse.json({ error: "Lesson already complete" }, { status: 409 });
   }
-  const body = (await request.json().catch(() => null)) as {
-    message?: string;
-  } | null;
-  if (typeof body?.message !== "string" || body.message.trim() === "") {
-    return NextResponse.json({ error: "Missing message" }, { status: 400 });
-  }
-  if (body.message.length > 2_000) {
-    return NextResponse.json({ error: "Message is too long" }, { status: 413 });
+  try {
+    session.assertCurrent(body.data.expectedStepId, body.data.expectedVersion);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Session conflict" }, { status: 409 });
   }
 
   const burst = checkRateLimit(`maia:${sessionId}`, BURST_LIMIT, BURST_WINDOW_MS);
@@ -62,8 +76,13 @@ export async function POST(
   }
 
   log.info("maia_turn_started", { sessionId, learnerTurns });
-  const delivery = await maiaRespond(session, body.message, undefined, request.signal);
-  return NextResponse.json(delivery, {
-    headers: { "Cache-Control": "no-store" },
-  });
+  const pending = maiaRespond(session, body.data.message, undefined, request.signal)
+    .then((delivery) => ({ ...delivery, sessionVersion: session.version }));
+  maiaCommands.set(commandKey, pending);
+  try {
+    return NextResponse.json(await pending, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    maiaCommands.delete(commandKey);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Maia request failed" }, { status: 409 });
+  }
 }
