@@ -13,7 +13,7 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Step-based session state machine with full event log
 - [x] Client/server truth boundary: browser receives sanitized lessons only (prompts + options), with a regression test
 - [x] Maia prompt builder: solution injection + non-revelation guardrail + scaffolding directive, cache-friendly split
-- [x] Maia tutor (Claude API) streaming token-by-token to the panel, with deterministic offline fallback
+- [x] Maia tutor (OpenAI Responses API) with strict buffered turns, a pre-delivery leak gate, and deterministic offline fallback
 - [x] Lesson player UI: progress bar, answer controls per step kind, feedback, hint ladder
 - [x] Maia side panel: chat, quick suggestions, "ask Maia why" after a wrong answer
 - [x] CI workflow (lint + test + build) with manual dispatch
@@ -45,14 +45,29 @@ Status legend: `[x]` done · `[ ]` planned
 
 ## v0.4 — Maia hardening & quality
 
-- [x] Answer-leak detector (`src/lib/maia/leak.ts`): numeric-equivalence + assertive-phrasing checks against the step's answer spec; runtime instrumentation logs flagged Maia turns
-- [x] Red-team suite (`npm run redteam`): 8 adversarial prompt attacks asserted leak-free against the live model (auto-skipped without an API key)
+- [x] Answer-leak gate (`src/lib/maia/leak.ts`): schema + target + answer checks before delivery, one repair, then deterministic fallback
+- [ ] Run and record the 8-case GPT-5.6 live red-team suite (auto-skipped without an API key)
 - [x] Rate limiting on the Maia route (sliding window per session + Retry-After; per-IP once deployed behind a stable proxy)
-- [ ] Maia streaming over SSE with structured events (text, done, error) instead of raw text
+- [x] Strict structured Maia JSON response (buffered so safety checks complete before delivery)
 - [ ] Conversation summarization for long sessions (keep prompt size bounded)
 - [x] Self-explanation prompts after correct answers, checked by Maia (generation effect)
 - [ ] Localized tutoring: Maia answers in the learner's language (start with Italian)
 - [x] Prompt-cache + token usage instrumentation on every tutor turn (session events + structured logs)
+
+## Build Week — Source-grounded compiler
+
+- [x] Browser ingestion for pasted text, Markdown, and selectable-text PDF
+- [x] Versioned normalization, page/document SHA-256, hard limits, and instruction-like-content warnings
+- [x] Exact unique source spans with UTF-16 offsets and hash/slice round-trip validation
+- [x] `/create` canonical preview verified with the six-page golden PDF at desktop and 320 px
+- [x] Canonical Source Graph and citation contracts
+- [x] Course Blueprint and public/private Course Artifact v2 contract, closed block registry, and v1 adapter
+- [x] Multi-stage GPT-5.6 compiler with typed repair and keyless golden replay
+- [x] Typed deterministic interactive blocks and bounded Maia UI actions
+- [x] Locked near-transfer task and versioned evidence ledger
+- [x] Complete local judge path and 20/20 clean-browser runs
+- [x] Deployment and submission drafts with measured claims
+- [ ] Hosted deployment verification and final submission (explicit authorization required)
 
 ## v0.5 — Content & exercise depth
 
@@ -89,7 +104,8 @@ Status legend: `[x]` done · `[ ]` planned
 
 ## Engineering hygiene (ongoing)
 
-- [ ] E2E tests (Playwright): onboarding → lesson → practice happy path
+- [x] Repeatable Playwright smoke: onboarding → lesson → practice/progress plus text/PDF source ingestion
+- [x] Full Playwright judge-path E2E with review/replay/transfer and 20/20 release run
 - [x] Typecheck script (`npm run typecheck`)
 - [x] Structured JSON logging on API routes (session_created, run_completed, maia_* events)
 - [x] Error boundary + not-found page with friendly copy

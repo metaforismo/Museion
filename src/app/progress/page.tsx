@@ -26,8 +26,9 @@ export default async function ProgressPage() {
 
   if (!profile) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-20 text-center animate-fade-up">
-        <h1 className="font-display text-3xl font-semibold">Nothing here yet</h1>
+      <div className="mx-auto w-full max-w-2xl px-4 py-24 text-center animate-fade-up">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-lapis-soft font-display text-2xl text-lapis" aria-hidden="true">∅</span>
+        <h1 className="mt-6 font-display text-4xl font-semibold tracking-tight">Nothing here yet</h1>
         <p className="mt-3 text-ink-soft">
           Your mastery map appears as soon as you start your first lesson.
           Every concept you work on is tracked — and the help you get fades as
@@ -49,8 +50,9 @@ export default async function ProgressPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 animate-fade-up">
-      <h1 className="font-display text-3xl font-semibold tracking-tight">
+    <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:py-24 animate-fade-up">
+      <p className="eyebrow">Anonymous learner record</p>
+      <h1 className="mt-4 font-display text-5xl font-semibold tracking-[-0.04em]">
         My progress
       </h1>
       <p className="mt-2 text-ink-soft">
@@ -75,7 +77,7 @@ export default async function ProgressPage() {
             return (
               <div
                 key={lesson.id}
-                className="rounded-xl border border-ink/10 bg-surface p-6"
+                className="premium-surface rounded-[1.4rem] border border-white/80 p-6"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-display text-lg font-semibold">

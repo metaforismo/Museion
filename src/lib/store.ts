@@ -54,6 +54,15 @@ export function getSessionLearner(sessionId: string): string | undefined {
   return sessionLearners.get(sessionId);
 }
 
+/** Resolve a session only when it belongs to the supplied learner id. */
+export function getSessionForLearner(
+  sessionId: string,
+  learnerId: string,
+): LearnerSession | undefined {
+  if (sessionLearners.get(sessionId) !== learnerId) return undefined;
+  return sessions.get(sessionId);
+}
+
 // -- learner profiles ----------------------------------------------------
 
 export function getOrCreateProfile(learnerId: string): LearnerProfile {

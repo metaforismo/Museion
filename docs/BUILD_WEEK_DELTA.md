@@ -3,6 +3,23 @@
 Changes on top of the pre-Build Week baseline (`d52f867`, 2026-07-15).
 Each entry is dated and maps to the roadmap in [`TODO.md`](../TODO.md).
 
+## 2026-07-15 — Codex local extension (uncommitted)
+
+- Added an OpenAI GPT-5.6 Responses provider behind a provider-neutral tutor contract.
+- Replaced raw token delivery with a strict Zod tutor turn buffered behind schema, UI-target, and answer-leak checks.
+- Added one repair attempt and deterministic fallback; unsafe candidates are not persisted or delivered.
+- Marked lesson/learner state as untrusted JSON data in tutor instructions.
+- Enforced anonymous-cookie ownership on session read and mutation routes.
+- Stripped hints from synthetic practice lessons server-side.
+- Added explicit CI typecheck, deterministic Turbopack root, safety/ownership tests, and a repeatable desktop/mobile Chrome smoke.
+- Added deterministic browser normalization for pasted text, Markdown, and selectable-text PDFs, with stable page/document hashes, exact UTF-16 spans, limits, and instruction-like-content warnings.
+- Added `/create` to inspect canonical pages and hashes before compilation; Source Graph remains deliberately disabled.
+- Expanded browser verification using the real six-page golden PDF and fixed the session-creation race, local PDF worker, and 320 px navigation defects it exposed.
+- Added strict Source Graph, Course Blueprint, and private/public Course Artifact v2 contracts with canonical hashing, closed block kinds, semantic reference checks, and an explicit legacy-v1 adapter.
+- Added fail-closed public serialization that omits answer specifications, solutions, hints, misconception internals, expected traces, and diagnostic rules.
+
+Subsequent local work added the checked golden graph/blueprint/artifact, compiler orchestration, interactive runtime, transfer ledger, creator review, and complete judge route. No live GPT-5.6 call, hosted deployment, learning-outcome result, commit, push, PR, or submission is claimed.
+
 ## 2026-07-15 — Tutor hardening, self-explanation, full practice coverage
 
 **Learning loop**

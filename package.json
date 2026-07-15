@@ -9,13 +9,18 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "verify:ui": "node scripts/verify-ui.mjs",
+    "generate:golden-source": "node scripts/generate-golden-source.mjs",
+    "generate:golden-course": "node scripts/generate-golden-course.mjs",
     "redteam": "vitest run tests/redteam.live.test.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.104.1",
-    "next": "16.2.9",
+    "next": "^16.2.10",
+    "openai": "^6.47.0",
+    "pdfjs-dist": "^6.1.200",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -23,13 +28,19 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "^16.2.10",
+    "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.8"
   },
-  "description": "Interactive learning platform with Maia, a Socratic AI tutor that never gives away the answer. Deterministic engine for ground truth, LLM for pedagogy.",
+  "description": "Interactive learning platform with deterministic ground truth and a leak-gated Socratic AI tutor.",
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.19"
+    }
   }
 }

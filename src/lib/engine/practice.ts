@@ -41,7 +41,11 @@ export function buildPracticeLesson(
     ...lesson,
     id: `${lesson.id}::practice`,
     title: `${lesson.title} — Practice`,
-    steps: shuffled(bank).slice(0, Math.max(1, size)),
+    // Enforce the no-ladder invariant in the server-owned lesson too; hiding
+    // the button in the browser is not an access-control boundary.
+    steps: shuffled(bank)
+      .slice(0, Math.max(1, size))
+      .map((step) => ({ ...step, hints: [] })),
     practice: [],
   };
 }

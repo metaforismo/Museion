@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { ChatMessage } from "@/lib/api-types";
+import type { ChatMessage, MaiaResponse } from "@/lib/api-types";
 
 /** A message another component asks the panel to send to Maia. */
 export interface MaiaOutbox {
@@ -60,25 +60,11 @@ export default function MaiaPanel({
           );
           return;
         }
-        if (!res.ok || !res.body) {
+        if (!res.ok) {
           throw new Error(`Maia request failed (${res.status})`);
         }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          setMessages((m) => {
-            const next = [...m];
-            const last = next[next.length - 1];
-            next[next.length - 1] = {
-              ...last,
-              content: last.content + chunk,
-            };
-            return next;
-          });
-        }
+        const delivery = (await res.json()) as MaiaResponse;
+        setLastAssistantMessage(delivery.turn.message);
       } catch {
         setLastAssistantMessage(
           "Maia couldn't answer just now — try again in a moment.",

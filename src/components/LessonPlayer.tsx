@@ -33,6 +33,38 @@ interface PlayerProps {
   mode: SessionMode;
 }
 
+// React's development Strict Mode mounts effects twice. Share an in-flight
+// creation per lesson/mode so concurrent mounts cannot mint two anonymous
+// learner cookies and orphan the first session.
+const pendingSessionCreations = new Map<
+  string,
+  Promise<SessionStateResponse | null>
+>();
+
+function createSessionOnce(
+  storeKey: string,
+  lessonId: string,
+  mode: SessionMode,
+): Promise<SessionStateResponse | null> {
+  const pending = pendingSessionCreations.get(storeKey);
+  if (pending) return pending;
+
+  const creation = fetch("/api/sessions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lessonId, mode }),
+  })
+    .then(async (response) => {
+      if (!response.ok) return null;
+      return (await response.json()) as SessionStateResponse;
+    })
+    .finally(() => {
+      pendingSessionCreations.delete(storeKey);
+    });
+  pendingSessionCreations.set(storeKey, creation);
+  return creation;
+}
+
 export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   // The authoritative lesson comes from the session (shuffled in
@@ -73,13 +105,8 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
     const storeKey = sessionStorageKey(lesson.id, mode);
 
     async function createSession(): Promise<void> {
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId: lesson.id, mode }),
-      });
-      if (!res.ok) return;
-      const state = (await res.json()) as SessionStateResponse;
+      const state = await createSessionOnce(storeKey, lesson.id, mode);
+      if (!state) return;
       if (cancelled) return;
       localStorage.setItem(storeKey, state.sessionId);
       applyState(state);
@@ -253,7 +280,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
 
             {feedback?.kind === "correct" && (
               <div className="mt-4 rounded-lg bg-correct-soft px-4 py-3 animate-fade-up">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="font-medium text-correct">
                     Correct — nice reasoning.
                     <span className="ml-2 text-sm font-normal">
@@ -482,13 +509,13 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
       >
         Lock it in: why did that work, in one sentence?
       </label>
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <input
           id="self-explain"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Because…"
-          className="flex-1 rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none transition focus:border-correct"
+          className="min-w-0 flex-1 rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none transition focus:border-correct"
         />
         <button
           type="submit"
@@ -553,7 +580,7 @@ function AnswerControl({
         e.preventDefault();
         if (value.trim()) onSubmit(value);
       }}
-      className="flex gap-3"
+      className="flex flex-col gap-3 sm:flex-row"
     >
       <input
         value={value}
@@ -561,7 +588,9 @@ function AnswerControl({
         disabled={disabled}
         autoFocus
         placeholder={step.kind === "expression" ? "e.g. 5/6" : "Your answer"}
-        className="w-44 rounded-lg border border-ink/15 bg-surface px-4 py-2.5 outline-none transition focus:border-lapis disabled:opacity-60"
+        aria-label="Your answer"
+        inputMode={step.kind === "numeric" ? "decimal" : "text"}
+        className="w-full min-w-0 rounded-lg border border-ink/15 bg-surface px-4 py-2.5 outline-none transition focus:border-lapis disabled:opacity-60 sm:w-44"
       />
       <button
         type="submit"

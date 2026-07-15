@@ -1,118 +1,150 @@
-/**
- * Maia's voice: the LLM interaction layer (server-only).
- *
- * Deliberately thin. All pedagogy-critical state (what is true, what
- * the learner did, how much help is allowed) is decided by the engine
- * and injected via the prompt; the model only converses.
- */
-
-import Anthropic from "@anthropic-ai/sdk";
-
+import type { Step } from "../content/types";
 import type { LearnerSession } from "../engine/session";
 import { log } from "../server/log";
+import type {
+  TutorDelivery,
+  TutorProvider,
+  TutorProviderResult,
+  TutorTurn,
+} from "./contracts";
+import { TutorTurnSchema } from "./contracts";
 import { revealsAnswer } from "./leak";
-import { buildSystemPrompt } from "./prompt";
-
-const MODEL = "claude-opus-4-8";
-const MAX_TOKENS = 1024;
+import { OpenAITutorProvider } from "./openai-provider";
 
 const OFFLINE_NOTICE =
-  "[Maia is offline: no ANTHROPIC_API_KEY configured. " +
-  "Falling back to the step's hint ladder.]";
+  "Maia is offline, so I’m using the lesson’s verified hint ladder.";
 
-let client: Anthropic | null = null;
+let defaultProvider: TutorProvider | null = null;
 
-export function maiaAvailable(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+function provider(): TutorProvider {
+  defaultProvider ??= new OpenAITutorProvider();
+  return defaultProvider;
 }
 
-function getClient(): Anthropic {
-  client ??= new Anthropic();
-  return client;
+export function maiaAvailable(): boolean {
+  return provider().available();
+}
+
+function safetyIssues(
+  step: Step,
+  turn: TutorTurn,
+  allowedUiTargetIds: readonly string[],
+): string[] {
+  const issues: string[] = [];
+  if (!TutorTurnSchema.safeParse(turn).success) issues.push("invalid_schema");
+  if (revealsAnswer(step, turn.message)) issues.push("answer_leak_detected");
+  const allowed = new Set(allowedUiTargetIds);
+  if (turn.uiActions.some((action) => !allowed.has(action.targetId))) {
+    issues.push("invalid_ui_target");
+  }
+  return issues;
+}
+
+function deterministicFallback(session: LearnerSession): TutorTurn {
+  const hint = session.requestHint();
+  return {
+    message: hint
+      ? `${OFFLINE_NOTICE} ${hint}`
+      : `${OFFLINE_NOTICE} No more hints are available at this level. Explain what you know about the current step, then try one small move.`,
+    pedagogicalMove: hint ? "give-conceptual-hint" : "request-self-explanation",
+    uiActions: [],
+  };
+}
+
+function recordSafeLiveTurn(
+  session: LearnerSession,
+  learnerMessage: string,
+  result: TutorProviderResult,
+  repaired: boolean,
+): void {
+  session.chatHistory.push(
+    { role: "user", content: learnerMessage },
+    { role: "assistant", content: result.turn.message },
+  );
+  session.log("maia_turn", { provider: "openai", repaired });
+  session.log("maia_usage", {
+    requestedModel: result.requestedModel,
+    resolvedModel: result.resolvedModel,
+    responseId: result.responseId,
+    inputTokens: result.usage.inputTokens,
+    outputTokens: result.usage.outputTokens,
+    cacheReadTokens: result.usage.cachedInputTokens,
+  });
+  log.info("maia_turn_completed", {
+    sessionId: session.sessionId,
+    provider: "openai",
+    requestedModel: result.requestedModel,
+    resolvedModel: result.resolvedModel,
+    inputTokens: result.usage.inputTokens,
+    outputTokens: result.usage.outputTokens,
+    cacheReadTokens: result.usage.cachedInputTokens,
+    repaired,
+  });
 }
 
 /**
- * One tutoring turn, grounded in the current lesson state.
- * Returns a text stream for the client plus a promise that resolves
- * once the full reply has been persisted to the session history.
+ * Produce one complete, validated tutoring turn. No model bytes are exposed to
+ * the caller until schema, UI-target and answer-leak checks have all passed.
  */
-export function maiaRespond(
+export async function maiaRespond(
   session: LearnerSession,
   learnerMessage: string,
-): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
+  tutorProvider: TutorProvider = provider(),
+  signal?: AbortSignal,
+): Promise<TutorDelivery> {
+  const step = session.currentStep;
+  const stepId = step.id;
+  const allowedUiTargetIds: string[] = [];
 
-  if (!maiaAvailable()) {
-    const hint = session.requestHint();
-    const reply = hint
-      ? `${OFFLINE_NOTICE}\n${hint}`
-      : `${OFFLINE_NOTICE}\nNo more hints are available at your mastery ` +
-        "level — trust your reasoning and try the step.";
-    return new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(reply));
-        controller.close();
-      },
-    });
+  if (tutorProvider.available()) {
+    const input = {
+      snapshot: session.snapshot(),
+      history: [...session.chatHistory],
+      learnerMessage,
+      allowedUiTargetIds,
+    };
+    try {
+      let result = await tutorProvider.generate(input, { signal });
+      let issues = safetyIssues(step, result.turn, allowedUiTargetIds);
+      let repaired = false;
+
+      if (issues.length > 0) {
+        repaired = true;
+        session.log("maia_turn_rejected", { stepId, issues, attempt: 1 });
+        result = await tutorProvider.generate(input, {
+          signal,
+          repairIssues: issues,
+        });
+        issues = safetyIssues(step, result.turn, allowedUiTargetIds);
+      }
+
+      const sameStep = !session.complete && session.currentStep.id === stepId;
+      if (issues.length === 0 && sameStep) {
+        recordSafeLiveTurn(session, learnerMessage, result, repaired);
+        return { turn: result.turn, source: "openai", repaired };
+      }
+      session.log("maia_turn_rejected", {
+        stepId,
+        issues: sameStep ? issues : ["stale_step"],
+        attempt: repaired ? 2 : 1,
+      });
+    } catch (error) {
+      session.log("maia_provider_error", {
+        stepId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      });
+      log.warn("maia_provider_error", {
+        sessionId: session.sessionId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      });
+    }
   }
 
-  session.chatHistory.push({ role: "user", content: learnerMessage });
-  const stream = getClient().messages.stream({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    thinking: { type: "adaptive" },
-    system: buildSystemPrompt(session.snapshot()),
-    messages: session.chatHistory.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
-
-  return new ReadableStream({
-    async start(controller) {
-      stream.on("text", (delta) => controller.enqueue(encoder.encode(delta)));
-      try {
-        const message = await stream.finalMessage();
-        const reply = message.content
-          .filter((block) => block.type === "text")
-          .map((block) => block.text)
-          .join("")
-          .trim();
-        session.chatHistory.push({ role: "assistant", content: reply });
-        session.log("maia_turn", { learner: learnerMessage });
-        // Token + cache instrumentation: cacheRead > 0 on follow-up
-        // turns confirms the persona block is riding the prompt cache.
-        session.log("maia_usage", {
-          inputTokens: message.usage.input_tokens,
-          outputTokens: message.usage.output_tokens,
-          cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
-          cacheWriteTokens: message.usage.cache_creation_input_tokens ?? 0,
-        });
-        log.info("maia_turn_completed", {
-          sessionId: session.sessionId,
-          inputTokens: message.usage.input_tokens,
-          outputTokens: message.usage.output_tokens,
-          cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
-        });
-        // Instrumentation, not a block: numeric steps whose answer also
-        // appears in the prompt can trigger false positives, so flagged
-        // turns are logged for audit rather than redacted.
-        if (!session.complete && revealsAnswer(session.currentStep, reply)) {
-          session.log("maia_possible_leak", {
-            stepId: session.currentStep.id,
-            reply,
-          });
-          log.warn("maia_possible_leak", {
-            sessionId: session.sessionId,
-            stepId: session.currentStep.id,
-          });
-        }
-        controller.close();
-      } catch (error) {
-        // Drop the unanswered user turn so history stays consistent.
-        session.chatHistory.pop();
-        controller.error(error);
-      }
-    },
-  });
+  const turn = deterministicFallback(session);
+  session.chatHistory.push(
+    { role: "user", content: learnerMessage },
+    { role: "assistant", content: turn.message },
+  );
+  session.log("maia_fallback", { stepId });
+  return { turn, source: "deterministic", repaired: false };
 }

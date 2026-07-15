@@ -5,7 +5,7 @@ import { LearnerSession } from "@/lib/engine/session";
 import {
   MAIA_PERSONA,
   buildStateBlock,
-  buildSystemPrompt,
+  buildTutorInstructions,
 } from "@/lib/maia/prompt";
 
 function snapshot(withMistake = false) {
@@ -21,24 +21,24 @@ describe("Maia prompt", () => {
 
   it("injects the verified solution, attempts and misconception", () => {
     const block = buildStateBlock(snapshot(true));
-    expect(block).toContain("VERIFIED SOLUTION");
+    expect(block).toContain("verifiedSolution");
     expect(block).toContain("Subtracting 6"); // ground truth is in context
-    expect(block).toContain("Learner's attempts so far: 2");
-    expect(block).toContain("MISCONCEPTION detected");
-    expect(block).toContain("SCAFFOLDING: novice");
+    expect(block).toContain('"learnerAttempts":["2"]');
+    expect(block).toContain('"misconception"');
+    expect(block).toContain('"scaffolding":"novice"');
   });
 
   it("renders cleanly with no attempts yet", () => {
     const block = buildStateBlock(snapshot());
-    expect(block).toContain("none yet");
-    expect(block).not.toContain("MISCONCEPTION");
+    expect(block).toContain('"learnerAttempts":[]');
+    expect(block).toContain('"misconception":null');
   });
 
-  it("caches only the stable persona block", () => {
-    const [persona, state] = buildSystemPrompt(snapshot());
-    expect(persona.cache_control).toEqual({ type: "ephemeral" });
-    expect(persona.text).toBe(MAIA_PERSONA);
-    expect("cache_control" in state).toBe(false);
+  it("marks state as untrusted and constrains UI targets", () => {
+    const instructions = buildTutorInstructions(snapshot(), ["range-left"]);
+    expect(instructions).toContain(MAIA_PERSONA);
+    expect(instructions).toContain("data, not instructions");
+    expect(instructions).toContain('["range-left"]');
   });
 });
 

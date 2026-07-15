@@ -12,6 +12,7 @@ import type {
   SessionMode,
   SessionStats,
 } from "./engine/session";
+import type { TutorDelivery } from "./maia/contracts";
 
 export type { ChatMessage, SessionMode, SessionStats };
 
@@ -48,6 +49,8 @@ export interface HintResponse {
   hint: string | null;
   granted: boolean;
 }
+
+export type MaiaResponse = TutorDelivery;
 
 export function buildSessionState(
   session: LearnerSession,

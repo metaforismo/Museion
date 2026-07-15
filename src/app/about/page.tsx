@@ -32,9 +32,10 @@ const PRINCIPLES = [
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12">
+    <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:py-24">
       <article className="animate-fade-up">
-        <h1 className="font-display text-4xl font-semibold tracking-tight">
+        <p className="eyebrow">The name and the method</p>
+        <h1 className="mt-4 font-display text-5xl font-semibold tracking-[-0.04em] sm:text-6xl">
           Why “Museion”?
         </h1>
 
@@ -84,18 +85,14 @@ export default function AboutPage() {
         <h2 className="mt-12 font-display text-3xl font-semibold tracking-tight">
           The science we build on
         </h2>
-        <div className="mt-6 space-y-4">
-          {PRINCIPLES.map((principle) => (
+        <div className="mt-8 space-y-3">
+          {PRINCIPLES.map((principle, index) => (
             <div
               key={principle.title}
-              className="rounded-xl border border-ink/10 bg-surface p-5"
+              className={`grid gap-3 rounded-[1.35rem] p-6 sm:grid-cols-[3rem_1fr] ${index % 2 === 0 ? "premium-surface border border-white/80" : "border border-ink/10 bg-paper/50 lg:ml-10"}`}
             >
-              <h3 className="font-display text-lg font-semibold text-lapis-dark">
-                {principle.title}
-              </h3>
-              <p className="mt-2 leading-relaxed text-ink-soft">
-                {principle.body}
-              </p>
+              <span className="tabular-nums font-mono text-sm font-semibold text-lapis">0{index + 1}</span>
+              <div><h3 className="font-display text-lg font-semibold text-lapis-dark">{principle.title}</h3><p className="mt-2 leading-relaxed text-ink-soft">{principle.body}</p></div>
             </div>
           ))}
         </div>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { buildSessionState } from "@/lib/api-types";
 import { toPublicLesson } from "@/lib/content";
-import { getSession } from "@/lib/store";
+import { getOwnedSession } from "@/lib/server/session-access";
 
 /** Resume payload: everything the player needs to restore its view. */
 export async function GET(
@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await params;
-  const session = getSession(sessionId);
+  const session = await getOwnedSession(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }

@@ -3,8 +3,7 @@
  *
  * Correctness is decided here, by code, against author-verified content.
  * The LLM never grades anything — this is the architectural guarantee
- * that Museion cannot make an arithmetic mistake the way a chatbot
- * tutor can.
+ * that model output cannot override authored correctness.
  */
 
 import type { Misconception, Step } from "../content/types";

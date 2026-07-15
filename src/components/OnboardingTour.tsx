@@ -98,15 +98,15 @@ export default function OnboardingTour() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col px-4 py-16">
+    <div className="mx-auto flex w-full max-w-2xl flex-col px-4 py-16 sm:px-6 lg:py-24">
       <div
         key={index}
-        className="rounded-2xl border border-ink/10 bg-surface p-8 shadow-sm animate-fade-up"
+        className="premium-surface rounded-[2rem] border border-white/80 p-8 sm:p-10 animate-fade-up"
       >
-        <p className="text-xs font-semibold uppercase tracking-widest text-gold">
+        <p className="eyebrow">
           {slide.kicker}
         </p>
-        <h1 className="mt-3 font-display text-3xl font-semibold leading-tight tracking-tight">
+        <h1 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-[-0.035em] sm:text-5xl">
           {slide.title}
         </h1>
         <div className="mt-4 space-y-3 leading-relaxed text-ink-soft">

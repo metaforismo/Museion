@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { getSession } from "@/lib/store";
+import { getOwnedSession } from "@/lib/server/session-access";
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await params;
-  const session = getSession(sessionId);
+  const session = await getOwnedSession(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }

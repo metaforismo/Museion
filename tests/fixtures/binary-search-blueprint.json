@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0",
+  "sourceGraphSha256": "a8a1a190dca9d49668d3238c72efee67a6c846362cb467f8e9b53637ad065709",
+  "title": "Binary Search: Preserve the Possible",
+  "audience": {
+    "level": "novice",
+    "language": "en",
+    "targetMinutes": 12,
+    "learnerGoal": "Trace inclusive binary search and justify every boundary update."
+  },
+  "bigQuestion": "How can binary search discard half the array without discarding a possible target?",
+  "objectives": [
+    {
+      "id": "objective_invariant",
+      "statement": "Identify the inclusive active-interval invariant.",
+      "conceptIds": [
+        "active_interval"
+      ],
+      "evidenceTarget": "self_explanation"
+    },
+    {
+      "id": "objective_boundary",
+      "statement": "Move the correct boundary past a disproved midpoint.",
+      "conceptIds": [
+        "midpoint_selection",
+        "boundary_elimination"
+      ],
+      "evidenceTarget": "guided_practice"
+    },
+    {
+      "id": "objective_progress",
+      "statement": "Detect an update that can repeat state instead of shrinking the interval.",
+      "conceptIds": [
+        "strict_progress",
+        "empty_interval"
+      ],
+      "evidenceTarget": "guided_practice"
+    },
+    {
+      "id": "objective_transfer",
+      "statement": "Apply the same invariant and boundary logic to unseen surface values.",
+      "conceptIds": [
+        "near_transfer",
+        "active_interval",
+        "boundary_elimination"
+      ],
+      "evidenceTarget": "near_transfer"
+    }
+  ],
+  "sequence": [
+    "objective_invariant",
+    "objective_boundary",
+    "objective_progress",
+    "objective_transfer"
+  ],
+  "ahaMoment": "The speedup is justified by an invariant: each comparison proves a whole region impossible, and moving past mid preserves possibility while guaranteeing progress."
+}

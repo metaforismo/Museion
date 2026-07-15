@@ -1,12 +1,14 @@
 # Museion
 
-**An interactive learning platform with Maia — a Socratic AI tutor that never gives away the answer.**
+**An interactive learning platform with deterministic ground truth and a leak-gated Socratic AI tutor.**
 
 Museion (the Mouseion of Alexandria, "seat of the Muses") pairs a millennia-old idea — the great house of knowledge — with a personal guide inside it: **Maia**, named after maieutics, the Socratic art of helping ideas be born rather than handing them over.
 
 > The deterministic engine owns truth. The LLM owns pedagogy. Neither can do the other's job.
 
-Built with Next.js (App Router), React, Tailwind, and the Anthropic API.
+Built with Next.js (App Router), React, Tailwind, and the OpenAI Responses API.
+
+The local Build Week release also includes a complete responsive presentation layer: an asymmetric source-to-evidence homepage, active accessible navigation, creator provenance review, a polished judge journey, legal disclosures for the current in-memory build, and generated social-preview metadata.
 
 ## Why
 
@@ -36,7 +38,7 @@ Museion is built around that finding, plus the rest of the learning-science stac
 │  Socratic coaching only. Receives: verified solution,      │
 │  learner attempts, detected misconception, allowed help    │
 │  level. Hard-forbidden from stating the final answer.      │
-│  Streams replies token-by-token.                           │
+│  Buffers strict typed replies; validates before delivery.  │
 └──────────────────────────▲─────────────────────────────────┘
                            │ structured lesson-state snapshot
 ┌──────────────────────────┴─────────────────────────────────┐
@@ -57,7 +59,7 @@ Museion is built around that finding, plus the rest of the learning-science stac
 └────────────────────────────────────────────────────────────┘
 ```
 
-The key inversion versus a chatbot wrapper: Maia doesn't start from an empty prompt box. Every turn she sees the exact lesson state — what the step asks, the author-verified solution (marked *do not reveal*), every attempt the learner made, which misconception their last mistake matches, and how much scaffolding the fading policy currently allows. The LLM cannot make a math error because it never does the math; it cannot become an answer machine because the answer is the one thing it is forbidden to say.
+The key inversion versus a chatbot wrapper: Maia doesn't start from an empty prompt box. Every turn she sees the exact lesson state — what the step asks, the author-verified solution (marked *do not reveal*), every attempt the learner made, which misconception their last mistake matches, and how much scaffolding the fading policy currently allows. The deterministic verifier, not the model, decides correctness. Maia's structured response is checked before delivery and falls back to authored guidance when it is unsafe or unavailable.
 
 ## Getting started
 
@@ -66,45 +68,58 @@ Requires Node.js 20+.
 ```bash
 npm install
 
-# Live tutoring needs an Anthropic API key; everything else works without it.
-cp .env.example .env.local   # then set ANTHROPIC_API_KEY
+# Live tutoring needs an OpenAI API key; everything else works without it.
+cp .env.example .env.local   # then set OPENAI_API_KEY
 
 npm run dev                  # http://localhost:3000
 ```
 
 Pick a lesson, answer step by step. Take rungs of the hint ladder, or talk to Maia in the side panel — she sees the step you're on, what you tried, and which misconception you hit. Without an API key Maia falls back to the deterministic hint ladder, so the whole loop works offline.
 
+The Build Week source path starts at `/create`: paste text/Markdown or choose a selectable-text PDF, then inspect normalized pages, warnings, and SHA-256 hashes. The checked six-page binary-search source resolves to `/create/review`, where concepts, claims, exact quotations, blueprint objectives, block citations, hashes, and blocking validators are inspectable. `/judge` then runs the complete keyless replay: five artifact-driven blocks, one locked near-transfer attempt, and a reconciled evidence ledger. Arbitrary sources remain normalized but are not falsely presented as compiled until a live provider has produced and passed every validator.
+
 ```bash
-npm test        # engine + prompt tests (vitest, no network)
+npm test        # 118 offline tests; 8 live-model cases skip without a key
 npm run build   # production build
+# With `npm run dev` running in another terminal:
+npm run verify:ui  # Chrome: legacy path + full judge path 20× desktop and once at 320 px
 ```
 
 ## Project layout
 
 ```
 src/
-├── app/                  # Pages: catalog, lesson player, practice, about, welcome
-│   └── api/sessions/     # create+resume / answer / hint / maia (streaming)
-├── components/           # LessonPlayer, MaiaPanel, OnboardingTour (client)
+├── app/                  # Catalog, creator review, judge, lesson, practice, about
+│   └── api/              # owner-bound authored and judge-session routes
+├── components/           # Players, Maia, creator, typed interactive blocks
 └── lib/
     ├── api-types.ts      # Wire contracts shared by routes and components
     ├── client/           # Browser-only helpers (storage keys, onboarding flag)
     ├── content/          # Ground truth: types, validation, lessons as checked TS data
+    ├── compiler/         # Source Graph, Blueprint, private/public Artifact v2 contracts
+    ├── evidence/         # locked transfer events and bounded observations
     ├── engine/           # Deterministic core: verifier, mastery, session, practice
-    ├── maia/             # LLM layer: guardrailed prompt builder, tutor
+    ├── judge/            # keyless replay session and public response boundary
+    ├── maia/             # GPT-5.6 provider, strict turns, leak-gated tutor
+    ├── runtime/          # pure block reducers, validators, replay, tutor snapshots
+    ├── source/           # Text/PDF normalization, hashes, spans, hard limits
     └── store.ts          # In-memory session store (persistence on roadmap)
 tests/                    # Vitest suite: engine, content validation, prompt, sanitization
 ```
 
 ## Design notes
 
-- **The browser never sees the truth.** Lesson pages ship a sanitized lesson (prompts and options only). Verification, hints, misconceptions, and solutions live server-side — there is a test asserting no ground truth survives serialization to the client.
+- **The browser does not receive hidden truth before it is earned.** Lesson pages ship a sanitized lesson (prompts and options only). Verification, hints, misconceptions, and solutions live server-side; a solved step may then reveal its authored explanation.
 - **Hint ladder with contingent fading.** Each step ships an authored ladder (orienting question → conceptual hint → procedural hint). The depth a learner may descend is capped by their mastery of the step's concept: novices get the full ladder, proficient learners get one Socratic nudge. Maia's tone follows the same signal.
 - **Misconception library.** Wrong answers are matched deterministically against known wrong paths (e.g. answering `2` to "what do we subtract from both sides of 2x + 6 = 14?" means the learner confused coefficient with constant). Maia is told *which* confusion to address, not left to guess.
 - **Mastery discounts assisted success.** Solving on a later attempt or after hints moves mastery half as much as clean first-attempt success — performance with a crutch is weak evidence of learning.
 - **Event log first.** Every answer, hint, and tutor turn is recorded, because the metric that validates Museion is delayed, unassisted transfer — not how many problems were solved with Maia present.
-- **Prompt caching by construction.** Maia's persona (stable, cacheable) is separated from the per-turn lesson state (volatile), so the guardrails ride the prompt cache.
-- **Practice mode is unassisted on purpose.** Each lesson can ship an exercise bank served shuffled with no hint ladder — retrieval practice (the testing effect) is what turns in-session performance into durable learning. Maia stays available, still under the guardrail.
+- **Pre-delivery tutor gate.** Maia uses GPT-5.6 through Responses with a strict Zod output contract. The whole turn is buffered, its UI targets and answer leakage are checked, and one unsafe repair is allowed before deterministic fallback.
+- **Canonical source boundary.** Text, Markdown, and selectable-text PDF are normalized in the browser into versioned pages with stable SHA-256 hashes. Source-derived spans use exact unique quotes and explicit UTF-16 offsets; instruction-looking prose is preserved as data and flagged for review.
+- **Provider-neutral compiler.** Source Graph, Blueprint, Artifact, critic, and one typed repair run through bounded stages with hashes, timeouts, usage metadata, and fail-closed validators. GPT-5.6 uses strict Structured Outputs; the checked replay uses the same contracts without a key.
+- **Data-only interactive runtime.** PredictionChoice, RangeExplorer, StateTrace, and SequenceBuilder are closed block kinds backed by pure server-side reducers. The public artifact contains prompts and initial state, never correct orders, expected traces, answer specs, or misconception rules.
+- **Locked evidence, narrowly worded.** Transfer is artifact-version-bound, permits one attempt, exposes no Maia/hints/solutions, hashes the raw response rather than storing it, and reports one immediate near-transfer observation plus its limitations—not mastery.
+- **Practice has no deterministic hint ladder.** Each exercise bank is shuffled and stripped of hints on the server. Maia remains available, so practice performance is not presented as independent-transfer evidence.
 - **The name is the thesis.** `/about` tells the story: the Mouseion of Alexandria as the house of knowledge, and Maia — from maieutics, Socrates' midwifery of ideas — as the guide who asks instead of telling. First-time visitors get a short onboarding tour that sets the same expectation: she will never give you the answer.
 
 ## Roadmap

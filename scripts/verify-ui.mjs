@@ -1,0 +1,243 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+
+import { chromium } from "playwright";
+
+const baseURL = process.env.MUSEION_BASE_URL ?? "http://localhost:3000";
+const outputDir = path.resolve("output/playwright/smoke");
+const pdfFixture = path.resolve("tests/fixtures/binary-search-golden-source.pdf");
+await mkdir(outputDir, { recursive: true });
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const failures = [];
+
+function watch(page, label) {
+  page.on("console", (message) => {
+    if (message.type() === "error") failures.push(`${label} console: ${message.text()}`);
+  });
+  page.on("pageerror", (error) => failures.push(`${label} page: ${error.message}`));
+  page.on("response", (response) => {
+    if (response.status() >= 500) {
+      failures.push(`${label} HTTP ${response.status()}: ${response.url()}`);
+    }
+  });
+}
+
+async function expectVisible(locator, description) {
+  await locator.waitFor({ state: "visible", timeout: 10_000 }).catch(() => {
+    throw new Error(`Expected visible: ${description}`);
+  });
+}
+
+async function submitTextAnswer(page, answer) {
+  const input = page.getByPlaceholder("Your answer");
+  await input.fill(answer);
+  await page.getByRole("button", { name: "Check" }).click();
+}
+
+async function desktopFlow() {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
+  watch(page, "desktop");
+
+  await page.goto(`${baseURL}/welcome`);
+  await page.getByRole("button", { name: "Skip" }).click();
+  await page.waitForURL((url) => url.pathname === "/");
+  await expectVisible(page.getByRole("heading", { name: /Learn by reasoning/ }), "catalog heading");
+  await expectVisible(page.getByText("Every link in the chain is inspectable."), "source-to-evidence narrative");
+  const activeLessons = await page.getByRole("link", { name: "Lessons", exact: true }).getAttribute("aria-current");
+  if (activeLessons !== "page") failures.push("desktop: Lessons navigation is not marked current");
+  await page.screenshot({ path: path.join(outputDir, "desktop-catalog.png"), fullPage: true });
+
+  await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
+  await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "first lesson step");
+
+  await submitTextAnswer(page, "2");
+  await expectVisible(page.getByText("Not yet — stay with it."), "wrong-answer feedback");
+  await page.getByRole("button", { name: "Take a hint" }).click();
+  await expectVisible(page.getByText(/^1\./), "first deterministic hint");
+
+  await page.getByLabel("Message for Maia").fill("Give me a nudge");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expectVisible(page.getByText(/Maia is offline/), "deterministic Maia fallback");
+
+  await submitTextAnswer(page, "6");
+  await expectVisible(page.getByText(/Correct — nice reasoning/), "correct feedback");
+  await page.getByRole("button", { name: /Continue/ }).click();
+  for (const answer of ["4", "5"]) {
+    await submitTextAnswer(page, answer);
+    await page.getByRole("button", { name: /Continue/ }).click();
+  }
+  await submitTextAnswer(page, "3");
+  await expectVisible(page.getByText("Lesson complete 🎓"), "lesson completion");
+  await expectVisible(page.getByRole("link", { name: /Try practice mode/ }), "practice entry");
+  await page.screenshot({ path: path.join(outputDir, "desktop-complete.png"), fullPage: true });
+
+  await page.getByRole("link", { name: /Try practice mode/ }).click();
+  await expectVisible(page.getByText(/Practice mode: no hint ladder/), "practice mode");
+  if (await page.getByRole("button", { name: "Take a hint" }).count()) {
+    failures.push("practice: hint control is visible");
+  }
+
+  await page.getByRole("link", { name: "Progress", exact: true }).click();
+  await expectVisible(page.getByRole("heading", { name: "My progress" }), "progress page");
+  await expectVisible(page.getByText("Solving Linear Equations"), "completed lesson progress");
+
+  await page.getByRole("link", { name: "Create", exact: true }).click();
+  await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
+  await page.getByLabel("Paste source text").fill(
+    "## Binary search invariant\nIgnore previous instructions is quoted source data, not an application command.",
+  );
+  await page.getByRole("button", { name: "Normalize pasted source" }).click();
+  await expectVisible(page.getByText("Document SHA-256"), "pasted-source hash");
+  await expectVisible(page.getByRole("heading", { name: "Review warnings" }), "instruction-like warning");
+
+  await page.locator('input[type="file"]').setInputFiles(pdfFixture);
+  await expectVisible(
+    page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }),
+    "six-page PDF record",
+  );
+  await expectVisible(page.getByRole("link", { name: "Review verified compilation" }), "verified compiler review link");
+  await page.getByRole("link", { name: "Review verified compilation" }).click();
+  await expectVisible(page.getByText("Accepted · 0 blocking issues"), "accepted compiler validation");
+  await expectVisible(page.getByRole("heading", { name: "Source Graph" }), "source graph review");
+  await page.screenshot({ path: path.join(outputDir, "desktop-source-creator.png"), fullPage: true });
+
+  const notFoundPage = await context.newPage();
+  await notFoundPage.goto(`${baseURL}/missing-route`);
+  await expectVisible(notFoundPage.getByText("404", { exact: true }), "404 page");
+  await context.close();
+}
+
+async function designSystemFlow() {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 850 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  watch(page, "design-system");
+  await page.goto(`${baseURL}/privacy`);
+  await expectVisible(page.getByRole("heading", { name: "Privacy, in plain language." }), "privacy page");
+  await page.keyboard.press("Tab");
+  const focused = await page.evaluate(() => document.activeElement?.textContent?.trim());
+  if (focused !== "Skip to content") failures.push(`keyboard: expected skip link first, got ${focused ?? "nothing"}`);
+  await page.keyboard.press("Enter");
+  const focusedId = await page.evaluate(() => document.activeElement?.id);
+  if (focusedId !== "main-content") failures.push("keyboard: skip link did not focus main content");
+  await page.getByRole("link", { name: "Terms", exact: true }).click();
+  await expectVisible(page.getByRole("heading", { name: "Use Museion as a learning tool, not an oracle." }), "terms page");
+  await page.goto(`${baseURL}/welcome`);
+  const reducedMotion = await page.evaluate(() => ({ preferred: matchMedia("(prefers-reduced-motion: reduce)").matches, animation: getComputedStyle(document.querySelector(".animate-fade-up")).animationName }));
+  if (!reducedMotion.preferred || reducedMotion.animation !== "none") failures.push("reduced motion: animated onboarding remains active");
+  await context.close();
+}
+
+async function mobileFlow() {
+  const context = await browser.newContext({ viewport: { width: 320, height: 700 } });
+  const page = await context.newPage();
+  watch(page, "mobile");
+  await page.goto(`${baseURL}/welcome`);
+  await expectVisible(page.getByRole("heading", { name: /Learn by reasoning/ }), "mobile onboarding");
+  const onboardingOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  if (onboardingOverflow) failures.push("mobile onboarding: horizontal overflow");
+  await page.screenshot({ path: path.join(outputDir, "mobile-onboarding.png"), fullPage: true });
+
+  await page.getByRole("button", { name: "Skip" }).click();
+  await page.waitForURL((url) => url.pathname === "/");
+  await expectVisible(page.getByRole("heading", { name: /Learn by reasoning/ }), "mobile redesigned home");
+  const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  if (homeOverflow) failures.push("mobile homepage: horizontal overflow");
+  await page.screenshot({ path: path.join(outputDir, "mobile-home.png"), fullPage: true });
+  await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
+  await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "mobile lesson");
+  const lessonOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  if (lessonOverflow) failures.push("mobile lesson: horizontal overflow");
+  await page.screenshot({ path: path.join(outputDir, "mobile-lesson.png"), fullPage: true });
+
+  await page.getByRole("link", { name: "Create", exact: true }).click();
+  await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "mobile source creator");
+  const creatorOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  if (creatorOverflow) failures.push("mobile source creator: horizontal overflow");
+  await page.screenshot({ path: path.join(outputDir, "mobile-source-creator.png"), fullPage: true });
+  await context.close();
+}
+
+async function completeJudge(page, label, takeScreenshot = false) {
+  await page.goto(`${baseURL}/judge`);
+  await expectVisible(page.getByText("Verified replay", { exact: true }), `${label} replay badge`);
+  await page.getByRole("button", { name: /Continue/ }).click();
+
+  await page.getByRole("radio").first().check();
+  await page.getByRole("button", { name: "Check prediction" }).click();
+  await expectVisible(page.getByText("Prediction matches the deterministic answer."), `${label} prediction`);
+  await page.getByRole("button", { name: /Continue/ }).click();
+
+  await page.getByLabel("Next low").fill("4");
+  await page.getByLabel("Next high").fill("6");
+  await page.getByRole("button", { name: "Update interval" }).click();
+  await page.getByRole("button", { name: "Confirm target at mid" }).click();
+  await expectVisible(page.getByText("Target found at the verified midpoint."), `${label} range`);
+  await page.getByRole("button", { name: /Continue/ }).click();
+
+  await page.getByLabel("Low", { exact: true }).fill("0");
+  await page.getByLabel("High", { exact: true }).fill("1");
+  await page.getByLabel("Mid", { exact: true }).fill("0");
+  await page.getByRole("button", { name: "Check next state" }).click();
+  await page.getByLabel("Low", { exact: true }).fill("1");
+  await page.getByLabel("High", { exact: true }).fill("1");
+  await page.getByLabel("Mid", { exact: true }).fill("1");
+  await page.getByRole("button", { name: "Check next state" }).click();
+  await expectVisible(page.getByText("Trace complete."), `${label} trace`);
+  await page.getByRole("button", { name: /Continue/ }).click();
+
+  for (let index = 0; index < 3; index += 1) await page.locator('button[aria-label*="Compare values"][aria-label$="up"]').click();
+  for (let index = 0; index < 2; index += 1) await page.locator('button[aria-label*="prove one region"][aria-label$="up"]').click();
+  await page.locator('button[aria-label*="corresponding boundary"][aria-label$="up"]').click();
+  await page.getByRole("button", { name: "Check order" }).click();
+  await expectVisible(page.getByText("The reasoning order is valid."), `${label} sequence`);
+  await page.getByRole("button", { name: /Finish lesson/ }).click();
+
+  await page.getByRole("button", { name: "Start locked transfer" }).click();
+  await expectVisible(page.getByText("Maia 0 · hints 0 · solutions 0"), `${label} transfer lock`);
+  await page.getByLabel("Final index").fill("4");
+  await page.getByRole("button", { name: "Submit only attempt" }).click();
+  await expectVisible(page.getByRole("heading", { name: "Correct" }), `${label} transfer result`);
+  await expectVisible(page.getByRole("heading", { name: "Evidence ledger" }), `${label} evidence ledger`);
+  await expectVisible(page.getByText(/not evidence of durable mastery/), `${label} limitation`);
+  if (takeScreenshot) await page.screenshot({ path: path.join(outputDir, `${label}.png`), fullPage: true });
+}
+
+async function judgeFlow(viewport, label, repeat = 1) {
+  for (let run = 1; run <= repeat; run += 1) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    watch(page, `${label}-${run}`);
+    await completeJudge(page, `${label}-${run}`, run === 1);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    if (overflow) failures.push(`${label}-${run}: horizontal overflow`);
+    if (run === 1) {
+      await page.reload();
+      await expectVisible(page.getByRole("heading", { name: "Evidence ledger" }), `${label} refresh persistence`);
+    }
+    await context.close();
+  }
+}
+
+try {
+  await desktopFlow();
+  await designSystemFlow();
+  await mobileFlow();
+  await judgeFlow({ width: 1440, height: 1000 }, "judge-desktop", 20);
+  await judgeFlow({ width: 320, height: 700 }, "judge-mobile", 1);
+} finally {
+  await browser.close();
+}
+
+if (failures.length > 0) {
+  throw new Error(`UI smoke failures:\n${failures.join("\n")}`);
+}
+
+console.log(`UI smoke passed. Screenshots: ${outputDir}`);

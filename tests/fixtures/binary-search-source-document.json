@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0",
+  "normalizationVersion": "source-text-v1",
+  "offsetEncoding": "utf-16",
+  "id": "src_637c098ea73b6c2d4cde1dea",
+  "title": "Binary Search: Invariants, Boundaries, and Off-by-One Errors",
+  "mediaType": "application/pdf",
+  "originalFileName": "binary-search-golden-source.pdf",
+  "language": "en",
+  "sha256": "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0",
+  "byteLength": 12724,
+  "charCount": 6679,
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "MUSEION GOLDEN SOURCE\nBinary Search • Page 1 of 6 Binary Search: Invariants, Boundaries, and\nOff-by-One Errors Original source written for the Museion Build Week demonstration.\nVersion:  1.0 Intended audience:  learners who can compare integers and read array indices. 1. The problem binary search solves Binary search looks for a target in a sequence that is already sorted. It avoids checking every element. Instead, it keeps an active interval  of indices where the target could still be located.\nFor an array  values , let  low  and  high  be inclusive indices. At the start, the active interval is usually the whole array: low =  0\nhigh  = values.length  -  1 The central promise of the algorithm is not merely that the interval becomes smaller. The promise is an  invariant : If the target occurs in the array, at least one occurrence remains inside the active interval from  low through  high . An invariant is a statement that is true before an iteration, remains true after the iteration, and helps explain why the\nalgorithm is correct. In binary search, every update must preserve the possibility of finding the target while discarding\npositions that have been proven impossible.\nThe loop continues while the interval is nonempty: while  low  <=  high When  low >  high , no candidate index remains. At that point, the target is absent.",
+      "sha256": "0fc00c42255b45f32c7dd758786c9c4511f3a7cb816cab489ebed5dda3ee3773",
+      "charCount": 1346
+    },
+    {
+      "pageNumber": 2,
+      "text": "MUSEION GOLDEN SOURCE\nBinary Search • Page 2 of 6 2. Choosing and inspecting the midpoint During each iteration, binary search chooses an index near the center of the active interval. A common midpoint rule is: mid =  low  + floor((high  -  low)  /  2) This expression chooses the lower middle index when the interval contains an even number of elements. It is also\npreferable to  (low + high) / 2  in languages where adding two large indices could overflow.\nAfter choosing  mid , compare  values[mid]  with the target.\nThere are three cases: 1.  values[mid]  == target : the search has succeeded. 2.  values[mid]  < target : every index at or below  mid  can be discarded, because the sequence is sorted. 3.  values[mid]  > target : every index at or above  mid  can be discarded. The midpoint is not a vague suggestion about where to search next. The comparison gives a proof that one whole region\ncannot contain the target.\nExample: values =  [2,  5,  8,  11,  14,  19,  23]\ntarget =  19\nlow =  0\nhigh  = 6\nmid =  3\nvalues[mid] =  11 Because  11  < 19 , indices  0  through  3  are impossible. The next active interval must begin at index  4 .",
+      "sha256": "c4383902da7ef3525c9963d4a19a116b7346c923becf18804593c78e1a589991",
+      "charCount": 1146
+    },
+    {
+      "pageNumber": 3,
+      "text": "MUSEION GOLDEN SOURCE\nBinary Search • Page 3 of 6 3. Correct boundary updates When  values[mid] < target , use: low =  mid  + 1 When  values[mid] > target , use: high  = mid -  1 The  + 1  and  - 1  are essential. The comparison has already shown that index  mid  is not the target. Keeping  mid  inside\nthe next interval would preserve a candidate that has been disproved.\nThese updates preserve the invariant: • If the middle value is too small, a target can only appear strictly to the right of  mid .\n• If the middle value is too large, a target can only appear strictly to the left of  mid . They also guarantee progress. Whenever the target is not found, the number of candidate indices decreases.\nContinuing the earlier example: values =  [2,  5,  8,  11,  14,  19,  23]\ntarget =  19\niteration  1:  low  =  0,  high  =  6,  mid  =  3,  value  =  11\nupdate: low =  4\niteration  2:  low  =  4,  high  =  6,  mid  =  5,  value  =  19\nresult: found  at  index  5 The interval changed from seven candidates to three candidates, then the target was found.",
+      "sha256": "5cc9c4960308bbfb55d02ba60f5a51e88d6cdb07f183d6011288b328390eaec3",
+      "charCount": 1056
+    },
+    {
+      "pageNumber": 4,
+      "text": "MUSEION GOLDEN SOURCE\nBinary Search • Page 4 of 6 4. The off-by-one misconception A common error is to write  high = mid  when the middle value is too large, or  low = mid  when the middle value is\ntoo small.\nConsider this search: values =  [2,  5]\ntarget =  2\nlow =  0\nhigh  = 1\nmid =  0\nvalues[mid] =  2 This case succeeds immediately. Now consider a target that is absent: values =  [2,  5]\ntarget =  4\nlow =  0\nhigh  = 1\nmid =  0\nvalues[mid] =  2 Because  2 < 4 , the correct update is  low = 1 . If an implementation uses  low = mid , then  low  remains  0 . The next\niteration chooses  mid = 0  again. The state does not change, so the loop may never terminate.\nThe misconception behind this bug is usually: The learner treats  mid  as still uncertain even after the comparison has ruled it out. A useful counterexample therefore uses a tiny interval where reusing  mid  visibly repeats the same state. The correction\nis conceptual, not merely syntactic: once the middle value is known to be too small or too large, the middle index is no\nlonger a candidate.",
+      "sha256": "75c504a07ddacf62c9f2c87de050cb92f9c36c7164d307de8fae2c57b8b90504",
+      "charCount": 1064
+    },
+    {
+      "pageNumber": 5,
+      "text": "MUSEION GOLDEN SOURCE\nBinary Search • Page 5 of 6 5. Empty intervals and termination The inclusive-boundary version of binary search uses the loop condition: while  low  <=  high A one-element interval has  low == high . That element still needs to be inspected. The interval becomes empty only\nwhen  low >  high .\nExample with an absent target: values =  [2,  5,  8,  11,  14]\ntarget =  6\nlow =  0,  high  =  4,  mid  =  2,  value  =  8\nvalue  is  too  large,  so  high  =  1\nlow =  0,  high  =  1,  mid  =  0,  value  =  2\nvalue  is  too  small,  so  low  =  1\nlow =  1,  high  =  1,  mid  =  1,  value  =  5\nvalue  is  too  small,  so  low  =  2\nnow low =  2 and  high  =  1\nthe interval  is  empty,  so  the  target  is  absent Termination follows from two facts: 1.  low  never decreases and  high  never increases. 2.  On every unsuccessful iteration, either  low  increases beyond  mid  or  high  decreases below  mid . Therefore the active interval strictly shrinks until the target is found or no candidates remain.",
+      "sha256": "c4d0c3120fc7fc38ec108ec8f42483a971cf5c159f7fc05a67406e5f60525f0c",
+      "charCount": 1024
+    },
+    {
+      "pageNumber": 6,
+      "text": "MUSEION GOLDEN SOURCE\nBinary Search • Page 6 of 6 6. A reasoning checklist and transfer case When tracing binary search, ask these questions in order: 1.  What indices are currently inside the active interval? 2.  Which midpoint rule is being used? 3.  What does the comparison prove impossible? 4.  Which boundary must move past  mid ? 5.  Is the invariant still true after the update? 6.  Did the interval strictly shrink? Reference pseudocode: function  binarySearch(values,  target):\nlow =  0\nhigh  = values.length  -  1\nwhile  low  <=  high:\nmid =  low  +  floor((high  -  low)  /  2)\nif values[mid]  ==  target:\nreturn  mid\nelse  if  values[mid]  <  target:\nlow  =  mid  +  1\nelse:\nhigh  =  mid  -  1\nreturn not-found Transfer case: values =  [1,  4,  7,  9,  13,  18,  21,  26,  31]\ntarget =  13 To demonstrate understanding, predict each  (low, high, mid)  state without hints, explain why the discarded\nregion is impossible, and identify the final index. The surface values are new, but the invariant and boundary logic are\nunchanged.",
+      "sha256": "a88999b8b2fbe2be041edb959a00bf91dd07140acec10f36a3e58928d38b9c74",
+      "charCount": 1043
+    }
+  ],
+  "warnings": [],
+  "createdAt": "2026-07-15T00:00:00.000Z"
+}

@@ -29,6 +29,7 @@ describe("practice mode", () => {
     const bankIds = new Set(lesson.practice!.map((s) => s.id));
     for (const step of practice.steps) {
       expect(bankIds.has(step.id)).toBe(true);
+      expect(step.hints).toEqual([]);
     }
     // The synthetic lesson must not advertise further practice.
     expect(hasPractice(practice)).toBe(false);

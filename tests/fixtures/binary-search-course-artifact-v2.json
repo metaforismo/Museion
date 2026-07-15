@@ -1,0 +1,493 @@
+{
+  "schemaVersion": "2.0",
+  "id": "binary_search_golden",
+  "title": "Binary Search: Preserve the Possible",
+  "source": {
+    "origin": "source_graph",
+    "sourceId": "src_637c098ea73b6c2d4cde1dea",
+    "sourceSha256": "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0",
+    "sourceGraphSha256": "a8a1a190dca9d49668d3238c72efee67a6c846362cb467f8e9b53637ad065709"
+  },
+  "audience": {
+    "level": "novice",
+    "language": "en",
+    "targetMinutes": 12,
+    "learnerGoal": "Trace inclusive binary search and justify every boundary update."
+  },
+  "description": "A cited interactive course about the invariant, inclusive boundaries, strict progress, and near transfer in binary search.",
+  "bigQuestion": "How can binary search discard half the array without discarding a possible target?",
+  "objectives": [
+    {
+      "id": "objective_invariant",
+      "statement": "Identify the inclusive active-interval invariant.",
+      "conceptIds": [
+        "active_interval"
+      ]
+    },
+    {
+      "id": "objective_boundary",
+      "statement": "Move the correct boundary past a disproved midpoint.",
+      "conceptIds": [
+        "midpoint_selection",
+        "boundary_elimination"
+      ]
+    },
+    {
+      "id": "objective_progress",
+      "statement": "Detect an update that can repeat state instead of shrinking the interval.",
+      "conceptIds": [
+        "strict_progress",
+        "empty_interval"
+      ]
+    },
+    {
+      "id": "objective_transfer",
+      "statement": "Apply the same invariant and boundary logic to unseen surface values.",
+      "conceptIds": [
+        "near_transfer",
+        "active_interval",
+        "boundary_elimination"
+      ]
+    }
+  ],
+  "concepts": [
+    {
+      "id": "active_interval",
+      "label": "Active interval invariant",
+      "prerequisiteIds": [],
+      "sourceConceptId": "active_interval"
+    },
+    {
+      "id": "midpoint_selection",
+      "label": "Midpoint selection",
+      "prerequisiteIds": [],
+      "sourceConceptId": "midpoint_selection"
+    },
+    {
+      "id": "boundary_elimination",
+      "label": "Boundary elimination",
+      "prerequisiteIds": [
+        "active_interval",
+        "midpoint_selection"
+      ],
+      "sourceConceptId": "boundary_elimination"
+    },
+    {
+      "id": "strict_progress",
+      "label": "Strict progress",
+      "prerequisiteIds": [
+        "boundary_elimination"
+      ],
+      "sourceConceptId": "strict_progress"
+    },
+    {
+      "id": "empty_interval",
+      "label": "Empty interval termination",
+      "prerequisiteIds": [
+        "strict_progress"
+      ],
+      "sourceConceptId": "empty_interval"
+    },
+    {
+      "id": "near_transfer",
+      "label": "Near transfer",
+      "prerequisiteIds": [
+        "active_interval"
+      ],
+      "sourceConceptId": "near_transfer"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson_binary_search",
+      "title": "Preserve, eliminate, progress",
+      "objectiveIds": [
+        "objective_invariant",
+        "objective_boundary",
+        "objective_progress",
+        "objective_transfer"
+      ],
+      "blockIds": [
+        "explanation_invariant",
+        "prediction_discard",
+        "range_boundary",
+        "trace_absent",
+        "sequence_reasoning"
+      ]
+    }
+  ],
+  "blocks": {
+    "explanation_invariant": {
+      "id": "explanation_invariant",
+      "objectiveIds": [
+        "objective_invariant"
+      ],
+      "conceptIds": [
+        "active_interval"
+      ],
+      "citations": [
+        {
+          "spanId": "span_invariant",
+          "purpose": "claim"
+        }
+      ],
+      "estimatedSeconds": 75,
+      "accessibilityLabel": "Explanation of the active interval invariant",
+      "kind": "explanation",
+      "title": "Keep every still-possible index",
+      "body": "Binary search carries one promise through every iteration: if the target exists, a possible occurrence remains inside the inclusive interval from low through high. A comparison may shrink that interval only when sorted order proves the discarded region impossible."
+    },
+    "prediction_discard": {
+      "id": "prediction_discard",
+      "objectiveIds": [
+        "objective_boundary"
+      ],
+      "conceptIds": [
+        "active_interval",
+        "boundary_elimination"
+      ],
+      "citations": [
+        {
+          "spanId": "span_discard",
+          "purpose": "claim"
+        }
+      ],
+      "estimatedSeconds": 90,
+      "accessibilityLabel": "Predict which indices are impossible after comparing 11 with target 19",
+      "kind": "prediction-choice",
+      "prompt": "For values [2, 5, 8, 11, 14, 19, 23], low = 0, high = 6, mid = 3 and target = 19. Which region has the comparison proved impossible?",
+      "options": [
+        "Indices 0 through 3",
+        "Indices 4 through 6",
+        "Only index 3",
+        "No indices yet"
+      ],
+      "correctIndex": 0,
+      "reveal": "Because values[3] = 11 is smaller than 19 and the values are sorted, every index at or below 3 is impossible.",
+      "misconceptionByIndex": {
+        "1": "mis_wrong_half",
+        "2": "mis_mid_still_candidate",
+        "3": "mis_ignores_sorted_order"
+      }
+    },
+    "range_boundary": {
+      "id": "range_boundary",
+      "objectiveIds": [
+        "objective_boundary",
+        "objective_progress"
+      ],
+      "conceptIds": [
+        "midpoint_selection",
+        "boundary_elimination",
+        "strict_progress"
+      ],
+      "citations": [
+        {
+          "spanId": "span_boundaries",
+          "purpose": "claim"
+        }
+      ],
+      "estimatedSeconds": 150,
+      "accessibilityLabel": "Explore inclusive binary search boundaries for target 19",
+      "kind": "range-explorer",
+      "prompt": "Move the inclusive boundaries until target 19 is found. Every unsuccessful update must move past mid.",
+      "values": [
+        2,
+        5,
+        8,
+        11,
+        14,
+        19,
+        23
+      ],
+      "target": 19,
+      "initialState": {
+        "low": 0,
+        "high": 6
+      },
+      "learnerTask": "complete-search",
+      "midpointPolicy": "floor",
+      "misconceptionRules": [
+        {
+          "id": "mis_mid_reused_small",
+          "when": "mid-reused-after-too-small"
+        },
+        {
+          "id": "mis_mid_reused_large",
+          "when": "mid-reused-after-too-large"
+        },
+        {
+          "id": "mis_wrong_half",
+          "when": "wrong-half-discarded"
+        }
+      ]
+    },
+    "trace_absent": {
+      "id": "trace_absent",
+      "objectiveIds": [
+        "objective_progress"
+      ],
+      "conceptIds": [
+        "strict_progress",
+        "empty_interval"
+      ],
+      "citations": [
+        {
+          "spanId": "span_termination",
+          "purpose": "claim"
+        }
+      ],
+      "estimatedSeconds": 150,
+      "accessibilityLabel": "Trace binary search for absent target 6",
+      "kind": "state-trace",
+      "prompt": "Predict the low, high and mid states while searching [2, 5, 8, 11, 14] for absent target 6.",
+      "values": [
+        2,
+        5,
+        8,
+        11,
+        14
+      ],
+      "target": 6,
+      "initialState": {
+        "step": 0,
+        "low": 0,
+        "high": 4,
+        "mid": 2
+      },
+      "expectedStates": [
+        {
+          "step": 0,
+          "low": 0,
+          "high": 4,
+          "mid": 2,
+          "comparison": "greater"
+        },
+        {
+          "step": 1,
+          "low": 0,
+          "high": 1,
+          "mid": 0,
+          "comparison": "less"
+        },
+        {
+          "step": 2,
+          "low": 1,
+          "high": 1,
+          "mid": 1,
+          "comparison": "less"
+        }
+      ],
+      "responseMode": "predict-next-state"
+    },
+    "sequence_reasoning": {
+      "id": "sequence_reasoning",
+      "objectiveIds": [
+        "objective_boundary"
+      ],
+      "conceptIds": [
+        "active_interval",
+        "boundary_elimination",
+        "strict_progress"
+      ],
+      "citations": [
+        {
+          "spanId": "span_progress",
+          "purpose": "claim"
+        }
+      ],
+      "estimatedSeconds": 90,
+      "accessibilityLabel": "Order the reasoning steps for a safe boundary update",
+      "kind": "sequence-builder",
+      "prompt": "Order the reasoning that justifies an unsuccessful binary-search update.",
+      "items": [
+        {
+          "id": "compare_mid",
+          "label": "Compare values[mid] with the target."
+        },
+        {
+          "id": "prove_region",
+          "label": "Use sorted order to prove one region impossible."
+        },
+        {
+          "id": "move_past_mid",
+          "label": "Move the corresponding boundary past mid."
+        },
+        {
+          "id": "check_shrink",
+          "label": "Check that the inclusive interval strictly shrank."
+        }
+      ],
+      "correctOrder": [
+        "compare_mid",
+        "prove_region",
+        "move_past_mid",
+        "check_shrink"
+      ]
+    },
+    "guided_next_low": {
+      "id": "guided_next_low",
+      "objectiveIds": [
+        "objective_boundary"
+      ],
+      "conceptIds": [
+        "boundary_elimination"
+      ],
+      "citations": [
+        {
+          "spanId": "span_boundaries",
+          "purpose": "claim"
+        }
+      ],
+      "estimatedSeconds": 60,
+      "accessibilityLabel": "Enter the next low boundary after midpoint 3 is too small",
+      "kind": "guided-response",
+      "prompt": "low = 0, high = 6 and mid = 3. values[mid] is too small. What is the next low?",
+      "responseKind": "numeric",
+      "options": [],
+      "answerSpecId": "answer_next_low",
+      "solution": "Index 3 has been disproved, so the next inclusive interval begins at mid + 1 = 4.",
+      "hints": [
+        "The midpoint is no longer a candidate.",
+        "Move low strictly past mid."
+      ],
+      "misconceptionIds": [
+        "mis_mid_reused_small"
+      ]
+    },
+    "transfer_unseen": {
+      "id": "transfer_unseen",
+      "objectiveIds": [
+        "objective_transfer"
+      ],
+      "conceptIds": [
+        "near_transfer",
+        "active_interval",
+        "boundary_elimination"
+      ],
+      "citations": [
+        {
+          "spanId": "span_transfer",
+          "purpose": "claim"
+        }
+      ],
+      "estimatedSeconds": 180,
+      "accessibilityLabel": "Unassisted transfer search for target 13",
+      "kind": "transfer-challenge",
+      "prompt": "Without hints or Maia, trace binary search over [1, 4, 7, 9, 13, 18, 21, 26, 31] for target 13. What final index is returned?",
+      "responseKind": "numeric",
+      "options": [],
+      "answerSpecId": "answer_transfer_index",
+      "deepStructureTags": [
+        "inclusive_bounds",
+        "move_past_mid",
+        "active_interval"
+      ],
+      "sourceSurfaceDifference": "The values and interval length differ from guided practice while the inclusive-boundary invariant is unchanged.",
+      "assistancePolicy": "none"
+    }
+  },
+  "answerSpecs": {
+    "answer_next_low": {
+      "id": "answer_next_low",
+      "kind": "numeric",
+      "value": 4,
+      "tolerance": 0
+    },
+    "answer_transfer_index": {
+      "id": "answer_transfer_index",
+      "kind": "numeric",
+      "value": 4,
+      "tolerance": 0
+    }
+  },
+  "misconceptions": {
+    "mis_mid_reused_small": {
+      "id": "mis_mid_reused_small",
+      "conceptId": "boundary_elimination",
+      "triggerAnswers": [
+        "low = mid"
+      ],
+      "description": "Keeps mid after values[mid] is too small.",
+      "remediationFocus": "Move low to mid + 1 because mid has been disproved.",
+      "citations": [
+        {
+          "spanId": "span_off_by_one",
+          "purpose": "instruction"
+        }
+      ]
+    },
+    "mis_mid_reused_large": {
+      "id": "mis_mid_reused_large",
+      "conceptId": "boundary_elimination",
+      "triggerAnswers": [
+        "high = mid"
+      ],
+      "description": "Keeps mid after values[mid] is too large.",
+      "remediationFocus": "Move high to mid - 1 because mid has been disproved.",
+      "citations": [
+        {
+          "spanId": "span_boundaries",
+          "purpose": "instruction"
+        }
+      ]
+    },
+    "mis_wrong_half": {
+      "id": "mis_wrong_half",
+      "conceptId": "active_interval",
+      "triggerAnswers": [],
+      "description": "Discards the region that may still contain the target.",
+      "remediationFocus": "Use sorted order and the comparison direction before moving a boundary.",
+      "citations": [
+        {
+          "spanId": "span_discard",
+          "purpose": "instruction"
+        }
+      ]
+    },
+    "mis_mid_still_candidate": {
+      "id": "mis_mid_still_candidate",
+      "conceptId": "boundary_elimination",
+      "triggerAnswers": [],
+      "description": "Treats the disproved midpoint as still uncertain.",
+      "remediationFocus": "Name what the comparison proved before updating the interval.",
+      "citations": [
+        {
+          "spanId": "span_off_by_one",
+          "purpose": "instruction"
+        }
+      ]
+    },
+    "mis_ignores_sorted_order": {
+      "id": "mis_ignores_sorted_order",
+      "conceptId": "active_interval",
+      "triggerAnswers": [],
+      "description": "Does not use sorted order to eliminate a region.",
+      "remediationFocus": "Connect the comparison at mid to every value on one side.",
+      "citations": [
+        {
+          "spanId": "span_discard",
+          "purpose": "instruction"
+        }
+      ]
+    }
+  },
+  "transferBlockIds": [
+    "transfer_unseen"
+  ],
+  "validation": {
+    "validatorVersion": "artifact-validator-v1",
+    "status": "accepted",
+    "blockingIssueCount": 0,
+    "warningCount": 0,
+    "validatedAt": "2026-07-15T00:00:00.000Z"
+  },
+  "provenance": {
+    "compilerVersion": "golden-replay-v1",
+    "promptBundleVersion": "golden-binary-search-v1",
+    "model": "deterministic-replay",
+    "generatedAt": "2026-07-15T00:00:00.000Z",
+    "deterministicSeed": "binary-search-golden-v1",
+    "generationRunId": "golden_binary_search_v1"
+  }
+}

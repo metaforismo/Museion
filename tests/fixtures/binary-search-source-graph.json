@@ -1,0 +1,347 @@
+{
+  "schemaVersion": "1.0",
+  "sourceId": "src_637c098ea73b6c2d4cde1dea",
+  "spans": {
+    "span_invariant": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 1,
+      "start": 902,
+      "end": 1045,
+      "exactText": "An invariant is a statement that is true before an iteration, remains true after the iteration, and helps explain why the\nalgorithm is correct.",
+      "sha256": "8ce300c3fa7c256a2dfed34ab1d5042552a19968e4d5509fb9dc905353caee00"
+    },
+    "span_midpoint": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 2,
+      "start": 253,
+      "end": 354,
+      "exactText": "This expression chooses the lower middle index when the interval contains an even number of elements.",
+      "sha256": "332de1d0e5ae1331418e39060d547efc0086d3791d30785fde7d0a2c3be08411"
+    },
+    "span_discard": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 2,
+      "start": 849,
+      "end": 926,
+      "exactText": "The comparison gives a proof that one whole region\ncannot contain the target.",
+      "sha256": "269fd0462ad3a69301b43e3d089e128dff53c0211773b4dc5e289378fe4b53d1"
+    },
+    "span_boundaries": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 3,
+      "start": 214,
+      "end": 282,
+      "exactText": "The comparison has already shown that index  mid  is not the target.",
+      "sha256": "73d1d2c5987186d56d437225b1a1b4f128fb65a427ed99aedfd2488190474286"
+    },
+    "span_progress": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 3,
+      "start": 597,
+      "end": 703,
+      "exactText": "They also guarantee progress. Whenever the target is not found, the number of candidate indices decreases.",
+      "sha256": "d404103ae2750cd8726204a4037f6942a01b9bb7858c3f816d87b3fa26261cff"
+    },
+    "span_off_by_one": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 4,
+      "start": 608,
+      "end": 667,
+      "exactText": "The state does not change, so the loop may never terminate.",
+      "sha256": "56f97cb303c7572f1b37d79271f92f1e4f072c4972b050da0dbc2893a2ee21e3"
+    },
+    "span_empty": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 5,
+      "start": 263,
+      "end": 314,
+      "exactText": "The interval becomes empty only\nwhen  low >  high .",
+      "sha256": "6126fbe021d44e0597a1a8524247438fa2fe9c40b577f278238fd3bcc4f60c50"
+    },
+    "span_termination": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 5,
+      "start": 927,
+      "end": 1024,
+      "exactText": "Therefore the active interval strictly shrinks until the target is found or no candidates remain.",
+      "sha256": "0e2fa3ef6b2329e9f21a5cba613c6797871f49714dac1690e957cb882e03dacf"
+    },
+    "span_transfer": {
+      "schemaVersion": "1.0",
+      "sourceId": "src_637c098ea73b6c2d4cde1dea",
+      "pageNumber": 6,
+      "start": 964,
+      "end": 1043,
+      "exactText": "The surface values are new, but the invariant and boundary logic are\nunchanged.",
+      "sha256": "210435f77265f4a64e1108d5794c6951e75ec1598d1868f736cf0610e696a065"
+    }
+  },
+  "concepts": [
+    {
+      "id": "active_interval",
+      "label": "Active interval invariant",
+      "definition": "If the target exists, at least one occurrence remains between the inclusive low and high boundaries.",
+      "evidence": [
+        {
+          "spanId": "span_invariant",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "id": "midpoint_selection",
+      "label": "Midpoint selection",
+      "definition": "Choose the lower midpoint using a difference-based formula.",
+      "evidence": [
+        {
+          "spanId": "span_midpoint",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "id": "boundary_elimination",
+      "label": "Boundary elimination",
+      "definition": "A comparison proves one region and the midpoint impossible, so the next boundary moves past mid.",
+      "evidence": [
+        {
+          "spanId": "span_boundaries",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "id": "strict_progress",
+      "label": "Strict progress",
+      "definition": "Every unsuccessful iteration reduces the number of candidate indices.",
+      "evidence": [
+        {
+          "spanId": "span_progress",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "id": "empty_interval",
+      "label": "Empty interval termination",
+      "definition": "An inclusive interval is empty only when low is greater than high.",
+      "evidence": [
+        {
+          "spanId": "span_empty",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "id": "near_transfer",
+      "label": "Near transfer",
+      "definition": "The same invariant and boundary reasoning applies when the surface values change.",
+      "evidence": [
+        {
+          "spanId": "span_transfer",
+          "support": "direct"
+        }
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim_invariant",
+      "text": "The active interval retains every still-possible target occurrence.",
+      "conceptIds": [
+        "active_interval"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_invariant",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_midpoint",
+      "text": "The canonical midpoint formula selects the lower middle index.",
+      "conceptIds": [
+        "midpoint_selection"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_midpoint",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_discard",
+      "text": "Sorted order plus the midpoint comparison proves an entire region impossible.",
+      "conceptIds": [
+        "active_interval",
+        "boundary_elimination"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_discard",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_boundary",
+      "text": "The midpoint must be excluded after it has been disproved.",
+      "conceptIds": [
+        "boundary_elimination"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_boundaries",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_progress",
+      "text": "Moving beyond the midpoint guarantees strict progress.",
+      "conceptIds": [
+        "strict_progress",
+        "boundary_elimination"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_progress",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_off_by_one",
+      "text": "Reusing mid can repeat the same state and prevent termination.",
+      "conceptIds": [
+        "strict_progress",
+        "boundary_elimination"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_off_by_one",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_empty",
+      "text": "A one-element inclusive interval remains searchable; low greater than high is empty.",
+      "conceptIds": [
+        "empty_interval"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_empty",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_termination",
+      "text": "Each unsuccessful update moves a boundary beyond the midpoint.",
+      "conceptIds": [
+        "strict_progress",
+        "empty_interval"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_termination",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    },
+    {
+      "id": "claim_transfer",
+      "text": "Changing the values preserves the invariant and boundary logic.",
+      "conceptIds": [
+        "near_transfer",
+        "active_interval",
+        "boundary_elimination"
+      ],
+      "evidence": [
+        {
+          "spanId": "span_transfer",
+          "support": "direct"
+        }
+      ],
+      "confidence": 1
+    }
+  ],
+  "prerequisiteEdges": [
+    {
+      "fromConceptId": "active_interval",
+      "toConceptId": "boundary_elimination",
+      "rationale": "A boundary can move safely only after the invariant identifies which candidates remain possible.",
+      "evidence": [
+        {
+          "spanId": "span_discard",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "fromConceptId": "midpoint_selection",
+      "toConceptId": "boundary_elimination",
+      "rationale": "The comparison at mid determines which inclusive boundary moves past mid.",
+      "evidence": [
+        {
+          "spanId": "span_boundaries",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "fromConceptId": "boundary_elimination",
+      "toConceptId": "strict_progress",
+      "rationale": "Excluding the disproved midpoint makes the active interval strictly smaller.",
+      "evidence": [
+        {
+          "spanId": "span_progress",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "fromConceptId": "strict_progress",
+      "toConceptId": "empty_interval",
+      "rationale": "Strictly shrinking inclusive bounds eventually find the target or produce an empty interval.",
+      "evidence": [
+        {
+          "spanId": "span_termination",
+          "support": "direct"
+        }
+      ]
+    },
+    {
+      "fromConceptId": "active_interval",
+      "toConceptId": "near_transfer",
+      "rationale": "The invariant is the deep structure reused when surface values change.",
+      "evidence": [
+        {
+          "spanId": "span_transfer",
+          "support": "direct"
+        }
+      ]
+    }
+  ],
+  "warnings": []
+}

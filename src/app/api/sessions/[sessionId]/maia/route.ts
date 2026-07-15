@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { maiaRespond } from "@/lib/maia/tutor";
 import { log } from "@/lib/server/log";
 import { checkRateLimit } from "@/lib/server/rate-limit";
-import { getSession } from "@/lib/store";
+import { getOwnedSession } from "@/lib/server/session-access";
 
 /** Max learner turns per session — past this, more talk is avoidance. */
 const MAX_LEARNER_TURNS = 30;
@@ -16,16 +16,21 @@ export async function POST(
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await params;
-  const session = getSession(sessionId);
+  const session = await getOwnedSession(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Unknown session" }, { status: 404 });
   }
   if (session.complete) {
     return NextResponse.json({ error: "Lesson already complete" }, { status: 409 });
   }
-  const body = (await request.json()) as { message?: string };
-  if (typeof body.message !== "string" || body.message.trim() === "") {
+  const body = (await request.json().catch(() => null)) as {
+    message?: string;
+  } | null;
+  if (typeof body?.message !== "string" || body.message.trim() === "") {
     return NextResponse.json({ error: "Missing message" }, { status: 400 });
+  }
+  if (body.message.length > 2_000) {
+    return NextResponse.json({ error: "Message is too long" }, { status: 413 });
   }
 
   const burst = checkRateLimit(`maia:${sessionId}`, BURST_LIMIT, BURST_WINDOW_MS);
@@ -57,10 +62,8 @@ export async function POST(
   }
 
   log.info("maia_turn_started", { sessionId, learnerTurns });
-  return new Response(maiaRespond(session, body.message), {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
+  const delivery = await maiaRespond(session, body.message, undefined, request.signal);
+  return NextResponse.json(delivery, {
+    headers: { "Cache-Control": "no-store" },
   });
 }
