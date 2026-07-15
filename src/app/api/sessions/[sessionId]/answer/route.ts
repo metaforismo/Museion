@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { log } from "@/lib/server/log";
 import { getSession, getSessionLearner, recordCompletion } from "@/lib/store";
 
 export async function POST(
@@ -29,6 +30,13 @@ export async function POST(
       // record against the original lesson.
       const lessonId = session.lesson.id.replace(/::practice$/, "");
       recordCompletion(learnerId, lessonId, session.mode);
+      log.info("run_completed", {
+        sessionId,
+        lessonId,
+        mode: session.mode,
+        totalAttempts: session.stats().totalAttempts,
+        hintsUsed: session.stats().hintsUsed,
+      });
     }
   }
 
