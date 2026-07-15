@@ -239,12 +239,13 @@ async function staleMaiaFlow() {
   await submitTextAnswer(page, "6");
   await expectVisible(page.getByRole("button", { name: /Continue/ }), "stale Maia advance control");
   await page.route("**/api/sessions/*/maia", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
     await route.continue();
   });
   await page.getByLabel("Message for Maia").fill("Explain this step without giving the answer");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("button", { name: /Continue/ }).click();
+  await expectVisible(page.getByText("Step 2 of 4"), "stale Maia advanced step");
   await expectVisible(page.getByText("The lesson moved to a new step, so I stopped that reply."), "stale Maia response cancellation");
   await context.close();
 }
@@ -438,12 +439,47 @@ async function completeJudge(page, label, takeScreenshot = false) {
 
   await page.getByRole("button", { name: "Start locked transfer" }).click();
   await expectVisible(page.getByText("Maia 0 · hints 0 · solutions 0"), `${label} transfer lock`);
+  await page.getByLabel("Final index").fill("4.5");
+  await page.getByLabel("Final index").blur();
+  await expectVisible(page.getByText(/Enter one whole-number index/), `${label} transfer integer validation`);
+  if (await page.getByRole("button", { name: "Submit only attempt" }).isEnabled()) failures.push(`${label}: invalid decimal transfer answer can be submitted`);
   await page.getByLabel("Final index").fill("4");
   await page.getByRole("button", { name: "Submit only attempt" }).click();
   await expectVisible(page.getByRole("heading", { name: "Correct" }), `${label} transfer result`);
   await expectVisible(page.getByRole("heading", { name: "Evidence ledger" }), `${label} evidence ledger`);
   await expectVisible(page.getByText(/not evidence of durable mastery/), `${label} limitation`);
   if (takeScreenshot) await page.screenshot({ path: path.join(outputDir, `${label}.png`), fullPage: true });
+}
+
+async function judgeRecoveryFlow() {
+  const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+  const page = await context.newPage();
+  await page.goto(`${baseURL}/judge`);
+  await expectVisible(page.getByText("Verified replay", { exact: true }), "judge recovery initial session");
+  const sessionId = await page.evaluate(() => localStorage.getItem("museion_judge_session_v1"));
+  if (!sessionId) throw new Error("Judge recovery fixture did not create a session");
+
+  await page.evaluate((id) => localStorage.setItem(`museion_judge_session_v1:${id}:block`, "999"), sessionId);
+  await page.reload();
+  await expectVisible(page.getByRole("radio").first(), "judge recovery clamps skipped interactive block");
+  if (await page.getByRole("button", { name: "Start locked transfer" }).count()) failures.push("judge recovery: corrupted local index skipped to transfer");
+
+  await page.route(`**/api/judge/${sessionId}`, (route) => route.request().method() === "GET"
+    ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "temporary outage" }) })
+    : route.continue());
+  await page.reload();
+  await expectVisible(page.getByRole("heading", { name: "Judge route unavailable" }), "judge temporary recovery state");
+  const preserved = await page.evaluate(() => localStorage.getItem("museion_judge_session_v1"));
+  if (preserved !== sessionId) failures.push("judge recovery: temporary server failure discarded the saved session");
+
+  await page.unroute(`**/api/judge/${sessionId}`);
+  await page.reload();
+  await expectVisible(page.getByRole("radio").first(), "judge recovery restored session");
+  await page.getByRole("button", { name: "Reset run" }).click();
+  await expectVisible(page.getByRole("group", { name: "Confirm reset run" }), "judge inline reset confirmation");
+  await page.getByRole("button", { name: "Keep run" }).click();
+  if (await page.getByRole("group", { name: "Confirm reset run" }).count()) failures.push("judge reset: keep run did not close confirmation");
+  await context.close();
 }
 
 async function judgeFlow(viewport, label, repeat = 1) {
@@ -478,6 +514,7 @@ try {
     await mobileFlow();
     await performanceBudgetFlow();
     await keyboardJudgeFlow();
+    await judgeRecoveryFlow();
     await judgeFlow({ width: 1440, height: 1000 }, "judge-desktop", 20);
     await judgeFlow({ width: 320, height: 700 }, "judge-mobile", 1);
   }
