@@ -45,6 +45,13 @@ export interface CompileResult {
   repaired: boolean;
 }
 
+export interface CompileAudience {
+  level: "novice" | "intermediate" | "advanced";
+  language: string;
+  targetMinutes: number;
+  learnerGoal: string;
+}
+
 function blocking(code: string, path: string, message: string): CompilerIssue {
   return { code, path, message, severity: "blocking" };
 }
@@ -65,7 +72,7 @@ function applyPatch(artifact: CourseArtifactV2, patch: ReturnType<typeof Artifac
 export async function compileCourse(
   document: SourceDocument,
   provider: CompilerProvider,
-  options: { timeoutMs?: number; now?: string } = {},
+  options: { timeoutMs?: number; now?: string; audience?: CompileAudience } = {},
 ): Promise<CompileResult> {
   const timeoutMs = options.timeoutMs ?? 20_000;
   const telemetry: CompilerStageTelemetry[] = [];
@@ -120,10 +127,13 @@ export async function compileCourse(
 
   const graphSha256 = await canonicalSha256(graph);
   const blueprint = CourseBlueprintSchema.parse(
-    await runStage("blueprint", { schemaVersion: "1.0", sourceGraph: graph, sourceGraphSha256: graphSha256 }),
+    await runStage("blueprint", { schemaVersion: "1.0", sourceGraph: graph, sourceGraphSha256: graphSha256, requestedAudience: options.audience }),
   );
   const blueprintIssues: CompilerIssue[] = [];
   if (blueprint.sourceGraphSha256 !== graphSha256) blueprintIssues.push(blocking("source_graph_hash_mismatch", "sourceGraphSha256", "Blueprint does not bind to the validated Source Graph"));
+  if (options.audience && JSON.stringify(blueprint.audience) !== JSON.stringify(options.audience)) {
+    blueprintIssues.push(blocking("audience_mismatch", "audience", "Blueprint does not match the requested learner audience"));
+  }
   const graphConceptIds = new Set(graph.concepts.map((item) => item.id));
   const objectiveIds = new Set(blueprint.objectives.map((item) => item.id));
   blueprint.objectives.forEach((objective, index) => objective.conceptIds.forEach((id) => {

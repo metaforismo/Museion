@@ -29,7 +29,9 @@ function completeState(state: JudgeSessionView["blockStates"][string] | undefine
   return state.complete && state.correct === true;
 }
 
-export default function JudgeExperience() {
+export default function JudgeExperience({ compilerRunId }: { compilerRunId?: string }) {
+  const sessionKey = compilerRunId ? `${SESSION_KEY}:${compilerRunId}` : SESSION_KEY;
+  const runKey = compilerRunId ? `${RUN_KEY}:${compilerRunId}` : RUN_KEY;
   const [session, setSession] = useState<JudgeSessionView | null>(null);
   const [blockIndex, setBlockIndex] = useState(0);
   const [busy, setBusy] = useState(true);
@@ -44,24 +46,24 @@ export default function JudgeExperience() {
     started.current = true;
     const boot = async () => {
       try {
-        const existingId = localStorage.getItem(SESSION_KEY);
+        const existingId = localStorage.getItem(sessionKey);
         if (existingId) {
           try {
             const resumed = await jsonRequest<JudgeSessionView>(`/api/judge/${existingId}`);
             setSession(resumed);
-            setBlockIndex(Number(localStorage.getItem(`${SESSION_KEY}:${existingId}:block`)) || 0);
+            setBlockIndex(Number(localStorage.getItem(`${sessionKey}:${existingId}:block`)) || 0);
             return;
           } catch {
-            localStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(sessionKey);
           }
         }
-        const clientRunId = localStorage.getItem(RUN_KEY) ?? crypto.randomUUID();
-        localStorage.setItem(RUN_KEY, clientRunId);
-        const created = await jsonRequest<JudgeSessionView>("/api/judge", {
+        const clientRunId = localStorage.getItem(runKey) ?? crypto.randomUUID();
+        localStorage.setItem(runKey, clientRunId);
+        const created = await jsonRequest<JudgeSessionView>(compilerRunId ? `/api/compiler/runs/${compilerRunId}/launch` : "/api/judge", {
           method: "POST",
           body: JSON.stringify({ clientRunId }),
         });
-        localStorage.setItem(SESSION_KEY, created.sessionId);
+        localStorage.setItem(sessionKey, created.sessionId);
         setSession(created);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "The verified replay could not start.");
@@ -70,7 +72,7 @@ export default function JudgeExperience() {
       }
     };
     void boot();
-  }, []);
+  }, [compilerRunId, runKey, sessionKey]);
 
   const lesson = session?.artifact.lessons[0];
   const lessonBlocks = session && lesson ? lesson.blockIds.map((id) => session.artifact.blocks[id]) : [];
@@ -81,7 +83,7 @@ export default function JudgeExperience() {
     if (!session) return;
     const next = Math.min(blockIndex + 1, lessonBlocks.length);
     setBlockIndex(next);
-    localStorage.setItem(`${SESSION_KEY}:${session.sessionId}:block`, String(next));
+    localStorage.setItem(`${sessionKey}:${session.sessionId}:block`, String(next));
     setFeedback(null);
     setTutor(null);
   };
@@ -137,8 +139,8 @@ export default function JudgeExperience() {
   const reset = async () => {
     setBusy(true);
     if (session) await fetch(`/api/judge/${session.sessionId}`, { method: "DELETE" }).catch(() => undefined);
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.setItem(RUN_KEY, crypto.randomUUID());
+    localStorage.removeItem(sessionKey);
+    localStorage.setItem(runKey, crypto.randomUUID());
     location.reload();
   };
 
@@ -154,7 +156,7 @@ export default function JudgeExperience() {
   return (
     <div className="mx-auto min-h-svh w-full max-w-5xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div><div className="flex flex-wrap items-center gap-2"><span className="rounded-md bg-correct-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-correct">Verified replay</span><span className="rounded-md bg-lapis-soft px-3 py-1 text-xs font-medium text-lapis-dark">No login · keyless</span></div><h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">{session.artifact.title}</h1><p className="mt-3 max-w-[62ch] text-lg leading-7 text-ink-soft">{session.artifact.bigQuestion}</p></div>
+        <div><div className="flex flex-wrap items-center gap-2"><span className="rounded-md bg-correct-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-correct">{session.mode === "verified-replay" ? "Verified replay" : "Generated course"}</span><span className="rounded-md bg-lapis-soft px-3 py-1 text-xs font-medium text-lapis-dark">No login · deterministic runtime</span></div><h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">{session.artifact.title}</h1><p className="mt-3 max-w-[62ch] text-lg leading-7 text-ink-soft">{session.artifact.bigQuestion}</p></div>
         <button type="button" onClick={() => void reset()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium hover:border-lapis">Reset run</button>
       </header>
 

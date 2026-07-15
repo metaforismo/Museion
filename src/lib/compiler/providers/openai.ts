@@ -61,7 +61,7 @@ export function buildCompilerInstructions(stage: CompilerStage): string {
   const task: Record<CompilerStage, string> = {
     source_graph: "Extract concepts, factual claims, prerequisite edges, warnings, and exact source quotes. For each span return only its pageNumber and exactText; the application resolves offsets and hashes deterministically.",
     blueprint: "Design a short learning sequence whose concepts and sourceGraphSha256 exactly match the validated Source Graph.",
-    course_artifact: "Produce a private Course Artifact v2 using only registered data-only block kinds. Every factual block needs a real supplied span citation. Keep transfer assistancePolicy equal to none.",
+    course_artifact: "Produce one short private Course Artifact v2 using explanation, prediction-choice, sequence-builder, range-explorer, and state-trace lesson blocks plus a transfer-challenge. Do not use guided-response until that renderer is available. Every factual block needs a real supplied span citation. Keep transfer assistancePolicy equal to none.",
     critic: "Audit the candidate and validator issues. Set accepted false for every unresolved blocking correctness, citation, reference, termination, privacy, or transfer-lock issue.",
     repair: "Return only a minimal allow-listed typed patch that resolves the supplied issues. Do not alter unrelated fields.",
   };

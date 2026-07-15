@@ -40,7 +40,7 @@ Codex was used as the primary engineering agent on 2026-07-15 to organize planni
 
 - `npm run lint`: passed.
 - `npm run typecheck`: passed.
-- `npm test`: 132 passed, 8 live GPT-5.6 tests skipped after compiler truth-hardening and session-protocol regressions.
+- `npm test`: 134 passed, 8 live GPT-5.6 tests skipped after compiler truth-hardening and session-protocol regressions.
 - `npm run build`: passed fully offline without the prior workspace-root or font-fetch dependency.
 - `npm run verify:ui`: legacy smoke plus complete judge flow passed 20× at 1440×1000 and once at 320×700.
 - `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities after the scoped PostCSS override.

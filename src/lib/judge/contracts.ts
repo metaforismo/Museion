@@ -25,7 +25,7 @@ export const JudgeTransferRequestSchema = z.discriminatedUnion("kind", [
 export const JudgeSessionViewSchema = z.object({
   schemaVersion: z.literal("1.0"),
   sessionId: z.string().uuid(),
-  mode: z.literal("verified-replay"),
+  mode: z.enum(["verified-replay", "generated-course"]),
   artifact: PublicCourseArtifactV2Schema,
   blockStates: z.record(z.string(), RuntimeStateSchema),
   completedBlockIds: z.array(z.string()),

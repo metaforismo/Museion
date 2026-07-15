@@ -3,6 +3,7 @@ export * from "./contracts";
 export * from "./legacy-adapter";
 export * from "./orchestrator";
 export * from "./public-artifact";
+export * from "./runs";
 export * from "./schemas/blueprint";
 export * from "./schemas/course-artifact";
 export * from "./schemas/source-graph";

@@ -270,17 +270,22 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Normalize pasted source" }).click();
   await expectVisible(page.getByText("Document SHA-256"), "pasted-source hash");
   await expectVisible(page.getByRole("heading", { name: "Review warnings" }), "instruction-like warning");
+  await page.getByRole("button", { name: "Compile this source" }).click();
+  await expectVisible(page.getByText(/Live compilation is not configured/), "truthful keyless live compiler boundary");
 
   await page.locator('input[type="file"]').setInputFiles(pdfFixture);
   await expectVisible(
     page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }),
     "six-page PDF record",
   );
-  await expectVisible(page.getByRole("link", { name: "Review verified compilation" }), "verified compiler review link");
-  await page.getByRole("link", { name: "Review verified compilation" }).click();
+  await page.getByRole("button", { name: "Create verified replay run" }).click();
+  await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
   await expectVisible(page.getByText("Accepted · 0 blocking issues"), "accepted compiler validation");
-  await expectVisible(page.getByRole("heading", { name: "Source Graph" }), "source graph review");
+  await expectVisible(page.getByRole("heading", { name: "Grounding" }), "run grounding review");
   await page.screenshot({ path: path.join(outputDir, "desktop-source-creator.png"), fullPage: true });
+  await page.getByRole("link", { name: /Launch generated learner experience/ }).click();
+  await expectVisible(page.getByText("Verified replay", { exact: true }), "compiler-run learner launch");
+  await expectVisible(page.getByRole("heading", { name: /Binary Search/ }), "compiler-run learner title");
 
   const notFoundPage = await context.newPage();
   await notFoundPage.goto(`${baseURL}/missing-route`);

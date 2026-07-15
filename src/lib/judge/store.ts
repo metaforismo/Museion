@@ -30,6 +30,7 @@ interface JudgeSessionRecord {
   ownerId: string;
   clientRunId: string;
   artifact: CourseArtifactV2;
+  mode: "verified-replay" | "generated-course";
   states: Record<string, RuntimeState>;
   transfer: TransferState | null;
   observation: EvidenceObservation | null;
@@ -84,7 +85,7 @@ function view(record: JudgeSessionRecord): JudgeSessionView {
   return JudgeSessionViewSchema.parse({
     schemaVersion: "1.0",
     sessionId: record.id,
-    mode: "verified-replay",
+    mode: record.mode,
     artifact: toPublicCourseArtifact(record.artifact),
     blockStates: record.states,
     completedBlockIds,
@@ -98,8 +99,12 @@ function view(record: JudgeSessionRecord): JudgeSessionView {
   });
 }
 
-export function createJudgeSession(ownerId: string, clientRunId: string): JudgeSessionView {
-  const runKey = `${ownerId}:${clientRunId}`;
+export function createJudgeSession(
+  ownerId: string,
+  clientRunId: string,
+  artifact: CourseArtifactV2 = goldenArtifact,
+): JudgeSessionView {
+  const runKey = `${ownerId}:${artifact.id}:${clientRunId}`;
   const existingId = store.runKeys.get(runKey);
   if (existingId) {
     const existing = store.sessions.get(existingId);
@@ -107,13 +112,14 @@ export function createJudgeSession(ownerId: string, clientRunId: string): JudgeS
   }
   const now = new Date().toISOString();
   const states = Object.fromEntries(
-    interactiveBlocks(goldenArtifact).map((block) => [block.id, initializeBlock(block)]),
+    interactiveBlocks(artifact).map((block) => [block.id, initializeBlock(block)]),
   );
   const record: JudgeSessionRecord = {
     id: crypto.randomUUID(),
     ownerId,
     clientRunId,
-    artifact: structuredClone(goldenArtifact),
+    artifact: structuredClone(artifact),
+    mode: artifact.id === goldenArtifact.id ? "verified-replay" : "generated-course",
     states,
     transfer: null,
     observation: null,
@@ -187,7 +193,7 @@ export async function updateJudgeTransfer(input: {
 
 export function deleteJudgeSession(sessionId: string, ownerId: string): boolean {
   const record = requireOwnedSession(sessionId, ownerId);
-  store.runKeys.delete(`${record.ownerId}:${record.clientRunId}`);
+  store.runKeys.delete(`${record.ownerId}:${record.artifact.id}:${record.clientRunId}`);
   return store.sessions.delete(sessionId);
 }
 

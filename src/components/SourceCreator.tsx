@@ -29,12 +29,23 @@ export default function SourceCreator() {
   const [selectedPage, setSelectedPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [level, setLevel] = useState<"novice" | "intermediate" | "advanced">("novice");
+  const [language, setLanguage] = useState("en");
+  const [targetMinutes, setTargetMinutes] = useState(12);
+  const [learnerGoal, setLearnerGoal] = useState("Understand the key ideas and apply them without assistance.");
+  const [compiling, setCompiling] = useState(false);
 
   const acceptDocument = (next: SourceDocument) => {
     setDocument(next);
     setSelectedPage(next.pages[0].pageNumber);
     setTitle(next.title);
     setError(null);
+    if (next.sha256 === GOLDEN_SOURCE_SHA256) {
+      setLevel("novice");
+      setLanguage("en");
+      setTargetMinutes(12);
+      setLearnerGoal("Trace inclusive binary search and justify every boundary update.");
+    }
   };
 
   const normalizePastedText = async () => {
@@ -67,6 +78,32 @@ export default function SourceCreator() {
   const page = document?.pages.find(
     (candidate) => candidate.pageNumber === selectedPage,
   );
+
+  const compile = async () => {
+    if (!document) return;
+    setCompiling(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/compiler/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document, audience: { level, language, targetMinutes, learnerGoal } }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error === "LIVE_COMPILER_NOT_CONFIGURED"
+          ? "Live compilation is not configured on this deployment. The normalized source is safe, but no course was published."
+          : payload?.error === "COMPILATION_REJECTED"
+            ? `Compilation stopped safely at ${payload.stage}. No partial course was published.`
+            : "Compilation failed safely. No partial course was published.");
+      }
+      location.assign(`/create/review/${payload.runId}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Compilation failed safely.");
+    } finally {
+      setCompiling(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
@@ -231,21 +268,20 @@ export default function SourceCreator() {
                   {page.text}
                 </pre>
               </div>
-              {document.sha256 === GOLDEN_SOURCE_SHA256 ? (
-                <>
-                  <Link href="/create/review" className="mt-5 block w-full rounded-lg bg-ink px-5 py-2.5 text-center font-medium text-white transition hover:bg-lapis-dark">
-                    Review verified compilation
-                  </Link>
-                  <p className="mt-2 text-center text-xs text-ink-soft">Exact golden source match · keyless deterministic replay</p>
-                </>
-              ) : (
-                <>
-                  <button type="button" disabled className="mt-5 w-full rounded-lg bg-ink px-5 py-2.5 font-medium text-white opacity-45">
-                    Live compilation unavailable
-                  </button>
-                  <p className="mt-2 text-center text-xs text-ink-soft">This build publishes only the fully verified golden source. Your normalized record remains available for inspection.</p>
-                </>
-              )}
+              <div className="mt-5 rounded-xl border border-ink/10 p-4">
+                <h3 className="font-semibold">Learning brief</h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <label className="text-sm">Level<select value={level} onChange={(event) => setLevel(event.target.value as typeof level)} className="mt-1 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2"><option value="novice">Novice</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
+                  <label className="text-sm">Language<input value={language} maxLength={35} onChange={(event) => setLanguage(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /></label>
+                  <label className="text-sm">Minutes<input type="number" min={3} max={60} value={targetMinutes} onChange={(event) => setTargetMinutes(Number(event.target.value))} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /></label>
+                </div>
+                <label className="mt-3 block text-sm">Learner goal<textarea value={learnerGoal} maxLength={600} rows={3} onChange={(event) => setLearnerGoal(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /></label>
+              </div>
+              {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-lg border border-lapis px-5 py-2.5 text-center font-medium text-lapis">Open checked golden review</Link>}
+              <button type="button" disabled={compiling || !learnerGoal.trim() || !language.trim() || targetMinutes < 3 || targetMinutes > 60} onClick={() => void compile()} className="mt-3 w-full rounded-lg bg-ink px-5 py-2.5 font-medium text-white disabled:opacity-45">
+                {compiling ? "Compiling grounded stages…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : "Compile this source"}
+              </button>
+              <p className="mt-2 text-center text-xs text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
             </>
           )}
         </section>

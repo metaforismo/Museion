@@ -125,6 +125,10 @@ The contracts below are implemented internally. Visible Judge integration remain
 - [x] Preserve useful state across refresh through an owner-bound session.
 - [x] Provide missing-key fallback, fail-closed corrupt output/timeout tests, and direct-route recovery.
 - [ ] Compile a non-golden normalized source from the Creator into a validated reviewable artifact.
+- [x] Add audience-bound owner-scoped compiler run creation and lookup APIs.
+- [x] Add a sanitized dynamic run review that excludes private answer truth.
+- [x] Fail closed with an explicit provider-not-configured state for arbitrary keyless sources.
+- [x] Launch a compatible accepted dynamic artifact into an owner-bound generated learner route.
 
 ## I. Verification and release evidence
 

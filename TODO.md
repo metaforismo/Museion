@@ -72,6 +72,8 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Wire deterministic bounded Maia observations/actions and counterexample guidance into the visible Judge runtime
 - [ ] Connect the live provider to the runtime-specific Maia snapshot
 - [ ] Compile a non-golden Creator source into a validated reviewable course
+- [x] Owner-bound compiler run API, audience brief, sanitized dynamic review, and truthful keyless failure
+- [x] Launch a compatible validated compiler run as a generated learner experience
 - [ ] Replace process-local session maps with deployment-safe state
 - [ ] Hosted deployment verification and final submission (explicit authorization required)
 
