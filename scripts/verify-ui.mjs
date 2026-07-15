@@ -86,12 +86,16 @@ async function accessibilityFlow() {
     await mobilePage.goto(`${baseURL}${route}`);
     await mobilePage.locator("main").waitFor({ state: "visible" });
     await scanPage(mobilePage, `mobile ${route}`);
-    const navLinks = mobilePage.getByRole("navigation", { name: "Primary navigation" }).getByRole("link");
-    const clippedLinks = await navLinks.evaluateAll((links) => links.filter((link) => {
-      const rect = link.getBoundingClientRect();
-      return rect.left < 0 || rect.right > window.innerWidth;
-    }).map((link) => link.textContent?.trim()));
-    if (clippedLinks.length) failures.push(`mobile ${route}: clipped primary navigation links: ${clippedLinks.join(", ")}`);
+    const currentLink = mobilePage.getByRole("navigation", { name: "Primary navigation" }).locator('[aria-current="page"]');
+    if (await currentLink.count()) {
+      const visible = await currentLink.evaluate((link) => {
+        const rect = link.getBoundingClientRect();
+        return rect.left >= 0 && rect.right <= window.innerWidth;
+      });
+      if (!visible) failures.push(`mobile ${route}: current navigation item is outside the viewport`);
+    }
+    const pageOverflows = await mobilePage.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    if (pageOverflows) failures.push(`mobile ${route}: page has horizontal overflow`);
   }
   await mobile.close();
 }
@@ -210,6 +214,41 @@ async function submitTextAnswer(page, answer) {
   await page.getByRole("button", { name: "Check" }).click();
 }
 
+async function learnerRecoveryFlow() {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  await context.addInitScript(() => {
+    localStorage.setItem("museion-onboarded", "1");
+    localStorage.setItem("museion-session-lesson-linear-equations-intro", "temporarily-unavailable");
+  });
+  const page = await context.newPage();
+  await page.route("**/api/sessions/temporarily-unavailable", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "temporary outage" }) }));
+  await page.goto(`${baseURL}/lessons/linear-equations-intro`);
+  await expectVisible(page.getByRole("heading", { name: "Your lesson could not open." }), "session recovery error state");
+  const preserved = await page.evaluate(() => localStorage.getItem("museion-session-lesson-linear-equations-intro"));
+  if (preserved !== "temporarily-unavailable") failures.push("learner recovery: temporary server failure discarded the saved session");
+  await context.close();
+}
+
+async function staleMaiaFlow() {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  watch(page, "stale-maia");
+  await page.goto(`${baseURL}/lessons/linear-equations-intro`);
+  await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "stale Maia lesson step");
+  await submitTextAnswer(page, "6");
+  await expectVisible(page.getByRole("button", { name: /Continue/ }), "stale Maia advance control");
+  await page.route("**/api/sessions/*/maia", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await route.continue();
+  });
+  await page.getByLabel("Message for Maia").fill("Explain this step without giving the answer");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: /Continue/ }).click();
+  await expectVisible(page.getByText("The lesson moved to a new step, so I stopped that reply."), "stale Maia response cancellation");
+  await context.close();
+}
+
 async function desktopFlow() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -249,7 +288,7 @@ async function desktopFlow() {
   await submitTextAnswer(page, "3");
   await expectVisible(page.getByText(/Correct — nice reasoning/), "final correct feedback");
   await page.getByRole("button", { name: /Continue/ }).click();
-  await expectVisible(page.getByText("Lesson complete 🎓"), "lesson completion");
+  await expectVisible(page.getByRole("heading", { name: "Lesson complete" }), "lesson completion");
   await expectVisible(page.getByRole("link", { name: /Try practice mode/ }), "practice entry");
   await page.screenshot({ path: path.join(outputDir, "desktop-complete.png"), fullPage: true });
 
@@ -433,6 +472,8 @@ try {
   }
   if (process.env.MUSEION_A11Y_ONLY !== "1" && process.env.MUSEION_KEYBOARD_ONLY !== "1" && process.env.MUSEION_PERFORMANCE_ONLY !== "1") {
     await desktopFlow();
+    await learnerRecoveryFlow();
+    await staleMaiaFlow();
     await designSystemFlow();
     await mobileFlow();
     await performanceBudgetFlow();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { ChatMessage, MaiaResponse } from "@/lib/api-types";
 
@@ -31,16 +31,26 @@ export default function MaiaPanel({
   const [streaming, setStreaming] = useState(false);
   const [deliverySource, setDeliverySource] = useState<MaiaResponse["source"] | null>(null);
   const [resolvedModel, setResolvedModel] = useState<string | null>(null);
+  const [retryMessage, setRetryMessage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastOutboxId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
+  const requestScope = useRef(`${sessionId}:${stepId}`);
+
+  useLayoutEffect(() => {
+    requestScope.current = `${sessionId}:${stepId}`;
+    requestController.current?.abort();
+    return () => requestController.current?.abort();
+  }, [sessionId, stepId]);
 
   const send = useCallback(
     async (text: string) => {
       const message = text.trim();
       if (!message || streaming) return;
+      const scope = `${sessionId}:${stepId}`;
       setStreaming(true);
       setDeliverySource(null);
+      setRetryMessage(null);
       setMessages((m) => [
         ...m,
         { role: "user", content: message },
@@ -76,22 +86,29 @@ export default function MaiaPanel({
           setLastAssistantMessage(
             data?.error ?? "Maia needs a moment — try again shortly.",
           );
+          setRetryMessage(message);
           return;
         }
         if (!res.ok) {
           throw new Error(`Maia request failed (${res.status})`);
         }
         const delivery = (await res.json()) as MaiaResponse;
+        if (requestScope.current !== scope) {
+          setLastAssistantMessage("The lesson moved to a new step, so I stopped that reply.");
+          return;
+        }
         onSessionVersion(delivery.sessionVersion);
         setDeliverySource(delivery.source);
         setResolvedModel(delivery.resolvedModel ?? null);
         setLastAssistantMessage(delivery.turn.message);
       } catch (error) {
-        setLastAssistantMessage(
-          error instanceof DOMException && error.name === "AbortError"
-            ? "That request was cancelled. Your lesson state did not change."
-            : "Maia couldn't answer just now — try again in a moment.",
-        );
+        const cancelled = error instanceof DOMException && error.name === "AbortError";
+        const stale = requestScope.current !== scope;
+        let failureMessage = "Maia couldn't answer just now — try again in a moment.";
+        if (stale) failureMessage = "The lesson moved to a new step, so I stopped that reply.";
+        else if (cancelled) failureMessage = "That request was cancelled. Your lesson state did not change.";
+        setLastAssistantMessage(failureMessage);
+        if (!stale) setRetryMessage(message);
       } finally {
         requestController.current = null;
         setStreaming(false);
@@ -185,17 +202,20 @@ export default function MaiaPanel({
           void send(input);
           setInput("");
         }}
-        className="flex gap-2 border-t border-ink/10 p-3"
+        className="border-t border-ink/10 p-3"
       >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={streaming}
-          placeholder="Ask Maia…"
-          aria-label="Message for Maia"
-          className="min-w-0 flex-1 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none transition focus:border-lapis disabled:opacity-60"
-        />
-        {streaming ? <button type="button" onClick={() => requestController.current?.abort()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium">Cancel</button> : <button type="submit" disabled={!input.trim()} className="rounded-lg bg-lapis px-4 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50">Send</button>}
+        {retryMessage && !streaming && <button type="button" onClick={() => void send(retryMessage)} className="mb-2 text-xs font-semibold text-lapis-dark underline underline-offset-4">Retry last question</button>}
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={streaming}
+            placeholder="Ask Maia…"
+            aria-label="Message for Maia"
+            className="min-w-0 flex-1 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none transition focus:border-lapis disabled:opacity-60"
+          />
+          {streaming ? <button type="button" onClick={() => requestController.current?.abort()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium">Cancel</button> : <button type="submit" disabled={!input.trim()} className="rounded-lg bg-lapis px-4 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50">Send</button>}
+        </div>
       </form>
     </aside>
   );

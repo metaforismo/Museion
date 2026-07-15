@@ -91,6 +91,14 @@ a[class*="bg-"]:active {
   z-index: 30;
 }
 
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .skip-link {
   background: var(--color-ink);
   border-radius: 0 0 0.75rem 0.75rem;

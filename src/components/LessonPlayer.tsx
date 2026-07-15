@@ -137,7 +137,11 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
             if (!cancelled) applyState(state);
             return;
           }
-          localStorage.removeItem(storeKey);
+          if (res.status === 404 || res.status === 410) {
+            localStorage.removeItem(storeKey);
+          } else {
+            throw new Error("SESSION_TEMPORARILY_UNAVAILABLE");
+          }
         }
         await createSession();
       } catch {
@@ -255,10 +259,24 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   }, [lesson.id, mode]);
 
   if (!sessionId) {
+    if (requestError) {
+      return (
+        <section role="alert" className="mx-auto w-full max-w-xl px-4 py-20 text-center animate-fade-up">
+          <p className="eyebrow">Session unavailable</p>
+          <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight">Your lesson could not open.</h1>
+          <p className="mx-auto mt-3 max-w-[52ch] leading-7 text-ink-soft">{requestError} A saved session is kept unless the server confirms that it expired.</p>
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={() => location.reload()} className="rounded-lg bg-ink px-5 py-2.5 font-semibold text-white transition hover:bg-lapis-dark">Retry session</button>
+            <Link href="/" className="rounded-lg border border-ink/15 bg-surface px-5 py-2.5 font-semibold transition hover:border-lapis">Back to lessons</Link>
+          </div>
+        </section>
+      );
+    }
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3 px-4 text-center text-ink-soft">
-        <p>{requestError ?? `Opening ${mode === "practice" ? "practice" : "the lesson"}…`}</p>
-        {requestError && <button type="button" onClick={() => location.reload()} className="rounded-lg bg-ink px-4 py-2 font-medium text-white">Retry</button>}
+      <div role="status" aria-label={`Opening ${mode === "practice" ? "practice" : "lesson"}`} className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-5 animate-pulse"><div className="h-8 w-2/3 rounded bg-ink/10"/><div className="h-2 rounded bg-ink/10"/><div className="h-72 rounded-[1.4rem] bg-surface/70"/></div>
+        <div className="hidden h-[36rem] rounded-[1.4rem] bg-surface/70 lg:block"/>
+        <span className="sr-only">Opening {mode === "practice" ? "practice" : "the lesson"}.</span>
       </div>
     );
   }
@@ -295,7 +313,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
             aria-label="Lesson progress"
             aria-valuemin={0}
             aria-valuemax={activeLesson.steps.length}
-            aria-valuenow={stepIndex}
+            aria-valuenow={Math.min(stepIndex + 1, activeLesson.steps.length)}
           >
             {activeLesson.steps.map((s, i) => (
               <div
@@ -453,29 +471,31 @@ function CompletionScreen({
 }) {
   const practiceDone = mode === "practice";
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-16 text-center animate-fade-up">
-      <p className="font-display text-3xl font-semibold">
-        {practiceDone ? "Practice complete 💪" : "Lesson complete 🎓"}
-      </p>
-      <p className="mt-3 text-ink-soft">
+    <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:py-24">
+      <p className="eyebrow">{practiceDone ? "Unassisted practice recorded" : "Lesson path completed"}</p>
+      <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+        {practiceDone ? "Practice complete" : "Lesson complete"}
+      </h1>
+      <p className="mt-4 max-w-[62ch] text-lg leading-8 text-ink-soft">
         {practiceDone
           ? `Unassisted reps on “${lesson.title}” — this is the work that sticks.`
           : `You worked through every step of “${lesson.title}”. The real test is what stays with you — come back in a few days and try it without Maia.`}
       </p>
 
+      <div className="mt-6 border-l-2 border-gold pl-4 text-sm leading-6 text-ink-soft">
+        {practiceDone
+          ? "This records one completed unassisted practice run. It does not establish long-term retention or transfer."
+          : "This records completion of the assisted lesson path. Completion is not the same as proven mastery."}
+      </div>
+
       {stats && (
         <>
-          <div className="mt-8 grid grid-cols-3 gap-3">
-            <StatCard
-              label="First-try steps"
-              value={`${stats.firstTryCorrect}/${stats.steps}`}
-            />
-            <StatCard label="Total attempts" value={String(stats.totalAttempts)} />
-            <StatCard label="Hints used" value={String(stats.hintsUsed)} />
-          </div>
+          <dl className="mt-10 grid border-y border-ink/10 sm:grid-cols-3 sm:divide-x sm:divide-ink/10">
+            {[{ label: "First-try steps", value: `${stats.firstTryCorrect}/${stats.steps}` }, { label: "Total attempts", value: String(stats.totalAttempts) }, { label: "Hints used", value: String(stats.hintsUsed) }].map((item) => <div key={item.label} className="border-b border-ink/10 py-5 last:border-b-0 sm:border-b-0 sm:px-6 sm:first:pl-0"><dt className="text-sm text-ink-soft">{item.label}</dt><dd className="mt-1 font-mono text-2xl font-semibold tabular-nums text-lapis-dark">{item.value}</dd></div>)}
+          </dl>
 
-          <div className="mt-8 rounded-xl border border-ink/10 bg-surface p-6 text-left">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-ink-soft">
+          <div className="mt-10 rounded-[1.4rem] bg-surface p-6 shadow-[0_18px_60px_rgba(35,53,91,0.08)] sm:p-8">
+            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-ink-soft">
               Concept mastery
             </h2>
             {Object.entries(stats.conceptMastery).map(([concept, mastery]) => (
@@ -498,13 +518,13 @@ function CompletionScreen({
         </>
       )}
 
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <div className="mt-8 flex flex-wrap items-center gap-3">
         {practiceDone ? (
           <button
             onClick={onRestartPractice}
             className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
           >
-            Practice again ↻
+            Practice again
           </button>
         ) : (
           lesson.practiceAvailable && (
@@ -512,7 +532,7 @@ function CompletionScreen({
               href={`/lessons/${lesson.id}/practice`}
               className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
             >
-              Try practice mode →
+              Try practice mode
             </Link>
           )
         )}
@@ -523,18 +543,7 @@ function CompletionScreen({
           Back to lessons
         </Link>
       </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-ink/10 bg-surface p-4">
-      <p className="font-display text-2xl font-semibold text-lapis-dark">
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-ink-soft">{label}</p>
-    </div>
+    </section>
   );
 }
 
@@ -608,6 +617,7 @@ function AnswerControl({
       <div className="flex flex-col gap-2.5">
         {step.options.map((option, i) => (
           <button
+            type="button"
             key={option}
             disabled={disabled}
             onClick={() => {
@@ -648,7 +658,6 @@ function AnswerControl({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={disabled}
-        autoFocus
         placeholder={step.kind === "expression" ? "e.g. 5/6" : "Your answer"}
         aria-label="Your answer"
         inputMode={step.kind === "numeric" ? "decimal" : "text"}
