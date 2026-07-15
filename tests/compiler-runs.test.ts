@@ -36,8 +36,8 @@ describe("compiler run lifecycle", () => {
     );
     expect(view.mode).toBe("replay");
     expect(view.validation.status).toBe("accepted");
-    expect(getCompilerRun(view.runId, "creator-a").runId).toBe(view.runId);
-    expect(() => getCompilerRun(view.runId, "creator-b")).toThrow("COMPILER_RUN_NOT_FOUND");
+    expect((await getCompilerRun(view.runId, "creator-a")).runId).toBe(view.runId);
+    await expect(getCompilerRun(view.runId, "creator-b")).rejects.toThrow("COMPILER_RUN_NOT_FOUND");
     const serialized = JSON.stringify(view);
     expect(serialized).not.toContain("answerSpecs");
     expect(serialized).not.toContain("correctOrder");

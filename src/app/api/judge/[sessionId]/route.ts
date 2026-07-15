@@ -15,7 +15,7 @@ export async function GET(
   if (!ownerId) return unavailable();
   try {
     const { sessionId } = await params;
-    const response = NextResponse.json(getJudgeSession(sessionId, ownerId));
+    const response = NextResponse.json(await getJudgeSession(sessionId, ownerId));
     response.headers.set("Cache-Control", "no-store");
     return response;
   } catch {
@@ -31,7 +31,7 @@ export async function DELETE(
   if (!ownerId) return unavailable();
   try {
     const { sessionId } = await params;
-    deleteJudgeSession(sessionId, ownerId);
+    await deleteJudgeSession(sessionId, ownerId);
     return new NextResponse(null, { status: 204 });
   } catch {
     return unavailable();

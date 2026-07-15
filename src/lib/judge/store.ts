@@ -22,6 +22,7 @@ import {
   type RuntimeState,
   type RuntimeTutorIntervention,
 } from "@/lib/runtime";
+import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-state";
 
 import { JudgeSessionViewSchema, type JudgeSessionView } from "./contracts";
 
@@ -38,31 +39,12 @@ interface JudgeSessionRecord {
   updatedAt: string;
 }
 
-interface JudgeStore {
-  sessions: Map<string, JudgeSessionRecord>;
-  runKeys: Map<string, string>;
-}
-
-const globalJudgeStore = globalThis as typeof globalThis & {
-  __museionJudgeStore?: JudgeStore;
-};
-
-const store = globalJudgeStore.__museionJudgeStore ?? {
-  sessions: new Map<string, JudgeSessionRecord>(),
-  runKeys: new Map<string, string>(),
-};
-globalJudgeStore.__museionJudgeStore = store;
-
 const goldenArtifact = CourseArtifactV2Schema.parse(goldenArtifactInput);
 export const JUDGE_SESSION_TTL_MS = 24 * 60 * 60 * 1_000;
 export const MAX_JUDGE_SESSIONS_PER_OWNER = 10;
 
-function pruneJudgeSessions(now = Date.now()): void {
-  for (const [id, record] of store.sessions) {
-    if (now - Date.parse(record.updatedAt) <= JUDGE_SESSION_TTL_MS) continue;
-    store.sessions.delete(id);
-    store.runKeys.delete(`${record.ownerId}:${record.artifact.id}:${record.clientRunId}`);
-  }
+async function pruneJudgeSessions(now = Date.now()): Promise<void> {
+  await stateBackend().prune("judge_session", new Date(now));
 }
 
 function interactiveBlocks(artifact: CourseArtifactV2): InteractiveBlock[] {
@@ -82,10 +64,22 @@ function isComplete(state: RuntimeState): boolean {
   return state.complete && state.correct === true;
 }
 
-function requireOwnedSession(sessionId: string, ownerId: string): JudgeSessionRecord {
-  const record = store.sessions.get(sessionId);
-  if (!record || record.ownerId !== ownerId) throw new Error("JUDGE_SESSION_NOT_FOUND");
-  return record;
+async function requireOwnedSession(sessionId: string, ownerId: string): Promise<JudgeSessionRecord> {
+  const stored = await stateBackend().get<JudgeSessionRecord>("judge_session", sessionId, ownerId);
+  if (!stored) throw new Error("JUDGE_SESSION_NOT_FOUND");
+  return stored.payload;
+}
+
+async function saveRecord(record: JudgeSessionRecord): Promise<void> {
+  await stateBackend().put({
+    namespace: "judge_session",
+    id: record.id,
+    ownerId: record.ownerId,
+    payload: record,
+    expiresAt: new Date(Date.parse(record.updatedAt) + JUDGE_SESSION_TTL_MS).toISOString(),
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  });
 }
 
 function view(record: JudgeSessionRecord): JudgeSessionView {
@@ -109,19 +103,17 @@ function view(record: JudgeSessionRecord): JudgeSessionView {
   });
 }
 
-export function createJudgeSession(
+export async function createJudgeSession(
   ownerId: string,
   clientRunId: string,
   artifact: CourseArtifactV2 = goldenArtifact,
-): JudgeSessionView {
-  pruneJudgeSessions();
-  const runKey = `${ownerId}:${artifact.id}:${clientRunId}`;
-  const existingId = store.runKeys.get(runKey);
-  if (existingId) {
-    const existing = store.sessions.get(existingId);
-    if (existing) return view(existing);
-  }
-  if ([...store.sessions.values()].filter((session) => session.ownerId === ownerId).length >= MAX_JUDGE_SESSIONS_PER_OWNER) {
+): Promise<JudgeSessionView> {
+  const backend = stateBackend();
+  await pruneJudgeSessions();
+  const owned = await backend.list<JudgeSessionRecord>("judge_session", ownerId);
+  const existing = owned.find(({ payload }) => payload.artifact.id === artifact.id && payload.clientRunId === clientRunId);
+  if (existing) return view(existing.payload);
+  if (owned.length >= MAX_JUDGE_SESSIONS_PER_OWNER) {
     throw new Error("JUDGE_SESSION_QUOTA_EXCEEDED");
   }
   const now = new Date().toISOString();
@@ -140,24 +132,23 @@ export function createJudgeSession(
     createdAt: now,
     updatedAt: now,
   };
-  store.sessions.set(record.id, record);
-  store.runKeys.set(runKey, record.id);
+  await saveRecord(record);
   return view(record);
 }
 
-export function getJudgeSession(sessionId: string, ownerId: string): JudgeSessionView {
-  pruneJudgeSessions();
-  return view(requireOwnedSession(sessionId, ownerId));
+export async function getJudgeSession(sessionId: string, ownerId: string): Promise<JudgeSessionView> {
+  await pruneJudgeSessions();
+  return view(await requireOwnedSession(sessionId, ownerId));
 }
 
-export function dispatchJudgeAction(input: {
+export async function dispatchJudgeAction(input: {
   sessionId: string;
   ownerId: string;
   blockId: string;
   action: RuntimeAction;
-}): { session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null } {
-  pruneJudgeSessions();
-  const record = requireOwnedSession(input.sessionId, input.ownerId);
+}): Promise<{ session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null }> {
+  await pruneJudgeSessions();
+  const record = await requireOwnedSession(input.sessionId, input.ownerId);
   if (record.transfer) throw new Error("TRANSFER_ALREADY_STARTED");
   const block = record.artifact.blocks[input.blockId];
   const state = record.states[input.blockId];
@@ -175,6 +166,7 @@ export function dispatchJudgeAction(input: {
   });
   record.states[input.blockId] = outcome.state;
   record.updatedAt = new Date().toISOString();
+  await saveRecord(record);
   return { session: view(record), outcome, tutor };
 }
 
@@ -185,8 +177,8 @@ export async function updateJudgeTransfer(input: {
   attemptId?: string;
   answer?: string;
 }): Promise<JudgeSessionView> {
-  pruneJudgeSessions();
-  const record = requireOwnedSession(input.sessionId, input.ownerId);
+  await pruneJudgeSessions();
+  const record = await requireOwnedSession(input.sessionId, input.ownerId);
   if (!interactiveBlocks(record.artifact).every((block) => isComplete(record.states[block.id]))) {
     throw new Error("TRANSFER_LOCKED");
   }
@@ -205,16 +197,15 @@ export async function updateJudgeTransfer(input: {
     record.observation = await buildEvidenceObservation(record.transfer, record.artifact);
   }
   record.updatedAt = new Date().toISOString();
+  await saveRecord(record);
   return view(record);
 }
 
-export function deleteJudgeSession(sessionId: string, ownerId: string): boolean {
-  const record = requireOwnedSession(sessionId, ownerId);
-  store.runKeys.delete(`${record.ownerId}:${record.artifact.id}:${record.clientRunId}`);
-  return store.sessions.delete(sessionId);
+export async function deleteJudgeSession(sessionId: string, ownerId: string): Promise<boolean> {
+  await requireOwnedSession(sessionId, ownerId);
+  return stateBackend().delete("judge_session", sessionId, ownerId);
 }
 
 export function resetJudgeStoreForTests(): void {
-  store.sessions.clear();
-  store.runKeys.clear();
+  resetMemoryStateForTests();
 }

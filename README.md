@@ -103,7 +103,9 @@ src/
     ├── maia/             # GPT-5.6 provider, strict turns, leak-gated tutor
     ├── runtime/          # pure block reducers, validators, replay, tutor snapshots
     ├── source/           # Text/PDF normalization, hashes, spans, hard limits
-    └── store.ts          # In-memory session store (persistence on roadmap)
+    ├── server/           # owner resolution, rate limits, memory/Supabase state boundary
+    └── store.ts          # authored lesson/profile store (durable migration remains)
+supabase/migrations/      # server-owned expiring state table, RLS, explicit grants
 tests/                    # Vitest suite: engine, content validation, prompt, sanitization
 ```
 
@@ -119,6 +121,7 @@ tests/                    # Vitest suite: engine, content validation, prompt, sa
 - **Provider-neutral compiler.** Source Graph, Blueprint, Artifact, critic, and one typed repair run through bounded stages with hashes, timeouts, usage metadata, and fail-closed validators. GPT-5.6 uses strict Structured Outputs; the checked replay uses the same contracts without a key.
 - **Data-only interactive runtime.** PredictionChoice, RangeExplorer, StateTrace, and SequenceBuilder are closed block kinds backed by pure server-side reducers. The public artifact contains prompts and initial state, never correct orders, expected traces, answer specs, or misconception rules.
 - **Locked evidence, narrowly worded.** Transfer is artifact-version-bound, permits one attempt, exposes no Maia/hints/solutions, hashes the raw response rather than storing it, and reports one immediate near-transfer observation plus its limitations—not mastery.
+- **Explicit persistence mode.** Keyless development uses a bounded in-process backend. A deployment can opt compiler and Judge state into Supabase with server-only credentials; partial configuration fails closed, while authored lesson/profile persistence remains on the roadmap.
 - **Practice has no deterministic hint ladder.** Each exercise bank is shuffled and stripped of hints on the server. Maia remains available, so practice performance is not presented as independent-transfer evidence.
 - **The name is the thesis.** `/about` tells the story: the Mouseion of Alexandria as the house of knowledge, and Maia — from maieutics, Socrates' midwifery of ideas — as the guide who asks instead of telling. First-time visitors get a short onboarding tour that sets the same expectation: she will never give you the answer.
 

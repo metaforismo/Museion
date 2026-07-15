@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { SourceDocumentSchema, type SourceDocument } from "@/lib/source";
+import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-state";
 
 import { CompilerFailure, compileCourse, type CompileAudience, type CompileResult } from "./orchestrator";
 import { OpenAICompilerProvider } from "./providers/openai";
@@ -32,10 +33,6 @@ interface CompilerRunRecord {
   createdAt: string;
 }
 
-const globalRuns = globalThis as unknown as { __museionCompilerRuns?: Map<string, CompilerRunRecord> };
-const runs = globalRuns.__museionCompilerRuns ?? new Map<string, CompilerRunRecord>();
-globalRuns.__museionCompilerRuns = runs;
-
 export type CompilerRunView = ReturnType<typeof compilerRunView>;
 
 function compilerRunView(record: CompilerRunRecord) {
@@ -64,8 +61,9 @@ export async function createCompilerRun(
   document: SourceDocument,
   audience: CompileAudience,
 ): Promise<CompilerRunView> {
-  pruneCompilerRuns();
-  if ([...runs.values()].filter((run) => run.ownerId === ownerId).length >= MAX_COMPILER_RUNS_PER_OWNER) {
+  const backend = stateBackend();
+  await backend.prune("compiler_run");
+  if ((await backend.list<CompilerRunRecord>("compiler_run", ownerId)).length >= MAX_COMPILER_RUNS_PER_OWNER) {
     throw new Error("COMPILER_RUN_QUOTA_EXCEEDED");
   }
   const provider = document.sha256 === GOLDEN_SOURCE_SHA256
@@ -83,22 +81,26 @@ export async function createCompilerRun(
     result,
     createdAt: new Date().toISOString(),
   };
-  runs.set(record.id, record);
+  await backend.put({
+    namespace: "compiler_run",
+    id: record.id,
+    ownerId,
+    payload: record,
+    expiresAt: new Date(Date.parse(record.createdAt) + COMPILER_RUN_TTL_MS).toISOString(),
+    createdAt: record.createdAt,
+    updatedAt: record.createdAt,
+  });
   return compilerRunView(record);
 }
 
-export function getCompilerRun(runId: string, ownerId: string): CompilerRunView {
-  pruneCompilerRuns();
-  const record = runs.get(runId);
-  if (!record || record.ownerId !== ownerId) throw new Error("COMPILER_RUN_NOT_FOUND");
-  return compilerRunView(record);
+export async function getCompilerRun(runId: string, ownerId: string): Promise<CompilerRunView> {
+  return compilerRunView(await getPrivateCompilerRun(runId, ownerId));
 }
 
-export function getPrivateCompilerRun(runId: string, ownerId: string): CompilerRunRecord {
-  pruneCompilerRuns();
-  const record = runs.get(runId);
-  if (!record || record.ownerId !== ownerId) throw new Error("COMPILER_RUN_NOT_FOUND");
-  return record;
+export async function getPrivateCompilerRun(runId: string, ownerId: string): Promise<CompilerRunRecord> {
+  const stored = await stateBackend().get<CompilerRunRecord>("compiler_run", runId, ownerId);
+  if (!stored) throw new Error("COMPILER_RUN_NOT_FOUND");
+  return stored.payload;
 }
 
 export function compilerFailurePayload(error: unknown) {
@@ -109,12 +111,10 @@ export function compilerFailurePayload(error: unknown) {
   return { error: ["LIVE_COMPILER_NOT_CONFIGURED", "COMPILER_RUN_QUOTA_EXCEEDED"].includes(code) ? code : "COMPILATION_FAILED" };
 }
 
-export function pruneCompilerRuns(now = Date.now()): void {
-  for (const [id, run] of runs) {
-    if (now - Date.parse(run.createdAt) > COMPILER_RUN_TTL_MS) runs.delete(id);
-  }
+export async function pruneCompilerRuns(now = Date.now()): Promise<void> {
+  await stateBackend().prune("compiler_run", new Date(now));
 }
 
 export function resetCompilerRunsForTests(): void {
-  runs.clear();
+  resetMemoryStateForTests();
 }

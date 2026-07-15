@@ -13,7 +13,7 @@ export async function POST(
   if (!parsed.success) return NextResponse.json({ error: "Invalid runtime action" }, { status: 400 });
   try {
     const { sessionId } = await params;
-    return NextResponse.json(dispatchJudgeAction({ sessionId, ownerId, ...parsed.data }));
+    return NextResponse.json(await dispatchJudgeAction({ sessionId, ownerId, ...parsed.data }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "RUNTIME_ACTION_FAILED";
     const status = message === "JUDGE_SESSION_NOT_FOUND" ? 404 : message === "TRANSFER_ALREADY_STARTED" ? 409 : 400;

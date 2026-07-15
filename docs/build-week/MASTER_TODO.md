@@ -135,7 +135,8 @@ The contracts below are implemented internally. Visible Judge integration remain
 - [x] Bound lesson, Judge, and compiler-run retention with owner quotas.
 - [x] Expire abandoned process-local state with explicit TTL cleanup.
 - [x] Add baseline CSP, frame, MIME, referrer, and browser-permission headers.
-- [ ] Replace process-local maps with a durable multi-instance storage adapter.
+- [ ] Replace process-local maps with a durable multi-instance storage adapter (Supabase adapter covers compiler and Judge records; authored lesson/profile maps remain).
+- [x] Add a server-only Supabase REST boundary, expiring state migration, RLS, explicit role grants, and key-format contract tests.
 - [ ] Verify resume, ownership, idempotency, and cleanup across a cold start.
 
 ## J. Verification and release evidence

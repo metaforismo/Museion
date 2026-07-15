@@ -28,3 +28,5 @@
 - Completed a premium frontend pass without changing the stack: active sticky navigation, skip link, asymmetric homepage, explicit truth-boundary diagram, source-to-evidence narrative, measured verification strip, redesigned lesson cards, richer creator/judge surfaces, and offline-safe visual tokens.
 - Added Privacy and Terms routes, deployment-aware metadata, a generated Open Graph image, a web manifest, reduced-motion verification, and first-focus skip-link coverage.
 - Re-ran the full browser matrix after the redesign: homepage, header, legal routes, lesson/source paths, 20/20 judge runs, and 320 px layouts all passed without overflow, page errors, console errors, or HTTP 5xx.
+- Added an explicit memory/Supabase state backend, a server-owned expiring-state migration with RLS and explicit grants, and new/legacy Supabase key handling. Compiler runs and Judge sessions now use the asynchronous backend; authored lesson/profile stores remain process-local.
+- Verified 141 offline tests, 8 expected live skips, lint, strict TypeScript, production build, and bundle budgets after the persistence slice. No live database or cold-start claim is made.

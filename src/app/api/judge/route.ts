@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const { learnerId, isNew } = await resolveLearnerId();
   let session;
   try {
-    session = createJudgeSession(learnerId, parsed.data.clientRunId);
+    session = await createJudgeSession(learnerId, parsed.data.clientRunId);
   } catch (error) {
     if (error instanceof Error && error.message === "JUDGE_SESSION_QUOTA_EXCEEDED") {
       return NextResponse.json({ error: error.message }, { status: 429 });

@@ -8,7 +8,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ run
   if (!ownerId) return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
   try {
     const { runId } = await params;
-    return NextResponse.json(getCompilerRun(runId, ownerId), { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(await getCompilerRun(runId, ownerId), { headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
   }

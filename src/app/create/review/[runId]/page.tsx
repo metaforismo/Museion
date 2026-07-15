@@ -12,7 +12,7 @@ export default async function CompilationRunReview({ params }: { params: Promise
   if (!ownerId) notFound();
   let run;
   try {
-    run = getCompilerRun((await params).runId, ownerId);
+    run = await getCompilerRun((await params).runId, ownerId);
   } catch {
     notFound();
   }

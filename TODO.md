@@ -38,7 +38,7 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Anonymous learner identity (httpOnly cookie) — database-ready profile shape
 - [x] Per-learner mastery profile that persists across sessions and lessons (sessions share the profile's mastery model, so fading carries over)
 - [x] "My progress" page: per-concept mastery bars grouped by lesson, completion + practice-run badges, scaffolding labels
-- [ ] Database persistence (Supabase/Postgres): sessions, mastery, event logs — replace the in-memory store
+- [ ] Database persistence (Supabase/Postgres): compiler/Judge state adapter and migration are implemented; learner sessions, mastery, event logs, and live cold-start verification remain
 - [x] Process-local TTL cleanup and per-owner retention quotas as a bounded pre-deployment safeguard
 - [ ] Learner accounts and auth (upgrade the anonymous cookie id, start with magic-link email)
 - [ ] Migrate localStorage resume to server-backed learner state
@@ -75,7 +75,7 @@ Status legend: `[x]` done · `[ ]` planned
 - [ ] Compile a non-golden Creator source into a validated reviewable course
 - [x] Owner-bound compiler run API, audience brief, sanitized dynamic review, and truthful keyless failure
 - [x] Launch a compatible validated compiler run as a generated learner experience
-- [ ] Replace process-local session maps with deployment-safe state
+- [ ] Replace process-local session maps with deployment-safe state (compiler and Judge complete; authored lesson/profile stores remain)
 - [ ] Hosted deployment verification and final submission (explicit authorization required)
 
 ## v0.5 — Content & exercise depth
