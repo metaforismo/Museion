@@ -301,7 +301,10 @@ async function desktopFlow() {
 
   await page.getByRole("link", { name: "Progress", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: "My progress" }), "progress page");
-  await expectVisible(page.getByText("Solving Linear Equations"), "completed lesson progress");
+  await expectVisible(page.getByText("Solving Linear Equations").first(), "completed lesson progress");
+  await expectVisible(page.getByText(/not proof of durable mastery or transfer/), "truthful progress boundary");
+  await expectVisible(page.getByRole("progressbar", { name: /adaptive support estimate/ }).first(), "accessible support estimate");
+  await expectVisible(page.getByRole("link", { name: "Practice without hints" }).first(), "recommended practice action");
 
   await page.getByRole("link", { name: "Create", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
@@ -323,6 +326,8 @@ async function desktopFlow() {
   await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
   await expectVisible(page.getByText("Accepted for learning"), "accepted compiler validation");
   await expectVisible(page.getByRole("heading", { name: "Source quotations" }), "run grounding review");
+  await expectVisible(page.getByText("Locked transfer"), "separate transfer boundary");
+  await expectVisible(page.getByText(/exact authored order/), "authoritative learning sequence");
   await page.screenshot({ path: path.join(outputDir, "desktop-source-creator.png"), fullPage: true });
   await page.getByRole("link", { name: /Launch generated learner experience/ }).click();
   await expectVisible(page.getByText("Verified replay", { exact: true }), "compiler-run learner launch");
