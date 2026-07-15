@@ -1,12 +1,13 @@
 # Demo Script and Shot List
 
-Target length: 2 minutes 30 seconds. Use the checked replay; do not imply a live model compile.
+Target length: 2 minutes 50 seconds. Use the checked replay for recording reliability and label accelerated compilation honestly. Mention the separately recorded live conformance result.
 
-1. **Problem (0:00–0:20)** — Show the Museion thesis: the deterministic engine owns truth; Maia owns questions. Ordinary chat can reveal answers too early.
-2. **Grounded source (0:20–0:45)** — Open `/create`, load `tests/fixtures/binary-search-golden-source.pdf`, show six normalized pages and the SHA-256, then continue to creator review.
-3. **Inspectable compilation (0:45–1:10)** — Show Verified Replay, zero blocking issues, concepts, claims, one expanded exact quotation, objectives, and typed blocks.
-4. **Interactive reasoning (1:10–1:45)** — Launch `/judge`. Demonstrate one wrong boundary update, then complete PredictionChoice, RangeExplorer, StateTrace, and SequenceBuilder.
-5. **Locked transfer (1:45–2:10)** — Start the one-attempt challenge. Point to `Maia 0 · hints 0 · solutions 0`, answer index `4`, and submit.
-6. **Honest evidence (2:10–2:30)** — Show reconciled events, source citation, and limitations. Say: “This records one immediate near-transfer observation, not durable mastery.”
+1. **Education problem (0:00–0:22)** — “Chat can improve performance while doing the thinking for the learner. Museion starts from a trusted source and keeps truth outside the model.”
+2. **Source and template (0:22–0:48)** — Open `/create`, load the checked six-page PDF, show page boundaries, warnings, SHA-256, and select Socratic Foundations.
+3. **Multi-model compiler (0:48–1:12)** — Show the timeline: Luna extracts exact grounded claims; Terra designs and writes the course; Sol audits and repairs. Label the replay/edited wait. Mention the separate 76.9 s live non-golden pass.
+4. **Validated review (1:12–1:35)** — Show Accepted for learning, learning sequence, exact quotations beside the dependent work, deterministic validation and model provenance.
+5. **Terra Maia (1:35–2:02)** — Launch the learner experience, make one wrong update, ask Maia, and show the provider/model plus bounded hint. “The deterministic engine still grades the answer.”
+6. **Locked transfer (2:02–2:28)** — Start the one-attempt challenge. Point to `Maia 0 · hints 0 · solutions 0`, answer index `4`, and submit.
+7. **Evidence and Codex (2:28–2:50)** — Show reconciled evidence and say: “This is one immediate near-transfer observation, not durable mastery. Codex built Museion and locally powers the GPT-5.6 pipeline without an API bill.”
 
-Required shots: source hash, exact citation, validator badge, replay badge, typed range interaction, transfer lock, evidence limitations, and 320 px final state.
+Required shots: Settings routing, source hash, template, real stage timeline, exact citation, validator/replay badges, Terra Maia badge, transfer lock, evidence limitations, and 320 px final state.

@@ -83,6 +83,20 @@ The first complete judge browser attempt exposed cross-block React state reuse: 
 ## 2026-07-15 12:23–12:29 CEST — Frontend and GitHub publication
 
 - Redesign gate: lint, strict TypeScript, 118 offline tests, production build, zero-vulnerability audit, and `git diff --check` passed.
+
+## 2026-07-15 — revised model routing gate
+
+| Check | Result | Evidence |
+|---|---|---|
+| `npm run typecheck` | Pass | Strict TypeScript, including Codex/job/template boundaries |
+| `npm run lint` | Pass | No ESLint findings |
+| `npm test` | Pass | 147 offline passed; 17 live-gated skipped |
+| `npm run verify:ui` (production) | Pass | Settings + full Creator/Judge paths, a11y, keyboard, mobile, budgets, 20 clean Judge contexts |
+| Luna/Terra/Sol check | Pass | 3,916 / 4,917 / 4,606 ms; requested model equals resolved model |
+| Non-golden compile | Pass | Water-cycle source accepted in 76,906 ms through Luna/Terra/Terra/Sol |
+| Terra Maia red-team | Pass | 8/8 Codex deliveries, 0 leaks, 0 fallback, 0 repair |
+
+Codex did not expose token counts or quota percentages, so none are reported. Deployment and external submission remain unverified.
 - Production Chrome gate: redesigned homepage/header, skip navigation, active-route state, Privacy/Terms, reduced motion, legacy lesson/source path, 20/20 judge runs, and 320 px path passed with no overflow, console/page errors, or HTTP 5xx.
 - Consolidated implementation commit: `cb669f1b0ad76a9817a05082cf47028aec1d02a6`.
 - Remote `main` was fast-forwarded to that commit and set as the GitHub default branch.

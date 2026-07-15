@@ -9,7 +9,7 @@ Codex was used as the primary engineering agent on 2026-07-15 to organize planni
 - Build Week product, architecture, learning science, eval, safety, execution, positioning, validation, and example-schema documents.
 - Git history and baseline/delta commits.
 - Next.js routes, content types and validators, verifier, mastery/session engine, stores, Maia prompt/provider/leak detector, learner UI, tests, CI, environment and documentation.
-- Current official OpenAI model and Structured Outputs guidance; GPT-5.6 Sol is the `gpt-5.6` alias and supports Responses/Structured Outputs.
+- Current official OpenAI Codex authentication, subscription and GPT-5.6 family guidance.
 
 ## Designed
 
@@ -34,20 +34,24 @@ Codex was used as the primary engineering agent on 2026-07-15 to organize planni
 - Creator review and no-login `/judge` experience with owner-bound refresh/resume and reset.
 - Offline font stacks and a patched transitive PostCSS override for reproducible builds and a zero-advisory audit.
 - A targeted redesign of the existing Tailwind/Next.js interface: active navigation, accessibility skip path, asymmetric homepage, product-route polish, legal routes, social preview, and responsive verification.
+- Server-only Codex discovery, structured execution, device login, cancellation, sanitized status, local-only request guards and Settings UX.
+- Balanced Luna/Terra/Sol routing, three pedagogical templates, asynchronous compiler jobs, refresh recovery, visible model stages and Codex-powered Maia.
+- Strict-output compatibility adapters that expose arrays to models and reconstruct private keyed records deterministically.
 - See `docs/build-week/UNCOMMITTED_CHANGE_MAP.md` only as a historical pre-publication file map; current state is recorded in Git history and `CURRENT_PROJECT_STATUS.md`.
 
 ## Verification
 
 - `npm run lint`: passed.
 - `npm run typecheck`: passed.
-- `npm test`: 137 passed, 8 live GPT-5.6 tests skipped after compiler truth-hardening and session-protocol regressions.
+- `npm test`: 147 passed; 17 live cases skip without explicit environment opt-in.
 - `npm run build`: passed fully offline without the prior workspace-root or font-fetch dependency.
 - `npm run verify:ui`: legacy smoke plus complete judge flow passed 20× at 1440×1000 and once at 320×700.
 - `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities after the scoped PostCSS override.
 
 ## Limitations
 
-- No API key was requested or used and no live model call was made.
+- No API key was requested or used. Live checks used the official authenticated Codex runtime and ChatGPT plan quota.
+- Luna, Terra and Sol conformance passed; one non-golden full compilation passed in 76.9 seconds; eight Terra Maia red-team cases delivered zero leaks.
 - No deployed route or learning-outcome result has been verified; external deployment and submission remain behind explicit authorization.
 - This document records actions and decisions, not private chain-of-thought.
 

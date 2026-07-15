@@ -17,7 +17,7 @@ This is the execution ledger for the complete binary-search judge slice. A check
 - [x] Validate schema, UI targets, and answer leakage before delivery.
 - [x] Bound repair to one attempt and fall back deterministically.
 - [x] Cover missing-key operation without a live model call.
-- [ ] Run and record the live GPT-5.6 red-team suite with explicit user-provided environment credentials.
+- [x] Run and record the live GPT-5.6 Terra red-team suite through the explicitly enabled Codex subscription runtime.
 
 ## B. Source ingestion and provenance
 
@@ -153,7 +153,7 @@ The contracts below are implemented internally. Visible Judge integration remain
 - [x] Run the clean-browser judge path 20/20 times.
 - [x] Record `.next/static` size (2.8 MB) and visually inspect desktop/mobile final states.
 - [x] Run lint, typecheck, all offline tests, production build, audit, and `git diff --check`.
-- [ ] Record live GPT-5.6 latency, usage, cost, repair, refusal, and delivered-leak results only if credentials are explicitly available.
+- [x] Record live GPT-5.6 latency, repair and delivered-leak results; record token/cost fields as unavailable rather than inventing them.
 
 ## J. Deployment and submission readiness
 

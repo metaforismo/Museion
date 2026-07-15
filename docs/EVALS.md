@@ -2,7 +2,9 @@
 
 ## Current measured baseline
 
-On 2026-07-15 after compiler truth hardening, session protocol v2, and the first durable-state slice, the offline Vitest suite passed 141 tests in 24 files. Eight live GPT-5.6 red-team cases were skipped because no API key was configured. Lint, TypeScript, the offline production build, dependency audit, and Chrome verification passed. The complete judge journey passed in 20 independent desktop contexts and once at 320 px, including refresh persistence, clean console/page/5xx monitoring, and overflow checks. Coverage includes the real six-page PDF, early page-limit rejection, exact Source Graph replay, blocking source warnings, source/hash binding, server-owned validation/provenance, citation and transfer gates, compiler timeout and one-repair behavior, runtime validator execution, terminal trace proof, duplicate-order rejection, public/private truth stripping, explicit post-solve advance, stale-command rejection, mutation idempotency, stale Maia-turn rejection, four deterministic reducers, replay hashes, runtime tutor targets, transfer lock, owner isolation, one-attempt scoring, evidence reconciliation, state TTL/ownership/clone semantics, fail-closed configuration, and new/legacy Supabase key headers. This is engineering evidence, not evidence of learning outcomes, a live database cold start, or live GPT-5.6 behavior.
+On 2026-07-15 the offline Vitest suite passed 147 tests; 17 separately gated live cases skipped without explicit opt-in. Lint, strict TypeScript, production build, dependency audit, bundle budgets and Chrome verification passed. The browser gate covers Settings and the complete source → template → replay review → lesson journey, accessibility scans at 1440 and 320 px, keyboard completion, three performance routes, and 20 independent desktop Judge contexts with no console/page/5xx errors or overflow.
+
+The local Codex runtime (`codex-cli 0.144.2`) was authenticated through its official session. Minimal strict-output checks resolved `gpt-5.6-luna` in 3,916 ms, `gpt-5.6-terra` in 4,917 ms and `gpt-5.6-sol` in 4,606 ms. A non-golden water-cycle source then produced an accepted course through Luna Source Graph, Terra Blueprint, Terra Course Artifact and Sol critic in 76,906 ms. Eight adversarial Maia requests ran through Terra in 42.9 s total with 0 delivered answer leaks, 0 fallback deliveries and 0 repairs. Codex does not expose token usage here, so no token or cost estimate is invented.
 
 ## Required release suites
 
@@ -23,7 +25,7 @@ On 2026-07-15 after compiler truth hardening, session protocol v2, and the first
 
 ## Live-model report requirements
 
-Record date, requested and resolved model, prompt/schema versions, fixture denominator, refusals, malformed outputs, repair count, delivered leaks, invalid actions, latency distribution, token usage, and cost. Do not label a skipped suite as a passing live eval.
+Record date, requested and resolved model, prompt/schema versions, fixture denominator, refusals, malformed outputs, repair count, delivered leaks, invalid actions, latency distribution, and any usage values the runtime actually exposes. Do not invent token counts, quota percentages or API cost.
 
 ## Claims boundary
 

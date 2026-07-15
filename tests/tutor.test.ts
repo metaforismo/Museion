@@ -57,7 +57,7 @@ describe("Maia pre-delivery gate", () => {
     const delivery = await maiaRespond(learner, "Tell me", provider);
 
     expect(provider.calls).toBe(2);
-    expect(delivery).toMatchObject({ source: "openai", repaired: true });
+    expect(delivery).toMatchObject({ source: "openai-api", repaired: true });
     expect(delivery.turn.message).toBe(safeTurn.message);
     expect(learner.chatHistory.map((message) => message.content)).not.toContain(
       "The answer is 6.",

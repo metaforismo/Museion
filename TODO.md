@@ -48,7 +48,7 @@ Status legend: `[x]` done · `[ ]` planned
 ## v0.4 — Maia hardening & quality
 
 - [x] Answer-leak gate (`src/lib/maia/leak.ts`): schema + target + answer checks before delivery, one repair, then deterministic fallback
-- [ ] Run and record the 8-case GPT-5.6 live red-team suite (auto-skipped without an API key)
+- [x] Run and record the 8-case GPT-5.6 Terra live red-team suite through Codex (0 delivered leaks)
 - [x] Rate limiting on the Maia route (sliding window per session + Retry-After; per-IP once deployed behind a stable proxy)
 - [x] Strict structured Maia JSON response (buffered so safety checks complete before delivery)
 - [ ] Conversation summarization for long sessions (keep prompt size bounded)
@@ -57,6 +57,13 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Prompt-cache + token usage instrumentation on every tutor turn (session events + structured logs)
 
 ## Build Week — Source-grounded compiler
+
+- [x] Add balanced Luna/Terra/Sol routing with exact requested/resolved models and family-only fallback
+- [x] Add server-only local Codex structured execution, official login/status/check/cancel routes, and hosted-runtime denial
+- [x] Add Settings provider experience and transparent routing table
+- [x] Add Socratic Foundations, Exam Practice, and Teach It Back templates
+- [x] Convert compilation to owner-bound asynchronous jobs with progress, cancellation, duplicate protection, retry, and refresh recovery
+- [x] Run one non-golden live compilation and three-model conformance check through ChatGPT/Codex
 
 - [x] Browser ingestion for pasted text, Markdown, and selectable-text PDF
 - [x] Versioned normalization, page/document SHA-256, hard limits, and instruction-like-content warnings

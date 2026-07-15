@@ -21,7 +21,7 @@
 - Configure deployment and deploy the verified `main` tree.
 - Apply `supabase/migrations/20260715130000_create_museion_state.sql` and configure server-only state variables.
 - Verify the hosted route, headers, logs, cold start, and anonymous-cookie behavior.
-- Optionally provide server-side credentials and run the eight live GPT-5.6 red-team fixtures; record model, usage, latency, cost, repair, refusal, and leak counts.
+- Live local Codex evidence is complete; repeat only if the runtime/model versions change. Do not invent usage fields Codex does not expose.
 - Change deployment/repository access settings, publish Devpost content, or submit.
 
 Do not convert skipped live tests into a pass and do not describe the local replay as a live compilation.

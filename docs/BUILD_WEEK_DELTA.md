@@ -18,7 +18,9 @@ Each entry is dated and maps to the roadmap in [`TODO.md`](../TODO.md).
 - Added strict Source Graph, Course Blueprint, and private/public Course Artifact v2 contracts with canonical hashing, closed block kinds, semantic reference checks, and an explicit legacy-v1 adapter.
 - Added fail-closed public serialization that omits answer specifications, solutions, hints, misconception internals, expected traces, and diagnostic rules.
 
-Subsequent work added the checked golden graph/blueprint/artifact, compiler orchestration, interactive runtime, transfer ledger, creator review, complete Judge route, accessibility gates, performance budgets, and compiler truth hardening. These changes are committed and published on `main`. No live GPT-5.6 result, hosted deployment, learning-outcome result, Devpost publication, or final submission is claimed.
+Subsequent work added the checked golden graph/blueprint/artifact, compiler orchestration, interactive runtime, transfer ledger, creator review, complete Judge route, accessibility gates, performance budgets, and compiler truth hardening. At that checkpoint, no live GPT-5.6 result, hosted deployment, learning-outcome result, Devpost publication, or final submission was claimed.
+
+The revised routing delivery adds local Codex subscription authentication, balanced Luna/Terra/Sol routing, Settings, three education templates, asynchronous compiler jobs, source-appropriate strict-output adapters, Codex Maia and expanded review/Creator UI. On 2026-07-15 the local live gates passed three-model conformance, one 76.9-second non-golden compilation and eight Terra red-team cases with zero delivered leaks. Hosted publication, video publication, learning outcomes and Devpost submission are not claimed.
 
 ## 2026-07-15 — Tutor hardening, self-explanation, full practice coverage
 

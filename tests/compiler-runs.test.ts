@@ -2,9 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   createCompilerRun,
+  enqueueCompilerRun,
   getCompilerRun,
+  getCompilerRunStatus,
   resetCompilerRunsForTests,
 } from "@/lib/compiler";
+import { resetAiSettingsForTests, updateAiSettings } from "@/lib/ai/settings";
 import { ingestTextSource, SourceDocumentSchema } from "@/lib/source";
 import goldenDocumentJson from "./fixtures/binary-search-source-document.json";
 
@@ -20,6 +23,7 @@ describe("compiler run lifecycle", () => {
 
   beforeEach(() => {
     resetCompilerRunsForTests();
+    resetAiSettingsForTests();
     delete process.env.OPENAI_API_KEY;
   });
 
@@ -53,6 +57,31 @@ describe("compiler run lifecycle", () => {
     await expect(createCompilerRun("creator-a", document, audience)).rejects.toThrow(
       "LIVE_COMPILER_NOT_CONFIGURED",
     );
+  });
+
+  it("never falls through to a configured API key while offline mode is selected", async () => {
+    process.env.OPENAI_API_KEY = "must-not-be-used";
+    updateAiSettings({ provider: "offline" });
+    const document = await ingestTextSource({
+      title: "Offline source",
+      text: "Photosynthesis converts light energy into chemical energy in plants.",
+      mediaType: "text/plain",
+    });
+    await expect(createCompilerRun("creator-a", document, audience)).rejects.toThrow("LIVE_COMPILER_NOT_CONFIGURED");
+  });
+
+  it("queues once, rejects duplicate clicks, and exposes the completed golden result", async () => {
+    const document = SourceDocumentSchema.parse(goldenDocumentJson);
+    const queued = await enqueueCompilerRun("creator-a", document, audience, "exam-practice");
+    expect(queued.status).toBe("queued");
+    await expect(enqueueCompilerRun("creator-a", document, audience, "exam-practice")).rejects.toThrow("COMPILER_JOB_ALREADY_RUNNING");
+    let view = await getCompilerRunStatus(queued.runId, "creator-a");
+    for (let attempt = 0; attempt < 20 && "status" in view && view.status !== "succeeded"; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      view = await getCompilerRunStatus(queued.runId, "creator-a");
+    }
+    expect(view.status).toBe("succeeded");
+    expect("templateId" in view && view.templateId).toBe("exam-practice");
   });
 
   it("caps retained compiler runs per owner", async () => {

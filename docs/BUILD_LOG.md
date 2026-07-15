@@ -30,3 +30,12 @@
 - Re-ran the full browser matrix after the redesign: homepage, header, legal routes, lesson/source paths, 20/20 judge runs, and 320 px layouts all passed without overflow, page errors, console errors, or HTTP 5xx.
 - Added an explicit memory/Supabase state backend, a server-owned expiring-state migration with RLS and explicit grants, and new/legacy Supabase key handling. Compiler runs and Judge sessions now use the asynchronous backend; authored lesson/profile stores remain process-local.
 - Verified 141 offline tests, 8 expected live skips, lint, strict TypeScript, production build, and bundle budgets after the persistence slice. No live database or cold-start claim is made.
+
+## 2026-07-15 — Codex subscription routing and education templates
+
+- Added local-only Codex discovery/authentication, strict structured execution, sanitized status/check endpoints and Settings UX.
+- Routed source extraction to Luna, design/course/Maia to Terra, and mandatory audit/repair to Sol.
+- Added three server-owned education templates, asynchronous compiler jobs, cancellation, duplicate protection and refresh recovery.
+- Corrected strict-output incompatibilities (`oneOf` and dynamic maps) with model-facing arrays plus deterministic reconstruction.
+- Corrected the binary-search-specific generation assumption exposed by Sol on a water-cycle source.
+- Verified 147 offline tests, production browser gates, Luna/Terra/Sol conformance, one accepted non-golden compilation, and eight Terra Maia attacks with zero delivered leaks.
