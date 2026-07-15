@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
+import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
 const baseURL = process.env.MUSEION_BASE_URL ?? "http://localhost:3000";
@@ -27,6 +28,131 @@ async function expectVisible(locator, description) {
   await locator.waitFor({ state: "visible", timeout: 10_000 }).catch(() => {
     throw new Error(`Expected visible: ${description}`);
   });
+}
+
+function recordAxeViolations(label, results) {
+  for (const violation of results.violations) {
+    const targets = violation.nodes
+      .slice(0, 3)
+      .map((node) => `${node.target.join(" ")} (${node.failureSummary?.replaceAll("\n", " ") ?? node.html})`)
+      .join(", ");
+    failures.push(`${label} axe ${violation.id} (${violation.impact ?? "unknown"}): ${violation.help} [${targets}]`);
+  }
+}
+
+async function scanPage(page, label) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  recordAxeViolations(label, results);
+}
+
+async function accessibilityFlow() {
+  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  await desktop.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const desktopPage = await desktop.newPage();
+  watch(desktopPage, "accessibility-desktop");
+  const routes = [
+    "/",
+    "/welcome",
+    "/create",
+    "/create/review",
+    "/judge",
+    "/lessons/linear-equations-intro",
+    "/lessons/linear-equations-intro/practice",
+    "/progress",
+    "/about",
+    "/privacy",
+    "/terms",
+  ];
+
+  for (const route of routes) {
+    await desktopPage.goto(`${baseURL}${route}`);
+    await desktopPage.locator("main").waitFor({ state: "visible" });
+    await scanPage(desktopPage, `desktop ${route}`);
+  }
+  const notFoundPage = await desktop.newPage();
+  await notFoundPage.goto(`${baseURL}/missing-route`);
+  await notFoundPage.locator("main").waitFor({ state: "visible" });
+  await scanPage(notFoundPage, "desktop /missing-route");
+  await desktop.close();
+
+  const mobile = await browser.newContext({ viewport: { width: 320, height: 700 }, reducedMotion: "reduce" });
+  await mobile.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const mobilePage = await mobile.newPage();
+  watch(mobilePage, "accessibility-mobile");
+  for (const route of ["/", "/create", "/judge"]) {
+    await mobilePage.goto(`${baseURL}${route}`);
+    await mobilePage.locator("main").waitFor({ state: "visible" });
+    await scanPage(mobilePage, `mobile ${route}`);
+    const navLinks = mobilePage.getByRole("navigation", { name: "Primary navigation" }).getByRole("link");
+    const clippedLinks = await navLinks.evaluateAll((links) => links.filter((link) => {
+      const rect = link.getBoundingClientRect();
+      return rect.left < 0 || rect.right > window.innerWidth;
+    }).map((link) => link.textContent?.trim()));
+    if (clippedLinks.length) failures.push(`mobile ${route}: clipped primary navigation links: ${clippedLinks.join(", ")}`);
+  }
+  await mobile.close();
+}
+
+async function keyboardActivate(page, locator, key = "Enter") {
+  await locator.click({ trial: true });
+  await locator.focus();
+  await page.keyboard.press(key);
+}
+
+async function keyboardFill(page, locator, value) {
+  await locator.focus();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type(value);
+}
+
+async function keyboardJudgeFlow() {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  watch(page, "keyboard-judge");
+  await page.goto(`${baseURL}/judge`);
+  await expectVisible(page.getByText("Verified replay", { exact: true }), "keyboard replay badge");
+  await keyboardActivate(page, page.getByRole("button", { name: /Continue/ }));
+
+  await keyboardActivate(page, page.getByRole("radio").first(), "Space");
+  await keyboardActivate(page, page.getByRole("button", { name: "Check prediction" }));
+  await expectVisible(page.getByText("Prediction matches the deterministic answer."), "keyboard prediction");
+  await keyboardActivate(page, page.getByRole("button", { name: /Continue/ }));
+
+  await keyboardFill(page, page.getByLabel("Next low"), "4");
+  await keyboardFill(page, page.getByLabel("Next high"), "6");
+  await keyboardActivate(page, page.getByRole("button", { name: "Update interval" }));
+  await keyboardActivate(page, page.getByRole("button", { name: "Confirm target at mid" }));
+  await expectVisible(page.getByText("Target found at the verified midpoint."), "keyboard range");
+  await keyboardActivate(page, page.getByRole("button", { name: /Continue/ }));
+
+  for (const [low, high, mid] of [["0", "1", "0"], ["1", "1", "1"]]) {
+    await keyboardFill(page, page.getByLabel("Low", { exact: true }), low);
+    await keyboardFill(page, page.getByLabel("High", { exact: true }), high);
+    await keyboardFill(page, page.getByLabel("Mid", { exact: true }), mid);
+    await keyboardActivate(page, page.getByRole("button", { name: "Check next state" }));
+  }
+  await expectVisible(page.getByText("Trace complete."), "keyboard trace");
+  await keyboardActivate(page, page.getByRole("button", { name: /Continue/ }));
+
+  const compareUp = page.locator('button[aria-label*="Compare values"][aria-label$="up"]');
+  const proveUp = page.locator('button[aria-label*="prove one region"][aria-label$="up"]');
+  const boundaryUp = page.locator('button[aria-label*="corresponding boundary"][aria-label$="up"]');
+  for (let index = 0; index < 3; index += 1) await keyboardActivate(page, compareUp);
+  for (let index = 0; index < 2; index += 1) await keyboardActivate(page, proveUp);
+  await keyboardActivate(page, boundaryUp);
+  await keyboardActivate(page, page.getByRole("button", { name: "Check order" }));
+  await expectVisible(page.getByText("The reasoning order is valid."), "keyboard sequence");
+  await keyboardActivate(page, page.getByRole("button", { name: /Finish lesson/ }));
+
+  await keyboardActivate(page, page.getByRole("button", { name: "Start locked transfer" }));
+  await expectVisible(page.getByText("Maia 0 · hints 0 · solutions 0"), "keyboard transfer lock");
+  await keyboardFill(page, page.getByLabel("Final index"), "4");
+  await keyboardActivate(page, page.getByRole("button", { name: "Submit only attempt" }));
+  await expectVisible(page.getByRole("heading", { name: "Correct" }), "keyboard transfer result");
+  await expectVisible(page.getByRole("heading", { name: "Evidence ledger" }), "keyboard evidence ledger");
+  await context.close();
 }
 
 async function submitTextAnswer(page, answer) {
@@ -227,11 +353,19 @@ async function judgeFlow(viewport, label, repeat = 1) {
 }
 
 try {
-  await desktopFlow();
-  await designSystemFlow();
-  await mobileFlow();
-  await judgeFlow({ width: 1440, height: 1000 }, "judge-desktop", 20);
-  await judgeFlow({ width: 320, height: 700 }, "judge-mobile", 1);
+  if (process.env.MUSEION_KEYBOARD_ONLY === "1") {
+    await keyboardJudgeFlow();
+  } else {
+    await accessibilityFlow();
+  }
+  if (process.env.MUSEION_A11Y_ONLY !== "1" && process.env.MUSEION_KEYBOARD_ONLY !== "1") {
+    await desktopFlow();
+    await designSystemFlow();
+    await mobileFlow();
+    await keyboardJudgeFlow();
+    await judgeFlow({ width: 1440, height: 1000 }, "judge-desktop", 20);
+    await judgeFlow({ width: 320, height: 700 }, "judge-mobile", 1);
+  }
 } finally {
   await browser.close();
 }

@@ -25,9 +25,9 @@ export default function SiteHeader() {
           <span className="flex h-9 w-9 items-center justify-center rounded-[0.7rem] bg-ink font-display text-lg font-semibold text-white shadow-[0_8px_24px_rgba(19,28,49,0.16)] transition-transform duration-200 group-hover:-rotate-2 group-active:scale-95">M</span>
           <span><span className="block font-display text-xl font-semibold leading-none tracking-tight text-ink">Museion</span><span className="mt-1 hidden text-[0.66rem] font-medium uppercase tracking-[0.16em] text-ink-soft md:block">reasoning, made visible</span></span>
         </Link>
-        <nav aria-label="Primary navigation" className="order-last w-full overflow-x-auto sm:order-none sm:w-auto">
-          <div className="flex min-w-max items-center gap-1 rounded-xl bg-paper/80 p-1">
-            {NAV_ITEMS.map((item) => { const active = activePath(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`min-h-10 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis ${active ? "bg-surface text-ink shadow-[0_4px_16px_rgba(35,53,91,0.08)]" : "text-ink-soft hover:bg-surface/70 hover:text-ink active:translate-y-px"}`}>{item.label}</Link>; })}
+        <nav aria-label="Primary navigation" className="order-last w-full sm:order-none sm:w-auto">
+          <div className="grid grid-cols-3 items-center gap-1 rounded-xl bg-paper/80 p-1 sm:flex">
+            {NAV_ITEMS.map((item) => { const active = activePath(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`flex min-h-11 items-center justify-center rounded-lg px-2 py-2 text-center text-sm font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis sm:px-3 ${active ? "bg-surface text-ink shadow-[0_4px_16px_rgba(35,53,91,0.08)]" : "text-ink-soft hover:bg-surface/70 hover:text-ink active:translate-y-px"}`}>{item.label}</Link>; })}
           </div>
         </nav>
       </div>

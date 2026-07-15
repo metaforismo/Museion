@@ -115,16 +115,20 @@ export default function OnboardingTour() {
       </div>
 
       <div className="mt-6 flex items-center justify-between">
-        <div className="flex gap-2">
+        <div className="flex gap-1" aria-label={`Slide ${index + 1} of ${SLIDES.length}`}>
           {SLIDES.map((_, i) => (
             <button
+              type="button"
               key={i}
               aria-label={`Go to slide ${i + 1}`}
+              aria-current={i === index ? "step" : undefined}
               onClick={() => setIndex(i)}
-              className={`h-2 rounded-full transition-all ${
-                i === index ? "w-6 bg-lapis" : "w-2 bg-ink/20 hover:bg-ink/40"
-              }`}
-            />
+              className="group flex min-h-6 min-w-6 items-center justify-center rounded-full"
+            >
+              <span aria-hidden="true" className={`h-2 rounded-full transition-all ${
+                i === index ? "w-5 bg-lapis" : "w-2 bg-ink/25 group-hover:bg-ink/40"
+              }`} />
+            </button>
           ))}
         </div>
         <div className="flex items-center gap-3">

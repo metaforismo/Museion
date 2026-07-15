@@ -19,6 +19,9 @@ This ledger covers the final visual-quality pass and the authorized GitHub conso
 - [x] Preserve 44 px touch targets and visible focus rings.
 - [x] Verify semantic landmarks and heading order.
 - [x] Verify reduced-motion behavior and keyboard-only navigation.
+- [x] Run automated WCAG 2 A/AA, 2.1 A/AA, and 2.2 AA scans across every public route.
+- [x] Complete the full judge, locked transfer, and evidence flow using keyboard activation only.
+- [x] Keep every mobile primary-navigation destination visible without horizontal discovery.
 
 ## C. Visual system
 
@@ -67,6 +70,7 @@ This ledger covers the final visual-quality pass and the authorized GitHub conso
 - [x] Pass the full existing judge path 20/20.
 - [x] Pass homepage/header/legal-route checks at desktop and 320 px.
 - [x] Pass console, page-error, HTTP 5xx, refresh, reset, and overflow checks.
+- [x] Pass axe-core with zero detected violations on desktop routes and critical 320 px routes.
 - [x] Inspect final desktop and mobile screenshots visually.
 - [x] Pass `git diff --check`.
 

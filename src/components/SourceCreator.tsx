@@ -155,7 +155,7 @@ export default function SourceCreator() {
           />
           <p className="mt-3 text-xs leading-relaxed text-ink-soft">
             Limits: {(MAX_SOURCE_BYTES / 1024 / 1024).toFixed(0)} MB, {MAX_SOURCE_PAGES}{" "}
-            pages, {MAX_NORMALIZED_CHARACTERS.toLocaleString()} normalized characters.
+            pages, {MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")} normalized characters.
           </p>
 
           {error && (
