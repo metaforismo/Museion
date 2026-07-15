@@ -22,6 +22,7 @@ import {
   type SourceGraph,
   validateSourceGraph,
 } from "./schemas/source-graph";
+import { courseTemplate, type CourseTemplateId } from "./templates";
 
 const MAX_STAGE_INPUT_CHARACTERS = 250_000;
 
@@ -43,6 +44,7 @@ export interface CompileResult {
   artifact: CourseArtifactV2;
   telemetry: CompilerStageTelemetry[];
   repaired: boolean;
+  templateId: CourseTemplateId;
 }
 
 export interface CompileAudience {
@@ -72,18 +74,30 @@ function applyPatch(artifact: CourseArtifactV2, patch: ReturnType<typeof Artifac
 export async function compileCourse(
   document: SourceDocument,
   provider: CompilerProvider,
-  options: { timeoutMs?: number; now?: string; audience?: CompileAudience } = {},
+  options: {
+    timeoutMs?: number;
+    now?: string;
+    audience?: CompileAudience;
+    templateId?: CourseTemplateId;
+    signal?: AbortSignal;
+    onStage?: (stage: CompilerStage | "critic_after_repair") => void;
+  } = {},
 ): Promise<CompileResult> {
   const timeoutMs = options.timeoutMs ?? 20_000;
+  const templateId = options.templateId ?? "socratic-foundations";
+  const template = courseTemplate(templateId);
   const telemetry: CompilerStageTelemetry[] = [];
 
   async function runStage(stage: CompilerStage, input: unknown, telemetryStage: CompilerStageTelemetry["stage"] = stage) {
+    options.onStage?.(telemetryStage);
     const serialized = JSON.stringify(input);
     if (serialized.length > MAX_STAGE_INPUT_CHARACTERS) {
       throw new CompilerFailure(stage, [blocking("stage_input_too_large", "$", `Stage input exceeds ${MAX_STAGE_INPUT_CHARACTERS} characters`)], telemetry);
     }
     const inputSha256 = await canonicalSha256(input);
     const controller = new AbortController();
+    const abortFromCaller = () => controller.abort();
+    options.signal?.addEventListener("abort", abortFromCaller, { once: true });
     const startedAt = performance.now();
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -111,6 +125,7 @@ export async function compileCourse(
       throw new CompilerFailure(stage, [blocking("provider_error", "$", error instanceof Error ? error.message.slice(0, 1_000) : "Unknown provider error")], telemetry);
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
+      options.signal?.removeEventListener("abort", abortFromCaller);
     }
   }
 
@@ -127,7 +142,7 @@ export async function compileCourse(
 
   const graphSha256 = await canonicalSha256(graph);
   const blueprint = CourseBlueprintSchema.parse(
-    await runStage("blueprint", { schemaVersion: "1.0", sourceGraph: graph, sourceGraphSha256: graphSha256, requestedAudience: options.audience }),
+    await runStage("blueprint", { schemaVersion: "1.0", sourceGraph: graph, sourceGraphSha256: graphSha256, requestedAudience: options.audience, courseTemplate: { id: templateId, ...template } }),
   );
   const blueprintIssues: CompilerIssue[] = [];
   if (blueprint.sourceGraphSha256 !== graphSha256) blueprintIssues.push(blocking("source_graph_hash_mismatch", "sourceGraphSha256", "Blueprint does not bind to the validated Source Graph"));
@@ -145,7 +160,7 @@ export async function compileCourse(
   if (blueprintIssues.length) throw new CompilerFailure("blueprint", blueprintIssues, telemetry);
 
   const candidate = GeneratedCourseCandidateSchema.parse(
-    await runStage("course_artifact", { schemaVersion: "1.0", document: { id: document.id, sha256: document.sha256 }, sourceGraph: graph, blueprint }),
+    await runStage("course_artifact", { schemaVersion: "1.0", document: { id: document.id, sha256: document.sha256 }, sourceGraph: graph, blueprint, courseTemplate: { id: templateId, ...template } }),
   );
   const generatedAt = options.now ?? new Date().toISOString();
   const artifactStage = telemetry.at(-1);
@@ -177,6 +192,10 @@ export async function compileCourse(
     return [...referenceIssues, ...runtimeIssues];
   };
   let artifactIssues = validateArtifact();
+  const generatedKinds = new Set(Object.values(artifact.blocks).map((block) => block.kind));
+  template.requiredKinds.forEach((kind) => {
+    if (!generatedKinds.has(kind)) artifactIssues.push(blocking("template_requirement_missing", "blocks", `${template.name} requires a ${kind} block`));
+  });
   let critic = CriticReportSchema.parse(
     await runStage("critic", { schemaVersion: "1.0", sourceGraph: graph, blueprint, artifact, validatorIssues: artifactIssues }),
   );
@@ -214,5 +233,5 @@ export async function compileCourse(
       validatedAt: generatedAt,
     },
   });
-  return { mode: provider.mode, sourceGraph: graph, blueprint, artifact, telemetry, repaired };
+  return { mode: provider.mode, sourceGraph: graph, blueprint, artifact, telemetry, repaired, templateId };
 }

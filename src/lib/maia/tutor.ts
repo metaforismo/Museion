@@ -10,15 +10,21 @@ import type {
 import { TutorTurnSchema } from "./contracts";
 import { revealsAnswer } from "./leak";
 import { OpenAITutorProvider } from "./openai-provider";
+import { CodexTutorProvider } from "./codex-provider";
+import { getAiSettings } from "../ai/settings";
 
 const OFFLINE_NOTICE =
   "Maia is offline, so I’m using the lesson’s verified hint ladder.";
 
-let defaultProvider: TutorProvider | null = null;
-
 function provider(): TutorProvider {
-  defaultProvider ??= new OpenAITutorProvider();
-  return defaultProvider;
+  const settings = getAiSettings();
+  if (settings.provider === "codex") return new CodexTutorProvider(settings.familyFallback);
+  if (settings.provider === "openai-api") return new OpenAITutorProvider();
+  return {
+    id: "deterministic",
+    available: () => false,
+    generate: async () => { throw new Error("Deterministic tutoring does not call a model"); },
+  };
 }
 
 export function maiaAvailable(): boolean {
@@ -63,12 +69,13 @@ function recordSafeLiveTurn(
   learnerMessage: string,
   result: TutorProviderResult,
   repaired: boolean,
+  providerId: string,
 ): void {
   session.chatHistory.push(
     { role: "user", content: learnerMessage },
     { role: "assistant", content: result.turn.message },
   );
-  session.log("maia_turn", { provider: "openai", repaired });
+  session.log("maia_turn", { provider: providerId, repaired });
   session.log("maia_usage", {
     requestedModel: result.requestedModel,
     resolvedModel: result.resolvedModel,
@@ -79,7 +86,7 @@ function recordSafeLiveTurn(
   });
   log.info("maia_turn_completed", {
     sessionId: session.sessionId,
-    provider: "openai",
+    provider: providerId,
     requestedModel: result.requestedModel,
     resolvedModel: result.resolvedModel,
     inputTokens: result.usage.inputTokens,
@@ -131,9 +138,15 @@ export async function maiaRespond(
         session.currentStep.id === stepId &&
         session.version === startVersion;
       if (issues.length === 0 && sameStep) {
-        recordSafeLiveTurn(session, learnerMessage, result, repaired);
+        recordSafeLiveTurn(session, learnerMessage, result, repaired, tutorProvider.id);
         session.version += 1;
-        return { turn: result.turn, source: "openai", repaired };
+        return {
+          turn: result.turn,
+          source: tutorProvider.id === "openai-codex" ? "openai-codex" : "openai-api",
+          repaired,
+          requestedModel: result.requestedModel,
+          resolvedModel: result.resolvedModel,
+        };
       }
       session.log("maia_turn_rejected", {
         stepId,

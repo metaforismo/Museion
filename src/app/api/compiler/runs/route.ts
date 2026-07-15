@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { compilerFailurePayload, createCompilerRun, CompilerRunRequestSchema } from "@/lib/compiler";
+import { compilerFailurePayload, enqueueCompilerRun, CompilerRunRequestSchema } from "@/lib/compiler";
 import { resolveLearnerId, setLearnerCookie } from "@/lib/server/learner";
 
 export async function POST(request: Request) {
@@ -8,13 +8,13 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "INVALID_COMPILER_REQUEST" }, { status: 400 });
   const { learnerId, isNew } = await resolveLearnerId();
   try {
-    const response = NextResponse.json(await createCompilerRun(learnerId, parsed.data.document, parsed.data.audience));
+    const response = NextResponse.json(await enqueueCompilerRun(learnerId, parsed.data.document, parsed.data.audience, parsed.data.templateId), { status: 202 });
     response.headers.set("Cache-Control", "no-store");
     if (isNew) setLearnerCookie(response, learnerId);
     return response;
   } catch (error) {
     const payload = compilerFailurePayload(error);
-    const status = payload.error === "LIVE_COMPILER_NOT_CONFIGURED" ? 503 : payload.error === "COMPILER_RUN_QUOTA_EXCEEDED" ? 429 : 422;
+    const status = payload.error === "LIVE_COMPILER_NOT_CONFIGURED" ? 503 : ["COMPILER_RUN_QUOTA_EXCEEDED", "COMPILER_JOB_ALREADY_RUNNING"].includes(payload.error) ? 429 : 422;
     return NextResponse.json(payload, { status });
   }
 }

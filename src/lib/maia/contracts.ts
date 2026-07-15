@@ -62,6 +62,8 @@ export interface TutorProvider {
 
 export interface TutorDelivery {
   turn: TutorTurn;
-  source: "openai" | "deterministic";
+  source: "openai-codex" | "openai-api" | "deterministic";
   repaired: boolean;
+  requestedModel?: string;
+  resolvedModel?: string;
 }

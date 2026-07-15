@@ -6,7 +6,11 @@ import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-sta
 import { CompilerFailure, compileCourse, type CompileAudience, type CompileResult } from "./orchestrator";
 import { OpenAICompilerProvider } from "./providers/openai";
 import { GoldenReplayCompilerProvider } from "./providers/replay";
+import { CodexCompilerProvider } from "./providers/codex";
 import { toPublicCourseArtifact } from "./public-artifact";
+import { CourseTemplateIdSchema, type CourseTemplateId } from "./templates";
+import { codexSelected, getAiSettings } from "@/lib/ai/settings";
+import type { CompilerStage } from "./contracts";
 
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 export const COMPILER_RUN_TTL_MS = 60 * 60 * 1_000;
@@ -22,6 +26,7 @@ export const CompileAudienceSchema = z.object({
 export const CompilerRunRequestSchema = z.object({
   document: SourceDocumentSchema,
   audience: CompileAudienceSchema,
+  templateId: CourseTemplateIdSchema.default("socratic-foundations"),
 }).strict();
 
 interface CompilerRunRecord {
@@ -29,6 +34,7 @@ interface CompilerRunRecord {
   ownerId: string;
   document: SourceDocument;
   audience: CompileAudience;
+  templateId: CourseTemplateId;
   result: CompileResult;
   createdAt: string;
 }
@@ -37,6 +43,7 @@ export type CompilerRunView = ReturnType<typeof compilerRunView>;
 
 function compilerRunView(record: CompilerRunRecord) {
   return {
+    status: "succeeded" as const,
     runId: record.id,
     mode: record.result.mode,
     document: {
@@ -46,6 +53,7 @@ function compilerRunView(record: CompilerRunRecord) {
       pages: record.document.pages.length,
     },
     audience: record.audience,
+    templateId: record.templateId ?? record.result.templateId ?? "socratic-foundations",
     sourceGraph: record.result.sourceGraph,
     blueprint: record.result.blueprint,
     artifact: toPublicCourseArtifact(record.result.artifact),
@@ -60,24 +68,43 @@ export async function createCompilerRun(
   ownerId: string,
   document: SourceDocument,
   audience: CompileAudience,
+  templateId: CourseTemplateId = "socratic-foundations",
+  execution: {
+    runId?: string;
+    signal?: AbortSignal;
+    onStage?: (stage: CompilerStage | "critic_after_repair") => void;
+  } = {},
 ): Promise<CompilerRunView> {
   const backend = stateBackend();
   await backend.prune("compiler_run");
   if ((await backend.list<CompilerRunRecord>("compiler_run", ownerId)).length >= MAX_COMPILER_RUNS_PER_OWNER) {
     throw new Error("COMPILER_RUN_QUOTA_EXCEEDED");
   }
+  const settings = getAiSettings();
+  if (document.sha256 !== GOLDEN_SOURCE_SHA256 && settings.provider === "offline") {
+    throw new Error("LIVE_COMPILER_NOT_CONFIGURED");
+  }
   const provider = document.sha256 === GOLDEN_SOURCE_SHA256
     ? new GoldenReplayCompilerProvider()
-    : new OpenAICompilerProvider();
+    : codexSelected()
+      ? new CodexCompilerProvider(settings.familyFallback)
+      : new OpenAICompilerProvider();
   if (provider instanceof OpenAICompilerProvider && !provider.available()) {
     throw new Error("LIVE_COMPILER_NOT_CONFIGURED");
   }
-  const result = await compileCourse(document, provider, { audience, timeoutMs: 60_000 });
+  const result = await compileCourse(document, provider, {
+    audience,
+    templateId,
+    timeoutMs: provider instanceof CodexCompilerProvider ? 190_000 : 60_000,
+    signal: execution.signal,
+    onStage: execution.onStage,
+  });
   const record: CompilerRunRecord = {
-    id: crypto.randomUUID(),
+    id: execution.runId ?? crypto.randomUUID(),
     ownerId,
     document,
     audience,
+    templateId,
     result,
     createdAt: new Date().toISOString(),
   };
@@ -91,6 +118,112 @@ export async function createCompilerRun(
     updatedAt: record.createdAt,
   });
   return compilerRunView(record);
+}
+
+export type CompilerJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+interface CompilerJobView {
+  runId: string;
+  status: CompilerJobStatus;
+  stage: CompilerStage | "critic_after_repair" | null;
+  completedStages: number;
+  totalStages: number;
+  error: string | null;
+  retryable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CompilerJob extends CompilerJobView {
+  ownerId: string;
+  controller: AbortController;
+}
+
+const jobsGlobal = globalThis as unknown as { __museionCompilerJobs?: Map<string, CompilerJob> };
+const compilerJobs = jobsGlobal.__museionCompilerJobs ?? new Map<string, CompilerJob>();
+jobsGlobal.__museionCompilerJobs = compilerJobs;
+
+function jobView(job: CompilerJob): CompilerJobView {
+  return {
+    runId: job.runId,
+    status: job.status,
+    stage: job.stage,
+    completedStages: job.completedStages,
+    totalStages: job.totalStages,
+    error: job.error,
+    retryable: job.retryable,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+  };
+}
+
+export async function enqueueCompilerRun(
+  ownerId: string,
+  document: SourceDocument,
+  audience: CompileAudience,
+  templateId: CourseTemplateId,
+): Promise<CompilerJobView> {
+  const ownedActive = [...compilerJobs.values()].filter((job) => job.ownerId === ownerId && ["queued", "running"].includes(job.status));
+  if (ownedActive.length >= 1) throw new Error("COMPILER_JOB_ALREADY_RUNNING");
+  const runId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const controller = new AbortController();
+  const job: CompilerJob = {
+    runId,
+    ownerId,
+    controller,
+    status: "queued",
+    stage: null,
+    completedStages: 0,
+    totalStages: 5,
+    error: null,
+    retryable: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+  compilerJobs.set(runId, job);
+  void createCompilerRun(ownerId, document, audience, templateId, {
+    runId,
+    signal: controller.signal,
+    onStage: (stage) => {
+      if (job.status === "cancelled") return;
+      job.status = "running";
+      if (job.stage && job.stage !== stage) job.completedStages = Math.min(job.totalStages - 1, job.completedStages + 1);
+      job.stage = stage;
+      job.updatedAt = new Date().toISOString();
+    },
+  }).then(() => {
+    if (job.status === "cancelled") return;
+    job.status = "succeeded";
+    job.completedStages = job.totalStages;
+    job.updatedAt = new Date().toISOString();
+  }).catch((error) => {
+    if (job.status === "cancelled") return;
+    job.status = "failed";
+    job.error = compilerFailurePayload(error).error;
+    job.retryable = true;
+    job.updatedAt = new Date().toISOString();
+  });
+  return jobView(job);
+}
+
+export async function getCompilerRunStatus(runId: string, ownerId: string) {
+  const job = compilerJobs.get(runId);
+  if (job) {
+    if (job.ownerId !== ownerId) throw new Error("COMPILER_RUN_NOT_FOUND");
+    if (job.status !== "succeeded") return jobView(job);
+  }
+  return getCompilerRun(runId, ownerId);
+}
+
+export function cancelCompilerRun(runId: string, ownerId: string): boolean {
+  const job = compilerJobs.get(runId);
+  if (!job || job.ownerId !== ownerId || !["queued", "running"].includes(job.status)) return false;
+  job.status = "cancelled";
+  job.retryable = true;
+  job.updatedAt = new Date().toISOString();
+  job.controller.abort();
+  return true;
 }
 
 export async function getCompilerRun(runId: string, ownerId: string): Promise<CompilerRunView> {
@@ -108,7 +241,7 @@ export function compilerFailurePayload(error: unknown) {
     return { error: "COMPILATION_REJECTED", stage: error.stage, issues: error.issues, telemetry: error.telemetry };
   }
   const code = error instanceof Error ? error.message : "COMPILATION_FAILED";
-  return { error: ["LIVE_COMPILER_NOT_CONFIGURED", "COMPILER_RUN_QUOTA_EXCEEDED"].includes(code) ? code : "COMPILATION_FAILED" };
+  return { error: ["LIVE_COMPILER_NOT_CONFIGURED", "COMPILER_RUN_QUOTA_EXCEEDED", "COMPILER_JOB_ALREADY_RUNNING"].includes(code) ? code : "COMPILATION_FAILED" };
 }
 
 export async function pruneCompilerRuns(now = Date.now()): Promise<void> {
@@ -117,4 +250,5 @@ export async function pruneCompilerRuns(now = Date.now()): Promise<void> {
 
 export function resetCompilerRunsForTests(): void {
   resetMemoryStateForTests();
+  compilerJobs.clear();
 }

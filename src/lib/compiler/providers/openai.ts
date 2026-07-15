@@ -12,7 +12,19 @@ import {
   type ProviderStageResult,
 } from "../contracts";
 import { CourseBlueprintSchema } from "../schemas/blueprint";
-import { GeneratedCourseCandidateSchema } from "../schemas/course-artifact";
+import {
+  AnswerSpecSchema,
+  ArtifactIdSchema,
+  ArtifactMisconceptionSchema,
+  ExplanationBlockSchema,
+  GeneratedCourseCandidateSchema,
+  GuidedResponseBlockSchema,
+  PredictionChoiceBlockSchema,
+  RangeExplorerBlockSchema,
+  SequenceBuilderBlockSchema,
+  StateTraceBlockSchema,
+  TransferChallengeBlockSchema,
+} from "../schemas/course-artifact";
 import { SourceGraphSchema } from "../schemas/source-graph";
 
 export const DEFAULT_COMPILER_MODEL = "gpt-5.6";
@@ -25,25 +37,111 @@ const MAX_OUTPUT_TOKENS: Record<CompilerStage, number> = {
   repair: 12_000,
 };
 
-const SourceGraphCandidateSchema = SourceGraphSchema.omit({ spans: true }).extend({
-  spans: z.record(
-    z.string().regex(/^[a-z][a-z0-9_-]{0,159}$/),
-    z
-      .object({
-        pageNumber: z.number().int().positive(),
-        exactText: z.string().min(1).max(2_000),
-      })
-      .strict(),
-  ),
+export const SourceGraphCandidateSchema = SourceGraphSchema.omit({ spans: true }).extend({
+  spans: z.array(z.object({
+    id: z.string().regex(/^[a-z][a-z0-9_-]{0,159}$/),
+    pageNumber: z.number().int().positive(),
+    exactText: z.string().min(1).max(2_000),
+  }).strict()).min(1).max(120),
+}).strict();
+
+const PredictionChoiceOutputSchema = PredictionChoiceBlockSchema.omit({ misconceptionByIndex: true }).extend({
+  misconceptionByIndex: z.array(z.object({
+    optionIndex: z.number().int().nonnegative(),
+    misconceptionId: z.string().regex(/^[a-z][a-z0-9_-]{0,159}$/),
+  }).strict()).max(6),
+}).strict();
+
+const LearningBlockOutputSchema = z.union([
+  ExplanationBlockSchema,
+  GuidedResponseBlockSchema,
+  PredictionChoiceOutputSchema,
+  SequenceBuilderBlockSchema,
+  RangeExplorerBlockSchema,
+  StateTraceBlockSchema,
+  TransferChallengeBlockSchema,
+]);
+
+const AnswerSpecOutputSchema = z.union(AnswerSpecSchema.options);
+
+const GeneratedCourseOutputSchema = GeneratedCourseCandidateSchema.omit({
+  blocks: true,
+  answerSpecs: true,
+  misconceptions: true,
+}).extend({
+  blocks: z.array(LearningBlockOutputSchema).min(1).max(60),
+  answerSpecs: z.array(AnswerSpecOutputSchema).max(60),
+  misconceptions: z.array(ArtifactMisconceptionSchema).max(60),
+}).strict();
+
+const ArtifactPatchOutputSchema = z.object({
+  schemaVersion: z.literal("1.0"),
+  operations: z.array(z.union([
+    z.object({ kind: z.literal("replace_block"), id: ArtifactIdSchema, value: LearningBlockOutputSchema }).strict(),
+    z.object({ kind: z.literal("replace_answer_spec"), id: ArtifactIdSchema, value: AnswerSpecOutputSchema }).strict(),
+    z.object({ kind: z.literal("replace_misconception"), id: ArtifactIdSchema, value: ArtifactMisconceptionSchema }).strict(),
+  ])).min(1).max(20),
 }).strict();
 
 const stageSchemas = {
   source_graph: SourceGraphCandidateSchema,
   blueprint: CourseBlueprintSchema,
-  course_artifact: GeneratedCourseCandidateSchema,
+  course_artifact: GeneratedCourseOutputSchema,
   critic: CriticReportSchema,
-  repair: ArtifactPatchSchema,
+  repair: ArtifactPatchOutputSchema,
 } satisfies Record<CompilerStage, z.ZodType>;
+
+export function compilerStageSchema(stage: CompilerStage): z.ZodType {
+  return stageSchemas[stage];
+}
+
+export async function parseCompilerStageOutput(
+  stage: CompilerStage,
+  raw: unknown,
+  input: unknown,
+): Promise<unknown> {
+  let output: unknown = stageSchemas[stage].parse(raw);
+  if (stage === "source_graph") {
+    const envelope = z.object({ document: SourceDocumentSchema }).passthrough().parse(input);
+    const candidate = SourceGraphCandidateSchema.parse(output);
+    const spans = Object.fromEntries(
+      await Promise.all(
+        candidate.spans.map(async (span) => [
+          span.id,
+          await resolveExactSourceSpan(envelope.document, span),
+        ] as const),
+      ),
+    );
+    output = SourceGraphSchema.parse({ ...candidate, spans });
+  }
+  if (stage === "course_artifact") {
+    const candidate = GeneratedCourseOutputSchema.parse(output);
+    const blocks = Object.fromEntries(candidate.blocks.map((block) => [block.id, block.kind === "prediction-choice" ? {
+      ...block,
+      misconceptionByIndex: Object.fromEntries(block.misconceptionByIndex.map((item) => [String(item.optionIndex), item.misconceptionId])),
+    } : block]));
+    output = GeneratedCourseCandidateSchema.parse({
+      ...candidate,
+      blocks,
+      answerSpecs: Object.fromEntries(candidate.answerSpecs.map((item) => [item.id, item])),
+      misconceptions: Object.fromEntries(candidate.misconceptions.map((item) => [item.id, item])),
+    });
+  }
+  if (stage === "repair") {
+    const patch = ArtifactPatchOutputSchema.parse(output);
+    output = ArtifactPatchSchema.parse({
+      ...patch,
+      operations: patch.operations.map((operation) => operation.kind === "replace_block" && operation.value.kind === "prediction-choice" ? {
+        ...operation,
+        value: {
+          ...operation.value,
+          misconceptionByIndex: Object.fromEntries(operation.value.misconceptionByIndex.map((item) => [String(item.optionIndex), item.misconceptionId])),
+        },
+      } : operation),
+    });
+  }
+  return output;
+}
 
 const schemaNames: Record<CompilerStage, string> = {
   source_graph: "museion_source_graph_candidate",
@@ -60,8 +158,8 @@ export function compilerTextFormat(stage: CompilerStage) {
 export function buildCompilerInstructions(stage: CompilerStage): string {
   const task: Record<CompilerStage, string> = {
     source_graph: "Extract concepts, factual claims, prerequisite edges, warnings, and exact source quotes. For each span return only its pageNumber and exactText; the application resolves offsets and hashes deterministically.",
-    blueprint: "Design a short learning sequence whose concepts and sourceGraphSha256 exactly match the validated Source Graph.",
-    course_artifact: "Produce one short private Course Artifact v2 using explanation, prediction-choice, sequence-builder, range-explorer, and state-trace lesson blocks plus a transfer-challenge. Do not use guided-response until that renderer is available. Every factual block needs a real supplied span citation. Keep transfer assistancePolicy equal to none.",
+    blueprint: "Design a short learning sequence whose concepts and sourceGraphSha256 exactly match the validated Source Graph. Copy requestedAudience exactly into audience. Give every objective a unique id, and set sequence to only those objective id values in learning order; sequence is not a list of activity kinds.",
+    course_artifact: "Produce one short private Course Artifact v2 that satisfies courseTemplate.requiredKinds and includes a transfer-challenge. Include every generated block, including the transfer challenge, in a lesson blockIds list. Prefer explanation, prediction-choice, and sequence-builder for general subjects. Use range-explorer or state-trace only when the supplied source directly supports numeric indexed state; never invent binary search, arrays, or midpoint rules for another subject. Do not use guided-response until that renderer is available. Every factual block needs a real supplied span citation. Keep transfer assistancePolicy equal to none.",
     critic: "Audit the candidate and validator issues. Set accepted false for every unresolved blocking correctness, citation, reference, termination, privacy, or transfer-lock issue.",
     repair: "Return only a minimal allow-listed typed patch that resolves the supplied issues. Do not alter unrelated fields.",
   };
@@ -105,20 +203,7 @@ export class OpenAICompilerProvider implements CompilerProvider {
     );
     if (!response.output_parsed) throw new Error(`OpenAI returned no parsed ${stage} output`);
 
-    let output: unknown = stageSchemas[stage].parse(response.output_parsed);
-    if (stage === "source_graph") {
-      const envelope = z.object({ document: SourceDocumentSchema }).passthrough().parse(input);
-      const candidate = SourceGraphCandidateSchema.parse(output);
-      const spans = Object.fromEntries(
-        await Promise.all(
-          Object.entries(candidate.spans).map(async ([id, span]) => [
-            id,
-            await resolveExactSourceSpan(envelope.document, span),
-          ] as const),
-        ),
-      );
-      output = SourceGraphSchema.parse({ ...candidate, spans });
-    }
+    const output = await parseCompilerStageOutput(stage, response.output_parsed, input);
 
     return {
       output,
