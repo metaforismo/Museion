@@ -111,5 +111,5 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Error boundary + not-found page with friendly copy
 - [x] Reduced-motion support (animations disabled under `prefers-reduced-motion`)
 - [x] Accessibility: aria-live chat log, progressbar semantics, labeled controls
-- [ ] Accessibility: full keyboard-navigation audit
-- [ ] Bundle/lighthouse audit
+- [x] Accessibility: full keyboard-navigation audit
+- [x] Bundle/Lighthouse audit with route payload, CLS, and static-asset budgets

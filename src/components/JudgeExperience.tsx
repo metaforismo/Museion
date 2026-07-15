@@ -139,7 +139,7 @@ export default function JudgeExperience() {
     location.reload();
   };
 
-  if (busy && !session) return <div className="mx-auto max-w-3xl px-4 py-20 text-center"><p className="font-display text-2xl font-semibold">Starting verified replay…</p><p className="mt-2 text-ink-soft">Loading the checked artifact and deterministic runtime.</p></div>;
+  if (busy && !session) return <div className="mx-auto min-h-svh max-w-3xl px-4 py-12 text-center sm:px-6 lg:px-8 lg:py-16"><p className="font-display text-2xl font-semibold">Starting verified replay…</p><p className="mt-2 text-ink-soft">Loading the checked artifact and deterministic runtime.</p></div>;
 
   if (!session) return <div className="mx-auto max-w-2xl px-4 py-20"><div role="alert" className="rounded-xl bg-wrong-soft p-6 text-wrong"><h1 className="font-display text-2xl font-semibold">Judge route unavailable</h1><p className="mt-2">{error}</p><button type="button" onClick={() => location.reload()} className="mt-4 rounded-lg bg-ink px-5 py-2.5 font-medium text-white">Retry</button></div></div>;
 
@@ -149,7 +149,7 @@ export default function JudgeExperience() {
   const canAdvance = currentBlock?.kind === "explanation" || completeState(currentState);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <div className="mx-auto min-h-svh w-full max-w-5xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div><div className="flex flex-wrap items-center gap-2"><span className="rounded-md bg-correct-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-correct">Verified replay</span><span className="rounded-md bg-lapis-soft px-3 py-1 text-xs font-medium text-lapis-dark">No login · keyless</span></div><h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">{session.artifact.title}</h1><p className="mt-3 max-w-[62ch] text-lg leading-7 text-ink-soft">{session.artifact.bigQuestion}</p></div>
         <button type="button" onClick={() => void reset()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium hover:border-lapis">Reset run</button>

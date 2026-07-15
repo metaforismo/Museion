@@ -155,6 +155,54 @@ async function keyboardJudgeFlow() {
   await context.close();
 }
 
+async function performanceBudgetFlow() {
+  const budgets = { totalBytes: 400 * 1024, javascriptBytes: 250 * 1024, cls: 0.02 };
+  for (const route of ["/welcome", "/create", "/judge"]) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+    await context.addInitScript(() => {
+      localStorage.setItem("museion-onboarded", "1");
+      window.__museionCls = 0;
+      window.__museionShifts = [];
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!entry.hadRecentInput) {
+            window.__museionCls += entry.value;
+            window.__museionShifts.push({
+              value: entry.value,
+              scrollY: window.scrollY,
+              sources: entry.sources?.map((source) => ({
+                node: source.node ? `${source.node.nodeName.toLowerCase()}${source.node.id ? `#${source.node.id}` : ""}.${[...source.node.classList].slice(0, 3).join(".")}` : "unknown",
+                previousRect: source.previousRect,
+                currentRect: source.currentRect,
+              })) ?? [],
+            });
+          }
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    const page = await context.newPage();
+    watch(page, `performance ${route}`);
+    await page.goto(`${baseURL}${route}`, { waitUntil: "networkidle" });
+    if (route === "/judge") await expectVisible(page.getByText("Verified replay", { exact: true }), "performance judge ready");
+    const metrics = await page.evaluate(() => {
+      const entries = [...performance.getEntriesByType("navigation"), ...performance.getEntriesByType("resource")];
+      return {
+        totalBytes: entries.reduce((sum, entry) => sum + (entry.encodedBodySize || entry.transferSize || 0), 0),
+        javascriptBytes: entries
+          .filter((entry) => entry.initiatorType === "script" || entry.name.includes("/_next/static/chunks/"))
+          .reduce((sum, entry) => sum + (entry.encodedBodySize || entry.transferSize || 0), 0),
+        cls: window.__museionCls ?? 0,
+        shifts: window.__museionShifts ?? [],
+      };
+    });
+    console.log(`Performance ${route}: ${(metrics.totalBytes / 1024).toFixed(1)} KiB total, ${(metrics.javascriptBytes / 1024).toFixed(1)} KiB JS, CLS ${metrics.cls.toFixed(3)}`);
+    if (metrics.totalBytes > budgets.totalBytes) failures.push(`performance ${route}: total transfer exceeds 400 KiB`);
+    if (metrics.javascriptBytes > budgets.javascriptBytes) failures.push(`performance ${route}: JavaScript transfer exceeds 250 KiB`);
+    if (metrics.cls > budgets.cls) failures.push(`performance ${route}: CLS ${metrics.cls.toFixed(3)} exceeds ${budgets.cls}; ${JSON.stringify(metrics.shifts)}`);
+    await context.close();
+  }
+}
+
 async function submitTextAnswer(page, answer) {
   const input = page.getByPlaceholder("Your answer");
   await input.fill(answer);
@@ -353,15 +401,18 @@ async function judgeFlow(viewport, label, repeat = 1) {
 }
 
 try {
-  if (process.env.MUSEION_KEYBOARD_ONLY === "1") {
+  if (process.env.MUSEION_PERFORMANCE_ONLY === "1") {
+    await performanceBudgetFlow();
+  } else if (process.env.MUSEION_KEYBOARD_ONLY === "1") {
     await keyboardJudgeFlow();
   } else {
     await accessibilityFlow();
   }
-  if (process.env.MUSEION_A11Y_ONLY !== "1" && process.env.MUSEION_KEYBOARD_ONLY !== "1") {
+  if (process.env.MUSEION_A11Y_ONLY !== "1" && process.env.MUSEION_KEYBOARD_ONLY !== "1" && process.env.MUSEION_PERFORMANCE_ONLY !== "1") {
     await desktopFlow();
     await designSystemFlow();
     await mobileFlow();
+    await performanceBudgetFlow();
     await keyboardJudgeFlow();
     await judgeFlow({ width: 1440, height: 1000 }, "judge-desktop", 20);
     await judgeFlow({ width: 320, height: 700 }, "judge-mobile", 1);

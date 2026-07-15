@@ -71,6 +71,8 @@ This ledger covers the final visual-quality pass and the authorized GitHub conso
 - [x] Pass homepage/header/legal-route checks at desktop and 320 px.
 - [x] Pass console, page-error, HTTP 5xx, refresh, reset, and overflow checks.
 - [x] Pass axe-core with zero detected violations on desktop routes and critical 320 px routes.
+- [x] Pass Lighthouse accessibility, best-practices, and SEO at 100 on the audited routes.
+- [x] Enforce static bundle, route transfer, JavaScript transfer, and CLS budgets.
 - [x] Inspect final desktop and mobile screenshots visually.
 - [x] Pass `git diff --check`.
 

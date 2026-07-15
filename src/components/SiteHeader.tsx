@@ -21,8 +21,8 @@ export default function SiteHeader() {
   return (
     <header className="site-header border-b border-ink/10 bg-surface/90 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:flex-nowrap sm:px-6 lg:px-8">
-        <Link href="/" className="group flex items-center gap-3" aria-label="Museion home">
-          <span className="flex h-9 w-9 items-center justify-center rounded-[0.7rem] bg-ink font-display text-lg font-semibold text-white shadow-[0_8px_24px_rgba(19,28,49,0.16)] transition-transform duration-200 group-hover:-rotate-2 group-active:scale-95">M</span>
+        <Link href="/" className="group flex items-center gap-3">
+          <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-[0.7rem] bg-ink font-display text-lg font-semibold text-white shadow-[0_8px_24px_rgba(19,28,49,0.16)] transition-transform duration-200 group-hover:-rotate-2 group-active:scale-95">M</span>
           <span><span className="block font-display text-xl font-semibold leading-none tracking-tight text-ink">Museion</span><span className="mt-1 hidden text-[0.66rem] font-medium uppercase tracking-[0.16em] text-ink-soft md:block">reasoning, made visible</span></span>
         </Link>
         <nav aria-label="Primary navigation" className="order-last w-full sm:order-none sm:w-auto">
