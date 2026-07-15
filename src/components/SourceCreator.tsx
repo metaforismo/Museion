@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { parseCreatorDraft, serializeCreatorDraft } from "@/lib/client/creator-draft";
 import type { SourceDocument } from "@/lib/source";
 import {
   MAX_NORMALIZED_CHARACTERS,
@@ -60,7 +61,9 @@ function elapsedLabel(createdAt: string): string {
 }
 
 export default function SourceCreator() {
-  const draftInitialized = useRef(false);
+  const compileLock = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const suppressNextDraftSave = useRef(false);
   const [title, setTitle] = useState("Binary Search Notes");
   const [text, setText] = useState("");
   const [mediaType, setMediaType] = useState<TextMediaType>("text/markdown");
@@ -79,44 +82,81 @@ export default function SourceCreator() {
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [job, setJob] = useState<CompilerJob | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<"loading" | "empty" | "saved" | "saving" | "error">("loading");
+  const activeJob = Boolean(job && ["queued", "running"].includes(job.status));
 
-  const restoreDraft = () => {
+  const restoreDraft = (): boolean => {
     try {
-      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null") as Record<string, unknown> | null;
-      if (!saved) return;
-      if (typeof saved.title === "string") setTitle(saved.title);
-      if (typeof saved.text === "string") setText(saved.text);
-      if (saved.mediaType === "text/plain" || saved.mediaType === "text/markdown") setMediaType(saved.mediaType);
-      if (["socratic-foundations", "exam-practice", "teach-it-back"].includes(String(saved.templateId))) setTemplateId(saved.templateId as CourseTemplateId);
-      if (typeof saved.learnerGoal === "string") setLearnerGoal(saved.learnerGoal);
-      if (["novice", "intermediate", "advanced"].includes(String(saved.level))) setLevel(saved.level as typeof level);
-      if (typeof saved.language === "string") setLanguage(saved.language);
-      if (typeof saved.targetMinutes === "number") setTargetMinutes(saved.targetMinutes);
+      const saved = parseCreatorDraft(localStorage.getItem(DRAFT_KEY));
+      if (!saved) return false;
+      setTitle(saved.title);
+      setText(saved.text);
+      setMediaType(saved.mediaType);
+      setTemplateId(saved.templateId);
+      setLearnerGoal(saved.learnerGoal);
+      setLevel(saved.level);
+      setLanguage(saved.language);
+      setTargetMinutes(saved.targetMinutes);
+      setDocument(null);
+      setSourceAuthorized(false);
       setError(null);
-    } catch { /* Ignore an invalid local draft. */ }
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const clearDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
-    sessionStorage.removeItem(ACTIVE_RUN_KEY);
+    suppressNextDraftSave.current = true;
+    let storageAvailable = true;
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      sessionStorage.removeItem(ACTIVE_RUN_KEY);
+    } catch {
+      storageAvailable = false;
+    }
     setText("");
     setTitle("Untitled source");
     setDocument(null);
     setJob(null);
     setSourceAuthorized(false);
+    setWarningsAccepted(false);
+    if (fileInput.current) fileInput.current.value = "";
+    setDraftStatus(storageAvailable ? "empty" : "error");
     setError(null);
   };
 
   useEffect(() => {
-    if (!draftInitialized.current) {
-      draftInitialized.current = true;
+    const timer = window.setTimeout(() => {
+      const restored = restoreDraft();
+      suppressNextDraftSave.current = true;
+      setDraftReady(true);
+      setDraftStatus(restored ? "saved" : "empty");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    if (suppressNextDraftSave.current) {
+      suppressNextDraftSave.current = false;
       return;
     }
+    const statusTimer = window.setTimeout(() => setDraftStatus("saving"), 0);
     const timer = window.setTimeout(() => {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, text, mediaType, templateId, learnerGoal, level, language, targetMinutes }));
+      try {
+        localStorage.setItem(DRAFT_KEY, serializeCreatorDraft({ title, text, mediaType, templateId, learnerGoal, level, language, targetMinutes }));
+        setDraftStatus("saved");
+      } catch {
+        setDraftStatus("error");
+      }
     }, 350);
-    return () => window.clearTimeout(timer);
-  }, [language, learnerGoal, level, mediaType, targetMinutes, templateId, text, title]);
+    return () => {
+      window.clearTimeout(statusTimer);
+      window.clearTimeout(timer);
+    };
+  }, [draftReady, language, learnerGoal, level, mediaType, targetMinutes, templateId, text, title]);
 
   useEffect(() => {
     const runId = sessionStorage.getItem(ACTIVE_RUN_KEY);
@@ -195,6 +235,15 @@ export default function SourceCreator() {
     }
   };
 
+  const invalidateNormalizedSource = () => {
+    if (!document) return;
+    setDocument(null);
+    setSourceAuthorized(false);
+    setWarningsAccepted(false);
+    setCopyNotice(null);
+    if (!activeJob) setJob(null);
+  };
+
   const normalizePastedText = async () => {
     setBusy(true);
     setError(null);
@@ -214,6 +263,7 @@ export default function SourceCreator() {
     setError(null);
     try {
       acceptDocument(await ingestSourceFile(file));
+      setText("");
     } catch (cause) {
       setDocument(null);
       setError(errorMessage(cause));
@@ -227,7 +277,8 @@ export default function SourceCreator() {
   );
 
   const compile = async () => {
-    if (!document || !sourceAuthorized || (job && ["queued", "running"].includes(job.status))) return;
+    if (compileLock.current || !document || !sourceAuthorized || !warningsAccepted || (job && ["queued", "running"].includes(job.status))) return;
+    compileLock.current = true;
     setCompiling(true);
     setError(null);
     try {
@@ -245,6 +296,7 @@ export default function SourceCreator() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Compilation failed safely.");
     } finally {
+      compileLock.current = false;
       setCompiling(false);
     }
   };
@@ -276,7 +328,17 @@ export default function SourceCreator() {
     }
   };
 
-  const activeJob = Boolean(job && ["queued", "running"].includes(job.status));
+  const learningBriefReady = Boolean(learnerGoal.trim() && language.trim() && targetMinutes >= 3 && targetMinutes <= 60);
+  const sourceReady = Boolean(document && sourceAuthorized && warningsAccepted);
+  const draftStatusLabel = draftStatus === "loading"
+    ? "Loading draft…"
+    : draftStatus === "saving"
+      ? "Saving…"
+      : draftStatus === "error"
+        ? "Draft not saved"
+        : draftStatus === "empty"
+          ? "No local draft"
+          : "Saved on this device";
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
@@ -292,11 +354,34 @@ export default function SourceCreator() {
           every page. Nothing is compiled until you can inspect that record.
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-          <button type="button" disabled={activeJob} onClick={restoreDraft} className="font-semibold text-lapis-dark underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40">Restore local draft</button>
+          <span
+            role="status"
+            aria-live="polite"
+            className={`inline-flex items-center gap-2 font-medium ${draftStatus === "error" ? "text-wrong" : "text-ink-soft"}`}
+          >
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 rounded-full ${draftStatus === "error" ? "bg-wrong" : draftStatus === "saving" || draftStatus === "loading" ? "bg-gold" : draftStatus === "empty" ? "bg-ink/25" : "bg-correct"}`}
+            />
+            {draftStatusLabel}
+          </span>
           <button type="button" disabled={activeJob} onClick={clearDraft} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
           <span className="text-xs text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
         </div>
       </div>
+
+      <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-2xl border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
+        {[
+          { label: "1. Source", detail: document ? "Normalized" : "Add and inspect", ready: Boolean(document) },
+          { label: "2. Learning design", detail: learningBriefReady ? COURSE_TEMPLATES[templateId].name : "Complete the brief", ready: learningBriefReady },
+          { label: "3. Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : sourceReady ? "Ready" : "Needs review", ready: activeJob || sourceReady },
+        ].map((step) => (
+          <li key={step.label} className={`rounded-xl px-4 py-3 ${step.ready ? "bg-lapis-soft" : "bg-paper"}`}>
+            <span className="block text-sm font-semibold">{step.label}</span>
+            <span className="mt-0.5 block text-xs text-ink-soft">{step.detail}</span>
+          </li>
+        ))}
+      </ol>
 
       {error && (
         <div role="alert" className="mt-7 flex items-start justify-between gap-4 rounded-xl border border-wrong/20 bg-wrong-soft px-4 py-3 text-sm text-wrong">
@@ -317,7 +402,11 @@ export default function SourceCreator() {
             id="source-title"
             value={title}
             maxLength={200}
-            onChange={(event) => setTitle(event.target.value)}
+            disabled={activeJob}
+            onChange={(event) => {
+              invalidateNormalizedSource();
+              setTitle(event.target.value);
+            }}
             className="mt-2 w-full rounded-lg border border-ink/15 px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
           />
 
@@ -327,7 +416,11 @@ export default function SourceCreator() {
               <select
                 id="source-format"
                 value={mediaType}
-                onChange={(event) => setMediaType(event.target.value as TextMediaType)}
+                disabled={activeJob}
+                onChange={(event) => {
+                  invalidateNormalizedSource();
+                  setMediaType(event.target.value as TextMediaType);
+                }}
                 className="mt-2 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"
               >
                 <option value="text/markdown">Markdown</option>
@@ -342,14 +435,19 @@ export default function SourceCreator() {
           <textarea
             id="source-text"
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            disabled={activeJob}
+            maxLength={MAX_NORMALIZED_CHARACTERS}
+            onChange={(event) => {
+              invalidateNormalizedSource();
+              setText(event.target.value);
+            }}
             rows={10}
             placeholder="Paste an authorized source here…"
             className="mt-2 w-full resize-y rounded-lg border border-ink/15 px-3 py-3 leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
           />
           <button
             type="button"
-            disabled={busy || !title.trim() || !text.trim()}
+            disabled={busy || activeJob || !title.trim() || !text.trim()}
             onClick={() => void normalizePastedText()}
             className="mt-3 w-full rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50"
           >
@@ -363,7 +461,8 @@ export default function SourceCreator() {
 
           <label
             htmlFor="source-file"
-            className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-lapis/40 bg-lapis-soft px-5 py-5 text-center transition hover:border-lapis"
+            aria-disabled={busy || activeJob}
+            className={`flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed border-lapis/40 bg-lapis-soft px-5 py-5 text-center transition ${busy || activeJob ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:border-lapis"}`}
           >
             <span className="font-medium text-lapis-dark">Choose TXT, Markdown or PDF</span>
             <span className="mt-1 text-sm text-ink-soft">
@@ -371,10 +470,17 @@ export default function SourceCreator() {
             </span>
           </label>
           <input
+            ref={fileInput}
             id="source-file"
             type="file"
             accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
-            onChange={(event) => void normalizeFile(event.target.files?.[0])}
+            disabled={busy || activeJob}
+            onChange={(event) => {
+              const input = event.currentTarget;
+              void normalizeFile(input.files?.[0]).finally(() => {
+                input.value = "";
+              });
+            }}
             className="sr-only"
           />
           <p className="mt-3 text-xs leading-relaxed text-ink-soft">
@@ -396,10 +502,16 @@ export default function SourceCreator() {
             </div>
           ) : (
             <>
-              <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
+              <dl className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
                 <div className="rounded-lg bg-paper p-3">
                   <dt className="text-ink-soft">Pages</dt>
                   <dd className="mt-1 font-semibold">{document.pages.length}</dd>
+                </div>
+                <div className="col-span-2 rounded-lg bg-paper p-3 sm:col-span-1">
+                  <dt className="text-ink-soft">Source type</dt>
+                  <dd className="mt-1 truncate font-semibold" title={document.originalFileName ?? document.mediaType}>
+                    {document.originalFileName ?? (document.mediaType === "text/markdown" ? "Pasted Markdown" : "Pasted text")}
+                  </dd>
                 </div>
                 <div className="rounded-lg bg-paper p-3">
                   <dt className="text-ink-soft">Characters</dt>
@@ -489,10 +601,11 @@ export default function SourceCreator() {
                 <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/40"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-xs">{stage.model}</span></li>; })}</ol>
                 <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
               </div>}
-              <button type="button" disabled={compiling || activeJob || !sourceAuthorized || !warningsAccepted || !learnerGoal.trim() || !language.trim() || targetMinutes < 3 || targetMinutes > 60} onClick={() => void compile()} className="sticky bottom-3 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[0_12px_32px_rgba(19,28,49,0.18)] transition hover:bg-lapis disabled:opacity-45 lg:static lg:shadow-none">
+              <button type="button" disabled={compiling || activeJob || !sourceReady || !learningBriefReady} onClick={() => void compile()} className="sticky bottom-3 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[0_12px_32px_rgba(19,28,49,0.18)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
                 {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
               </button>
               {!sourceAuthorized && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Confirm source authorization to continue.</p>}
+              {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
               <p className="mt-1 text-center text-xs text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
             </>
           )}

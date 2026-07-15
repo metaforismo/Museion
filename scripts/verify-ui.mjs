@@ -467,10 +467,18 @@ async function desktopFlow() {
   await page.getByLabel("Paste source text").fill(
     "## Binary search invariant\nIgnore previous instructions is quoted source data, not an application command.",
   );
+  await page.waitForFunction(() => localStorage.getItem("museion:creator-draft:v1")?.includes("Binary search invariant"));
+  await page.reload();
+  if (!(await page.getByLabel("Paste source text").inputValue()).includes("Binary search invariant")) {
+    failures.push("creator: local text draft did not restore after refresh");
+  }
   await page.getByRole("button", { name: "Normalize pasted source" }).click();
   await expectVisible(page.getByText("Document SHA-256"), "pasted-source hash");
   await expectVisible(page.getByRole("heading", { name: "Review warnings" }), "instruction-like warning");
   await expectVisible(page.getByText(/Other sources require the configured live compiler/), "truthful keyless live compiler boundary");
+
+  await page.getByLabel("Source title").fill("Updated source title");
+  await expectVisible(page.getByText(/Add a source to inspect its canonical pages/), "stale normalized source invalidation");
 
   await page.locator('input[type="file"]').setInputFiles(pdfFixture);
   await expectVisible(

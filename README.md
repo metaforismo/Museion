@@ -95,7 +95,7 @@ The balanced Build Week policy routes Source Graph extraction to `gpt-5.6-luna`,
 The Build Week source path starts at `/create`: paste text/Markdown or choose a selectable-text PDF, then inspect normalized pages, warnings, and SHA-256 hashes. The checked six-page binary-search source resolves to `/create/review`, where concepts, claims, exact quotations, blueprint objectives, block citations, hashes, and blocking validators are inspectable. `/judge` then runs the complete keyless replay: five artifact-driven blocks, one locked near-transfer attempt, and a reconciled evidence ledger. Arbitrary sources remain normalized but are not falsely presented as compiled until a live provider has produced and passed every validator.
 
 ```bash
-npm test        # 147 offline tests; 17 explicit live cases skip without opt-in
+npm test        # 155 offline tests; 17 explicit live cases skip without opt-in
 npm run build   # production build
 # With `npm run dev` running in another terminal:
 npm run verify:ui  # Chrome: legacy path + full judge path 20× desktop and once at 320 px
