@@ -56,6 +56,7 @@ async function accessibilityFlow() {
     "/",
     "/welcome",
     "/create",
+    "/settings",
     "/create/review",
     "/judge",
     "/lessons/linear-equations-intro",
@@ -81,7 +82,7 @@ async function accessibilityFlow() {
   await mobile.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
   const mobilePage = await mobile.newPage();
   watch(mobilePage, "accessibility-mobile");
-  for (const route of ["/", "/create", "/judge"]) {
+  for (const route of ["/", "/create", "/settings", "/judge"]) {
     await mobilePage.goto(`${baseURL}${route}`);
     await mobilePage.locator("main").waitFor({ state: "visible" });
     await scanPage(mobilePage, `mobile ${route}`);
@@ -279,12 +280,20 @@ async function desktopFlow() {
   );
   await page.getByRole("button", { name: "Create verified replay run" }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
-  await expectVisible(page.getByText("Accepted · 0 blocking issues"), "accepted compiler validation");
-  await expectVisible(page.getByRole("heading", { name: "Grounding" }), "run grounding review");
+  await expectVisible(page.getByText("Accepted for learning"), "accepted compiler validation");
+  await expectVisible(page.getByRole("heading", { name: "Source quotations" }), "run grounding review");
   await page.screenshot({ path: path.join(outputDir, "desktop-source-creator.png"), fullPage: true });
   await page.getByRole("link", { name: /Launch generated learner experience/ }).click();
   await expectVisible(page.getByText("Verified replay", { exact: true }), "compiler-run learner launch");
   await expectVisible(page.getByRole("heading", { name: /Binary Search/ }), "compiler-run learner title");
+
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expectVisible(page.getByRole("heading", { name: "Choose how Museion thinks." }), "AI settings");
+  await expectVisible(page.getByText(/Local AI is disabled/), "hosted-safe AI state");
+  await expectVisible(page.getByText("gpt-5.6-luna", { exact: true }), "Luna routing");
+  await expectVisible(page.getByText("gpt-5.6-terra", { exact: true }).first(), "Terra routing");
+  await expectVisible(page.getByText("gpt-5.6-sol", { exact: true }).first(), "Sol routing");
+  await page.screenshot({ path: path.join(outputDir, "desktop-settings.png"), fullPage: true });
 
   const notFoundPage = await context.newPage();
   await notFoundPage.goto(`${baseURL}/missing-route`);

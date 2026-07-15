@@ -29,14 +29,18 @@ export default function MaiaPanel({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [deliverySource, setDeliverySource] = useState<MaiaResponse["source"] | null>(null);
+  const [resolvedModel, setResolvedModel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastOutboxId = useRef(0);
+  const requestController = useRef<AbortController | null>(null);
 
   const send = useCallback(
     async (text: string) => {
       const message = text.trim();
       if (!message || streaming) return;
       setStreaming(true);
+      setDeliverySource(null);
       setMessages((m) => [
         ...m,
         { role: "user", content: message },
@@ -51,6 +55,8 @@ export default function MaiaPanel({
         });
 
       try {
+        const controller = new AbortController();
+        requestController.current = controller;
         const res = await fetch(`/api/sessions/${sessionId}/maia`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -60,6 +66,7 @@ export default function MaiaPanel({
             expectedVersion: sessionVersion,
             idempotencyKey: crypto.randomUUID(),
           }),
+          signal: controller.signal,
         });
         if (res.status === 429) {
           // The server explains WHY (burst pause vs conversation cap).
@@ -76,12 +83,17 @@ export default function MaiaPanel({
         }
         const delivery = (await res.json()) as MaiaResponse;
         onSessionVersion(delivery.sessionVersion);
+        setDeliverySource(delivery.source);
+        setResolvedModel(delivery.resolvedModel ?? null);
         setLastAssistantMessage(delivery.turn.message);
-      } catch {
+      } catch (error) {
         setLastAssistantMessage(
-          "Maia couldn't answer just now — try again in a moment.",
+          error instanceof DOMException && error.name === "AbortError"
+            ? "That request was cancelled. Your lesson state did not change."
+            : "Maia couldn't answer just now — try again in a moment.",
         );
       } finally {
+        requestController.current = null;
         setStreaming(false);
       }
     },
@@ -119,6 +131,9 @@ export default function MaiaPanel({
             asks the right questions — never gives the answer
           </p>
         </div>
+        <span className={`ml-auto rounded-md px-2 py-1 text-[0.68rem] font-semibold ${deliverySource === "deterministic" ? "bg-gold-soft text-ink" : "bg-correct-soft text-correct"}`}>
+          {deliverySource === "openai-codex" ? resolvedModel ?? "GPT-5.6 Terra" : deliverySource === "openai-api" ? "OpenAI API" : deliverySource === "deterministic" ? "Verified fallback" : "Grounded tutor"}
+        </span>
       </div>
 
       <div
@@ -180,13 +195,7 @@ export default function MaiaPanel({
           aria-label="Message for Maia"
           className="min-w-0 flex-1 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none transition focus:border-lapis disabled:opacity-60"
         />
-        <button
-          type="submit"
-          disabled={streaming || !input.trim()}
-          className="rounded-lg bg-lapis px-4 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50"
-        >
-          Send
-        </button>
+        {streaming ? <button type="button" onClick={() => requestController.current?.abort()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium">Cancel</button> : <button type="submit" disabled={!input.trim()} className="rounded-lg bg-lapis px-4 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50">Send</button>}
       </form>
     </aside>
   );

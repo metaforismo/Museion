@@ -182,11 +182,13 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
           setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep });
           setShakeTick((t) => t + 1);
         }
+      } catch {
+        setRequestError("The answer could not be checked because the connection failed. Your response was not lost; try again.");
       } finally {
         setBusy(false);
       }
     },
-    [sessionId, busy, sessionVersion, step?.id],
+    [sessionId, busy, sessionVersion, step],
   );
 
   const advance = useCallback(async () => {
@@ -208,6 +210,8 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
       setFeedback(null);
       setShowSolution(false);
       setHintNote(null);
+    } catch {
+      setRequestError("The next step could not be opened because the connection failed. Try again.");
     } finally {
       setBusy(false);
     }
@@ -238,6 +242,8 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
       } else {
         setHintNote("No more hints at your mastery level — trust your reasoning, or ask Maia a question.");
       }
+    } catch {
+      setRequestError("The hint could not be requested because the connection failed. Try again.");
     } finally {
       setBusy(false);
     }

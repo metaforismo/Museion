@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/judge", label: "Judge" },
   { href: "/progress", label: "Progress" },
   { href: "/about", label: "About" },
+  { href: "/settings", label: "Settings" },
 ];
 
 function activePath(pathname: string, href: string): boolean {
