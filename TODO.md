@@ -47,16 +47,16 @@ Status legend: `[x]` done · `[ ]` planned
 
 - [x] Answer-leak detector (`src/lib/maia/leak.ts`): numeric-equivalence + assertive-phrasing checks against the step's answer spec; runtime instrumentation logs flagged Maia turns
 - [x] Red-team suite (`npm run redteam`): 8 adversarial prompt attacks asserted leak-free against the live model (auto-skipped without an API key)
-- [ ] Rate limiting on the Maia route (per-IP and per-session)
+- [x] Rate limiting on the Maia route (sliding window per session + Retry-After; per-IP once deployed behind a stable proxy)
 - [ ] Maia streaming over SSE with structured events (text, done, error) instead of raw text
 - [ ] Conversation summarization for long sessions (keep prompt size bounded)
-- [ ] Self-explanation prompts: after a correct answer, Maia occasionally asks "why did that work?" (generation effect)
+- [x] Self-explanation prompts after correct answers, checked by Maia (generation effect)
 - [ ] Localized tutoring: Maia answers in the learner's language (start with Italian)
-- [ ] Prompt-cache hit-rate instrumentation (verify the persona block actually caches)
+- [x] Prompt-cache + token usage instrumentation on every tutor turn (session events + structured logs)
 
 ## v0.5 — Content & exercise depth
 
-- [ ] Practice banks for every lesson (fractions still missing one)
+- [x] Practice banks for every lesson
 - [ ] More lessons per track: Algebra (two-step inequalities, systems intro), Arithmetic (percentages, ratios), CS (hexadecimal, logic gates, Big-O intuition)
 - [ ] New step kinds: multi-input (e.g. "give both solutions"), ordering, drag-to-match pairs
 - [ ] Adaptive practice composition: pick the next exercise targeting the learner's weakest concept (the "optimal problem X for target Y" pattern)
@@ -91,8 +91,9 @@ Status legend: `[x]` done · `[ ]` planned
 
 - [ ] E2E tests (Playwright): onboarding → lesson → practice happy path
 - [x] Typecheck script (`npm run typecheck`)
-- [ ] Structured logging and request tracing on API routes
+- [x] Structured JSON logging on API routes (session_created, run_completed, maia_* events)
 - [x] Error boundary + not-found page with friendly copy
 - [x] Reduced-motion support (animations disabled under `prefers-reduced-motion`)
-- [ ] Accessibility pass: keyboard navigation through the player, ARIA on chat
+- [x] Accessibility: aria-live chat log, progressbar semantics, labeled controls
+- [ ] Accessibility: full keyboard-navigation audit
 - [ ] Bundle/lighthouse audit

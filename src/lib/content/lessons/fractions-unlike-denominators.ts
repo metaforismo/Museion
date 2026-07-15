@@ -77,6 +77,73 @@ const lesson = {
       ],
     },
   ],
+  practice: [
+    {
+      id: "practice-1",
+      concept: "common-denominator",
+      prompt: "What is the smallest common denominator for 1/6 and 1/4?",
+      answer: { kind: "numeric", value: 12, tolerance: 0 },
+      solution:
+        "Multiples of 6: 6, 12, 18… Multiples of 4: 4, 8, 12… The lists first meet at 12, the least common multiple.",
+      misconceptions: [
+        {
+          id: "adds-denominators",
+          triggerAnswers: ["10"],
+          description:
+            "The learner added the denominators (6 + 4) instead of finding a common multiple.",
+          remediationFocus:
+            "A common denominator must be divisible by BOTH denominators — a common multiple, not a sum.",
+        },
+        {
+          id: "multiplies-denominators",
+          triggerAnswers: ["24"],
+          description:
+            "The learner multiplied the denominators. 24 works, but it is not the smallest.",
+          remediationFocus:
+            "The product is always a common multiple, but the LEAST common multiple can be smaller — check earlier meeting points.",
+        },
+      ],
+      hints: ["List multiples of 6 and of 4. Where do they first meet?"],
+    },
+    {
+      id: "practice-2",
+      concept: "equivalent-fractions",
+      prompt: "Compute 1/4 + 1/2. Give the result as a fraction a/b.",
+      answer: { kind: "expression", acceptedForms: ["3/4", "6/8"] },
+      solution:
+        "Re-cut the half into quarters: 1/2 = 2/4. Then 1/4 + 2/4 = 3/4.",
+      misconceptions: [
+        {
+          id: "adds-across",
+          triggerAnswers: ["2/6", "1/3"],
+          description:
+            "The learner added numerators and denominators separately: 1/4 + 1/2 = 2/6.",
+          remediationFocus:
+            "Convert to same-size pieces first; then only the counts are added.",
+        },
+      ],
+      hints: ["How many quarters make a half?"],
+    },
+    {
+      id: "practice-3",
+      concept: "equivalent-fractions",
+      prompt: "Compute 2/3 + 1/6. Give the result as a fraction a/b.",
+      answer: { kind: "expression", acceptedForms: ["5/6"] },
+      solution:
+        "Thirds re-cut into sixths: 2/3 = 4/6. Then 4/6 + 1/6 = 5/6.",
+      misconceptions: [
+        {
+          id: "adds-across",
+          triggerAnswers: ["3/9", "1/3"],
+          description:
+            "The learner added numerators and denominators separately: 2/3 + 1/6 = 3/9.",
+          remediationFocus:
+            "Sixths are the common size here: convert 2/3 into sixths before adding.",
+        },
+      ],
+      hints: ["How many sixths make two thirds?"],
+    },
+  ],
 } satisfies Lesson;
 
 export default lesson;
