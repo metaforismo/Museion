@@ -86,7 +86,7 @@ async function accessibilityFlow() {
     await mobilePage.goto(`${baseURL}${route}`);
     await mobilePage.locator("main").waitFor({ state: "visible" });
     await scanPage(mobilePage, `mobile ${route}`);
-    const currentLink = mobilePage.getByRole("navigation", { name: "Primary navigation" }).locator('[aria-current="page"]');
+    const currentLink = mobilePage.getByRole("navigation", { name: "Primary navigation" }).locator('[aria-current="page"]:visible');
     if (await currentLink.count()) {
       const visible = await currentLink.evaluate((link) => {
         const rect = link.getBoundingClientRect();
@@ -104,6 +104,35 @@ async function keyboardActivate(page, locator, key = "Enter") {
   await locator.click({ trial: true });
   await locator.focus();
   await page.keyboard.press(key);
+}
+
+async function mobileNavigationFlow() {
+  const context = await browser.newContext({ viewport: { width: 320, height: 700 }, reducedMotion: "reduce" });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  watch(page, "mobile-navigation");
+  await page.goto(`${baseURL}/`);
+
+  const moreButton = page.getByRole("button", { name: "More" });
+  await keyboardActivate(page, moreButton);
+  await expectVisible(page.getByRole("link", { name: "Settings", exact: true }), "mobile Settings destination");
+  await page.keyboard.press("Escape");
+  if (await page.getByLabel("More pages").count()) failures.push("mobile navigation: Escape did not close the More menu");
+  if (!(await moreButton.evaluate((button) => button === document.activeElement))) {
+    failures.push("mobile navigation: focus did not return to the More button after Escape");
+  }
+
+  await moreButton.click();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.waitForURL((url) => url.pathname === "/settings");
+  const settingsButton = page.getByRole("button", { name: "Settings" });
+  if ((await settingsButton.getAttribute("aria-current")) !== "page") {
+    failures.push("mobile navigation: current secondary page is not exposed on the compact navigation");
+  }
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) {
+    failures.push("mobile navigation: compact header causes horizontal overflow");
+  }
+  await context.close();
 }
 
 async function keyboardFill(page, locator, value) {
@@ -674,6 +703,7 @@ try {
     await keyboardJudgeFlow();
   } else {
     await accessibilityFlow();
+    await mobileNavigationFlow();
   }
   if (process.env.MUSEION_A11Y_ONLY !== "1" && process.env.MUSEION_KEYBOARD_ONLY !== "1" && process.env.MUSEION_PERFORMANCE_ONLY !== "1") {
     await desktopFlow();
