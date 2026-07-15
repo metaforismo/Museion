@@ -237,12 +237,17 @@ async function desktopFlow() {
 
   await submitTextAnswer(page, "6");
   await expectVisible(page.getByText(/Correct — nice reasoning/), "correct feedback");
+  await page.reload();
+  await expectVisible(page.getByText(/Correct — nice reasoning/), "post-solve resume feedback");
+  await expectVisible(page.getByRole("button", { name: /Continue/ }), "post-solve resume advance");
   await page.getByRole("button", { name: /Continue/ }).click();
   for (const answer of ["4", "5"]) {
     await submitTextAnswer(page, answer);
     await page.getByRole("button", { name: /Continue/ }).click();
   }
   await submitTextAnswer(page, "3");
+  await expectVisible(page.getByText(/Correct — nice reasoning/), "final correct feedback");
+  await page.getByRole("button", { name: /Continue/ }).click();
   await expectVisible(page.getByText("Lesson complete 🎓"), "lesson completion");
   await expectVisible(page.getByRole("link", { name: /Try practice mode/ }), "practice entry");
   await page.screenshot({ path: path.join(outputDir, "desktop-complete.png"), fullPage: true });
