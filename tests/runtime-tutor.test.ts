@@ -4,6 +4,7 @@ import { CourseArtifactV2Schema, type LearningBlock } from "@/lib/compiler";
 import {
   allowedRuntimeTargets,
   buildRuntimeTutorSnapshot,
+  buildRuntimeTutorIntervention,
   gateRuntimeTutorActions,
   initializeBlock,
   offByOneCounterexample,
@@ -44,5 +45,21 @@ describe("bounded Maia runtime observation", () => {
     expect(outcome.misconceptionId).toBe("mis_mid_reused_small");
     expect(counterexample?.before).toEqual({ low: 0, high: 6, mid: 3 });
     expect(counterexample?.proposed).toEqual({ low: 3, high: 6 });
+  });
+
+  it("turns an incorrect outcome into a gated visible intervention", () => {
+    const state = initializeBlock(range);
+    if (state.kind !== "range-explorer") throw new Error("Unexpected state");
+    const action = { kind: "range_update", low: 3, high: 6 } as const;
+    const intervention = buildRuntimeTutorIntervention({
+      artifactId: artifact.id,
+      block: range,
+      stateBefore: state,
+      action,
+      outcome: reduceBlock(range, state, action),
+    });
+    expect(intervention?.turn.pedagogicalMove).toBe("address-misconception");
+    expect(intervention?.turn.uiActions.every((item) => intervention.snapshot.allowedTargetIds.includes(item.targetId))).toBe(true);
+    expect(JSON.stringify(intervention)).not.toContain("misconceptionRules");
   });
 });

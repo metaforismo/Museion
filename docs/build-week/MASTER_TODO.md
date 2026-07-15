@@ -94,9 +94,10 @@ The contracts below are implemented internally. Visible Judge integration remain
 - [x] Prevent Maia from answering, mutating state, changing score, or navigating.
 - [x] Pair every visual action contract with a textual or accessible target.
 - [x] Add a deterministic local counterexample for the binary-search off-by-one path.
-- [ ] Build a runtime tutor snapshot after an incorrect Judge outcome.
-- [ ] Call the leak-gated runtime tutor and render validated actions in the Judge.
-- [ ] Apply highlight, focus, pulse, annotation, and counterexample effects to semantic targets.
+- [x] Build a runtime tutor snapshot after an incorrect Judge outcome.
+- [x] Render a schema-validated deterministic tutor turn and allow-listed actions in the Judge.
+- [x] Apply semantic highlight/annotation treatment and the bounded off-by-one counterexample.
+- [ ] Connect the live provider to this runtime-specific snapshot without weakening the deterministic fallback.
 
 ## G. Locked transfer and evidence
 

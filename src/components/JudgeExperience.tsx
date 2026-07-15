@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import type { JudgeSessionView } from "@/lib/judge/contracts";
-import type { RuntimeAction, RuntimeOutcome } from "@/lib/runtime";
+import type { RuntimeAction, RuntimeOutcome, RuntimeTutorIntervention } from "@/lib/runtime";
 
 import InteractiveBlock from "./blocks/InteractiveBlock";
 
@@ -34,6 +34,7 @@ export default function JudgeExperience() {
   const [blockIndex, setBlockIndex] = useState(0);
   const [busy, setBusy] = useState(true);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [tutor, setTutor] = useState<RuntimeTutorIntervention | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transferAnswer, setTransferAnswer] = useState("");
   const started = useRef(false);
@@ -82,6 +83,7 @@ export default function JudgeExperience() {
     setBlockIndex(next);
     localStorage.setItem(`${SESSION_KEY}:${session.sessionId}:block`, String(next));
     setFeedback(null);
+    setTutor(null);
   };
 
   const sendAction = async (blockId: string, action: RuntimeAction) => {
@@ -89,12 +91,13 @@ export default function JudgeExperience() {
     setBusy(true);
     setError(null);
     try {
-      const result = await jsonRequest<{ session: JudgeSessionView; outcome: RuntimeOutcome }>(`/api/judge/${session.sessionId}/action`, {
+      const result = await jsonRequest<{ session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null }>(`/api/judge/${session.sessionId}/action`, {
         method: "POST",
         body: JSON.stringify({ blockId, action }),
       });
       setSession(result.session);
       setFeedback(result.outcome.message);
+      setTutor(result.tutor);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The action could not be checked.");
     } finally {
@@ -162,8 +165,10 @@ export default function JudgeExperience() {
       {currentBlock?.kind === "explanation" && <section className="mt-7 rounded-xl border border-ink/10 bg-surface p-7 shadow-sm"><p className="text-sm font-semibold uppercase tracking-wide text-lapis">Grounded explanation</p><h2 className="mt-2 font-display text-2xl font-semibold">{currentBlock.title}</h2><p className="mt-4 whitespace-pre-line text-lg leading-relaxed">{currentBlock.body}</p><p className="mt-5 text-xs text-ink-soft">Citations: {currentBlock.citations.map((item) => item.spanId).join(", ")}</p></section>}
 
       {currentBlock && ["prediction-choice", "sequence-builder", "range-explorer", "state-trace"].includes(currentBlock.kind) && currentState && (
-        <div className="mt-7"><InteractiveBlock key={currentBlock.id} block={currentBlock as Extract<typeof currentBlock, { kind: "prediction-choice" | "sequence-builder" | "range-explorer" | "state-trace" }>} state={currentState} busy={busy} feedback={feedback} onAction={(action) => sendAction(currentBlock.id, action)} /></div>
+        <div className="mt-7"><InteractiveBlock key={currentBlock.id} block={currentBlock as Extract<typeof currentBlock, { kind: "prediction-choice" | "sequence-builder" | "range-explorer" | "state-trace" }>} state={currentState} busy={busy} feedback={feedback} tutor={tutor} onAction={(action) => sendAction(currentBlock.id, action)} /></div>
       )}
+
+      {tutor && <aside aria-label="Maia runtime guidance" className="mt-4 rounded-xl border border-lapis/20 bg-lapis-soft p-5"><p className="text-xs font-semibold uppercase tracking-wide text-lapis-dark">Maia · bounded intervention</p><p className="mt-2 font-medium">{tutor.turn.message}</p>{tutor.counterexample && <p className="mt-2 text-sm text-ink-soft">Counterexample: [{tutor.counterexample.before.low}, {tutor.counterexample.before.high}] with midpoint {tutor.counterexample.before.mid}; the proposed [{tutor.counterexample.proposed.low}, {tutor.counterexample.proposed.high}] can repeat the same midpoint.</p>}<p className="mt-3 text-xs text-ink-soft">Maia may highlight or focus registered targets. The deterministic runtime still owns state and correctness.</p></aside>}
 
       {currentBlock && canAdvance && <button type="button" onClick={advance} className="mt-5 w-full rounded-xl bg-lapis px-6 py-3 font-semibold text-white transition hover:bg-lapis-dark">{blockIndex === lessonBlocks.length - 1 ? "Finish lesson and unlock transfer" : "Continue"} →</button>}
 

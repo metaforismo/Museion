@@ -14,11 +14,13 @@ import {
 } from "@/lib/evidence";
 import {
   initializeBlock,
+  buildRuntimeTutorIntervention,
   reduceBlock,
   type InteractiveBlock,
   type RuntimeAction,
   type RuntimeOutcome,
   type RuntimeState,
+  type RuntimeTutorIntervention,
 } from "@/lib/runtime";
 
 import { JudgeSessionViewSchema, type JudgeSessionView } from "./contracts";
@@ -132,7 +134,7 @@ export function dispatchJudgeAction(input: {
   ownerId: string;
   blockId: string;
   action: RuntimeAction;
-}): { session: JudgeSessionView; outcome: RuntimeOutcome } {
+}): { session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null } {
   const record = requireOwnedSession(input.sessionId, input.ownerId);
   if (record.transfer) throw new Error("TRANSFER_ALREADY_STARTED");
   const block = record.artifact.blocks[input.blockId];
@@ -140,10 +142,18 @@ export function dispatchJudgeAction(input: {
   if (!block || !state || !interactiveBlocks(record.artifact).some((item) => item.id === block.id)) {
     throw new Error("UNKNOWN_INTERACTIVE_BLOCK");
   }
-  const outcome = reduceBlock(block as InteractiveBlock, state, input.action);
+  const interactiveBlock = block as InteractiveBlock;
+  const outcome = reduceBlock(interactiveBlock, state, input.action);
+  const tutor = buildRuntimeTutorIntervention({
+    artifactId: record.artifact.id,
+    block: interactiveBlock,
+    stateBefore: state,
+    action: input.action,
+    outcome,
+  });
   record.states[input.blockId] = outcome.state;
   record.updatedAt = new Date().toISOString();
-  return { session: view(record), outcome };
+  return { session: view(record), outcome, tutor };
 }
 
 export async function updateJudgeTransfer(input: {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import type { TutorUiAction } from "@/lib/maia/contracts";
-import { TutorUiActionSchema } from "@/lib/maia/contracts";
+import type { TutorTurn, TutorUiAction } from "@/lib/maia/contracts";
+import { TutorTurnSchema, TutorUiActionSchema } from "@/lib/maia/contracts";
 
 import { RuntimeActionSchema, RuntimeStateSchema, type RuntimeAction, type RuntimeOutcome, type RuntimeState } from "./contracts";
 import type { InteractiveBlock } from "./registry";
@@ -26,6 +26,12 @@ export const RuntimeTutorSnapshotSchema = z
   })
   .strict();
 export type RuntimeTutorSnapshot = z.infer<typeof RuntimeTutorSnapshotSchema>;
+
+export interface RuntimeTutorIntervention {
+  snapshot: RuntimeTutorSnapshot;
+  turn: TutorTurn;
+  counterexample: ReturnType<typeof offByOneCounterexample>;
+}
 
 export function allowedRuntimeTargets(block: InteractiveBlock): string[] {
   const base = [`block:${block.id}`, `prompt:${block.id}`, `status:${block.id}`];
@@ -91,5 +97,46 @@ export function offByOneCounterexample(
     before: { low: state.low, high: state.high, mid: state.mid },
     proposed: { low: action.low, high: action.high },
     explanation: `Index ${state.mid} has already been disproved. Reusing it can select the same midpoint again; move the boundary past mid to guarantee progress.`,
+  };
+}
+
+export function buildRuntimeTutorIntervention(input: {
+  artifactId: string;
+  block: InteractiveBlock;
+  stateBefore: RuntimeState;
+  action: RuntimeAction;
+  outcome: RuntimeOutcome;
+}): RuntimeTutorIntervention | null {
+  if (input.outcome.correct) return null;
+  const snapshot = buildRuntimeTutorSnapshot({
+    artifactId: input.artifactId,
+    block: input.block,
+    state: input.outcome.state,
+    lastAction: input.action,
+    lastOutcome: input.outcome,
+  });
+  const counterexample =
+    input.block.kind === "range-explorer" && input.stateBefore.kind === "range-explorer"
+      ? offByOneCounterexample(input.block, input.stateBefore, input.action)
+      : null;
+  const focusTarget =
+    counterexample === null
+      ? `status:${input.block.id}`
+      : `value:${input.block.id}:${counterexample.before.mid}`;
+  const gated = gateRuntimeTutorActions(snapshot, [
+    { kind: "highlight", targetId: focusTarget, text: "Inspect the evidence at this point." },
+    { kind: "focus", targetId: `status:${input.block.id}`, text: null },
+    { kind: "annotate", targetId: `block:${input.block.id}`, text: counterexample?.explanation ?? "Compare your action with the deterministic feedback." },
+  ]);
+  return {
+    snapshot,
+    counterexample,
+    turn: TutorTurnSchema.parse({
+      message: counterexample
+        ? `Index ${counterexample.before.mid} was already ruled out. What boundary would move strictly past it?`
+        : "The deterministic checker found a mismatch. Which part of the feedback can you test with one smaller move?",
+      pedagogicalMove: counterexample ? "address-misconception" : "ask-probing-question",
+      uiActions: gated.accepted,
+    }),
   };
 }

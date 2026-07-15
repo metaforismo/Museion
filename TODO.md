@@ -69,7 +69,8 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Locked near-transfer task and versioned evidence ledger
 - [x] Complete local judge path and 20/20 clean-browser runs
 - [x] Deployment and submission drafts with measured claims
-- [ ] Wire bounded Maia observations/actions into the visible Judge runtime
+- [x] Wire deterministic bounded Maia observations/actions and counterexample guidance into the visible Judge runtime
+- [ ] Connect the live provider to the runtime-specific Maia snapshot
 - [ ] Compile a non-golden Creator source into a validated reviewable course
 - [ ] Replace process-local session maps with deployment-safe state
 - [ ] Hosted deployment verification and final submission (explicit authorization required)

@@ -43,6 +43,19 @@ describe("verified judge session store", () => {
     expect(active.transfer.status).toBe("active");
   });
 
+  it("returns bounded Maia guidance after an incorrect runtime action", () => {
+    const session = createJudgeSession("learner-a", "browser-run-a");
+    const result = dispatchJudgeAction({
+      sessionId: session.sessionId,
+      ownerId: "learner-a",
+      blockId: "range_boundary",
+      action: { kind: "range_update", low: 3, high: 6 },
+    });
+    expect(result.outcome.correct).toBe(false);
+    expect(result.tutor?.counterexample?.before.mid).toBe(3);
+    expect(result.tutor?.turn.uiActions).not.toHaveLength(0);
+  });
+
   it("scores exactly one answer and returns a reconciled bounded observation", async () => {
     const session = createJudgeSession("learner-a", "browser-run-a");
     completeLesson(session.sessionId, "learner-a");

@@ -354,8 +354,12 @@ async function completeJudge(page, label, takeScreenshot = false) {
   await expectVisible(page.getByText("Prediction matches the deterministic answer."), `${label} prediction`);
   await page.getByRole("button", { name: /Continue/ }).click();
 
-  await page.getByLabel("Next low").fill("4");
+  await page.getByLabel("Next low").fill("3");
   await page.getByLabel("Next high").fill("6");
+  await page.getByRole("button", { name: "Update interval" }).click();
+  await expectVisible(page.getByText("Maia · bounded intervention"), `${label} bounded Maia`);
+  await expectVisible(page.getByText(/can repeat the same midpoint/), `${label} counterexample`);
+  await page.getByLabel("Next low").fill("4");
   await page.getByRole("button", { name: "Update interval" }).click();
   await page.getByRole("button", { name: "Confirm target at mid" }).click();
   await expectVisible(page.getByText("Target found at the verified midpoint."), `${label} range`);

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { PublicLearningBlock } from "@/lib/compiler";
-import type { RuntimeAction, RuntimeState } from "@/lib/runtime";
+import type { RuntimeAction, RuntimeState, RuntimeTutorIntervention } from "@/lib/runtime";
 
 type PublicInteractiveBlock = Extract<
   PublicLearningBlock,
@@ -15,6 +15,7 @@ export interface InteractiveBlockProps {
   state: RuntimeState;
   busy: boolean;
   feedback: string | null;
+  tutor: RuntimeTutorIntervention | null;
   onAction(action: RuntimeAction): Promise<void>;
 }
 
@@ -23,6 +24,7 @@ export default function InteractiveBlock({
   state,
   busy,
   feedback,
+  tutor,
   onAction,
 }: InteractiveBlockProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -38,6 +40,8 @@ export default function InteractiveBlock({
   const [mid, setMid] = useState(
     block.kind === "state-trace" ? block.initialState.mid : 0,
   );
+  const emphasized = new Set(tutor?.turn.uiActions.map((action) => action.targetId) ?? []);
+  const emphasis = (targetId: string) => emphasized.has(targetId) ? " ring-2 ring-gold ring-offset-2" : "";
 
   const move = (index: number, delta: -1 | 1) => {
     const destination = index + delta;
@@ -52,12 +56,13 @@ export default function InteractiveBlock({
   return (
     <section
       aria-labelledby={`${block.id}-title`}
-      className="rounded-xl border border-ink/10 bg-surface p-5 shadow-sm"
+      data-runtime-target={`block:${block.id}`}
+      className={`rounded-xl border border-ink/10 bg-surface p-5 shadow-sm${emphasis(`block:${block.id}`)}`}
     >
       <h3 id={`${block.id}-title`} className="font-display text-xl font-semibold">
         {block.accessibilityLabel}
       </h3>
-      <p className="mt-3 leading-relaxed">{block.prompt}</p>
+      <p data-runtime-target={`prompt:${block.id}`} className={`mt-3 leading-relaxed${emphasis(`prompt:${block.id}`)}`}>{block.prompt}</p>
 
       {block.kind === "prediction-choice" && (
         <fieldset className="mt-5 space-y-2" disabled={busy || state.kind !== block.kind || state.complete}>
@@ -103,7 +108,7 @@ export default function InteractiveBlock({
               {block.values.map((value, index) => {
                 const active = index >= state.low && index <= state.high;
                 const current = index === state.mid;
-                return <div key={index} className={`min-w-14 rounded-lg border px-3 py-2 text-center ${current ? "border-gold bg-gold-soft" : active ? "border-lapis bg-lapis-soft" : "border-ink/10 opacity-45"}`}><span className="block text-xs text-ink-soft">{index}</span><span className="font-semibold">{value}</span></div>;
+                return <div key={index} data-runtime-target={`value:${block.id}:${index}`} className={`min-w-14 rounded-lg border px-3 py-2 text-center ${current ? "border-gold bg-gold-soft" : active ? "border-lapis bg-lapis-soft" : "border-ink/10 opacity-45"}${emphasis(`value:${block.id}:${index}`)}`}><span className="block text-xs text-ink-soft">{index}</span><span className="font-semibold">{value}</span></div>;
               })}
             </div>
           </div>
@@ -131,7 +136,7 @@ export default function InteractiveBlock({
         </div>
       )}
 
-      <p role="status" aria-live="polite" className="mt-4 min-h-6 text-sm font-medium text-ink-soft">
+      <p role="status" aria-live="polite" data-runtime-target={`status:${block.id}`} className={`mt-4 min-h-6 text-sm font-medium text-ink-soft${emphasis(`status:${block.id}`)}`}>
         {feedback}
       </p>
     </section>
