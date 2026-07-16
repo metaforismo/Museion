@@ -113,11 +113,11 @@ async function mobileNavigationFlow() {
   watch(page, "mobile-navigation");
   await page.goto(`${baseURL}/`);
 
-  const moreButton = page.getByRole("button", { name: "More" });
+  const moreButton = page.getByRole("button", { name: "More pages" });
   await keyboardActivate(page, moreButton);
   await expectVisible(page.getByRole("link", { name: "Settings", exact: true }), "mobile Settings destination");
   await page.keyboard.press("Escape");
-  if (await page.getByLabel("More pages").count()) failures.push("mobile navigation: Escape did not close the More menu");
+  if (await page.locator("#mobile-more-navigation").count()) failures.push("mobile navigation: Escape did not close the More menu");
   if (!(await moreButton.evaluate((button) => button === document.activeElement))) {
     failures.push("mobile navigation: focus did not return to the More button after Escape");
   }
@@ -125,10 +125,19 @@ async function mobileNavigationFlow() {
   await moreButton.click();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.waitForURL((url) => url.pathname === "/settings");
-  const settingsButton = page.getByRole("button", { name: "Settings" });
+  const settingsButton = page.getByRole("button", { name: /Settings, current page; more pages/ });
   if ((await settingsButton.getAttribute("aria-current")) !== "page") {
     failures.push("mobile navigation: current secondary page is not exposed on the compact navigation");
   }
+  const mobileHeaderCollision = await page.evaluate(() => {
+    const brand = document.querySelector("[data-mobile-brand]");
+    const navigation = document.querySelector('nav[aria-label="Primary navigation"]');
+    if (!(brand instanceof HTMLElement) || !(navigation instanceof HTMLElement)) return true;
+    const brandRect = brand.getBoundingClientRect();
+    const navigationRect = navigation.getBoundingClientRect();
+    return brandRect.right > navigationRect.left;
+  });
+  if (mobileHeaderCollision) failures.push("mobile navigation: brand and compact navigation overlap");
   if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) {
     failures.push("mobile navigation: compact header causes horizontal overflow");
   }
@@ -400,7 +409,10 @@ async function authoritativeRecoveryFlow() {
 }
 
 async function desktopFlow() {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 1000 },
+    permissions: ["clipboard-read", "clipboard-write"],
+  });
   const page = await context.newPage();
   watch(page, "desktop");
 
@@ -528,10 +540,22 @@ async function desktopFlow() {
 
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: "Choose how Museion thinks." }), "AI settings");
-  await expectVisible(page.getByText(/Local AI is disabled/), "hosted-safe AI state");
+  await expectVisible(page.getByText("Local AI disabled", { exact: true }).first(), "hosted-safe AI state");
+  await expectVisible(page.getByRole("list", { name: "Live AI readiness" }), "AI readiness checklist");
   await expectVisible(page.getByText("gpt-5.6-luna", { exact: true }), "Luna routing");
   await expectVisible(page.getByText("gpt-5.6-terra", { exact: true }).first(), "Terra routing");
   await expectVisible(page.getByText("gpt-5.6-sol", { exact: true }).first(), "Sol routing");
+  await page.getByRole("button", { name: "Copy diagnostics" }).click();
+  await expectVisible(page.getByText(/Sanitized diagnostics copied/), "sanitized AI diagnostics copy");
+  const diagnostics = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
+  if ("token" in diagnostics || "credentials" in diagnostics || "source" in diagnostics) {
+    failures.push("settings: copied diagnostics contain a forbidden secret or source field");
+  }
+  if (!diagnostics.models?.compiler || !diagnostics.models?.tutor) {
+    failures.push("settings: copied diagnostics omitted model routing");
+  }
+  await page.locator("main").focus();
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await page.screenshot({ path: path.join(outputDir, "desktop-settings.png"), fullPage: true });
 
   const notFoundPage = await context.newPage();

@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const PRIMARY_NAV_ITEMS = [
-  { href: "/", label: "Lessons" },
-  { href: "/create", label: "Create" },
-  { href: "/judge", label: "Judge" },
+  { href: "/", label: "Lessons", mobileLabel: "Learn" },
+  { href: "/create", label: "Create", mobileLabel: "Create" },
+  { href: "/judge", label: "Judge", mobileLabel: "Judge" },
 ];
 
 const SECONDARY_NAV_ITEMS = [
@@ -51,7 +51,7 @@ export default function SiteHeader() {
     };
   }, [mobileMenuOpen]);
 
-  const linkClass = (active: boolean) => `flex min-h-11 shrink-0 items-center justify-center rounded-lg px-3 py-2 text-center text-sm font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis ${
+  const linkClass = (active: boolean, compact = false) => `flex min-h-11 shrink-0 items-center justify-center rounded-lg ${compact ? "px-1.5" : "px-3"} py-2 text-center text-sm font-medium transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis ${
     active
       ? "bg-surface text-ink shadow-[0_4px_16px_rgba(35,53,91,0.08)]"
       : "text-ink-soft hover:bg-surface/70 hover:text-ink active:translate-y-px"
@@ -59,8 +59,8 @@ export default function SiteHeader() {
 
   return (
     <header className="site-header border-b border-ink/10 bg-surface/90 backdrop-blur-xl">
-      <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center gap-3 px-4 py-2 sm:justify-between sm:gap-6 sm:px-6 lg:px-8">
-        <Link href="/" aria-label="Museion home" className="group flex shrink-0 items-center gap-3">
+      <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center gap-6 px-4 py-2 sm:justify-between sm:px-6 lg:px-8">
+        <Link href="/" aria-label="Museion home" data-mobile-brand className="group flex shrink-0 items-center gap-3">
           <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-[0.7rem] bg-ink font-display text-lg font-semibold text-white shadow-[0_8px_24px_rgba(19,28,49,0.16)] transition-transform duration-200 group-hover:-rotate-2 group-active:scale-95">M</span>
           <span className="hidden sm:block"><span className="block font-display text-xl font-semibold leading-none tracking-tight text-ink">Museion</span><span className="mt-1 hidden text-[0.66rem] font-medium uppercase tracking-[0.16em] text-ink-soft md:block">reasoning, made visible</span></span>
         </Link>
@@ -89,22 +89,23 @@ export default function SiteHeader() {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`${linkClass(active)} px-2.5`}
+                  className={linkClass(active, true)}
                 >
-                  {item.label}
+                  {item.mobileLabel}
                 </Link>
               );
             })}
             <button
               ref={mobileMenuButton}
               type="button"
+              aria-label={activeSecondaryItem ? `${activeSecondaryItem.label}, current page; more pages` : "More pages"}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-more-navigation"
               aria-current={activeSecondaryItem ? "page" : undefined}
               onClick={() => setMobileMenuOpen((open) => !open)}
-              className={`${linkClass(Boolean(activeSecondaryItem))} px-2.5`}
+              className={linkClass(Boolean(activeSecondaryItem), true)}
             >
-              {activeSecondaryItem?.label ?? "More"}
+              More
               <svg
                 aria-hidden="true"
                 viewBox="0 0 12 12"
