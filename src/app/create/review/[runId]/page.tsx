@@ -43,9 +43,20 @@ export default async function CompilationRunReview({
     && lessonBlocks.length === lesson?.blockIds.length
     && lessonBlocks.every((block) => SUPPORTED_LEARNER_BLOCKS.has(block.kind));
   const template = COURSE_TEMPLATES[run.templateId];
+  const totalMinutes = Math.max(
+    1,
+    Math.ceil(lessonBlocks.reduce((total, block) => total + block.estimatedSeconds, 0) / 60),
+  );
+  const accepted = run.validation.status === "accepted" && run.validation.blockingIssueCount === 0;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
+      <Link
+        href="/create"
+        className="mb-7 inline-flex min-h-11 items-center text-sm font-semibold text-lapis underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
+      >
+        Back to Creator Studio
+      </Link>
       <header className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-start">
         <div>
           <p className="eyebrow">Creator review · {run.mode}</p>
@@ -56,9 +67,13 @@ export default async function CompilationRunReview({
             {run.artifact.bigQuestion}
           </p>
         </div>
-        <div className="rounded-xl border border-correct/20 bg-correct-soft px-5 py-4 text-sm text-correct">
-          <p className="font-semibold">Accepted for learning</p>
-          <p className="mt-1">0 blocking issues</p>
+        <div className={`rounded-xl border px-5 py-4 text-sm ${accepted ? "border-correct/20 bg-correct-soft text-correct" : "border-wrong/20 bg-wrong-soft text-wrong"}`}>
+          <p className="font-semibold">{accepted ? "Accepted for learning" : "Launch blocked"}</p>
+          <p className="mt-1">
+            {run.validation.blockingIssueCount} blocking issue{run.validation.blockingIssueCount === 1 ? "" : "s"}
+            {" · "}
+            {run.validation.warningCount} warning{run.validation.warningCount === 1 ? "" : "s"}
+          </p>
         </div>
       </header>
 
@@ -70,6 +85,7 @@ export default async function CompilationRunReview({
           ["Overview", "#overview"],
           ["Learning sequence", "#sequence"],
           ["Citations", "#citations"],
+          ["Validation", "#validation"],
           ["Provenance", "#provenance"],
         ].map(([label, href]) => (
           <a
@@ -97,12 +113,12 @@ export default async function CompilationRunReview({
               <dd className="mt-1 font-semibold">{run.audience.language}</dd>
             </div>
             <div>
-              <dt className="text-ink-soft">Time</dt>
+              <dt className="text-ink-soft">Designed time</dt>
               <dd className="mt-1 font-semibold">{run.audience.targetMinutes} min</dd>
             </div>
             <div>
-              <dt className="text-ink-soft">Lesson blocks</dt>
-              <dd className="mt-1 font-semibold">{lessonBlocks.length}</dd>
+              <dt className="text-ink-soft">Authored estimate</dt>
+              <dd className="mt-1 font-semibold">{totalMinutes} min</dd>
             </div>
           </dl>
         </div>
@@ -126,7 +142,7 @@ export default async function CompilationRunReview({
         </div>
         <ol className="mt-7 divide-y divide-ink/10">
           {lessonBlocks.map((block, index) => (
-            <li key={block.id} className="grid gap-3 py-5 sm:grid-cols-[3rem_1fr_auto]">
+            <li key={block.id} className="grid gap-3 py-5 sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
               <span className="font-mono text-sm font-semibold text-lapis">
                 {String(index + 1).padStart(2, "0")}
               </span>
@@ -135,6 +151,40 @@ export default async function CompilationRunReview({
                 <p className="mt-1 text-sm text-ink-soft">
                   {block.kind.replaceAll("-", " ")} · {Math.ceil(block.estimatedSeconds / 60)} min
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                  <span className="rounded-md bg-lapis-soft px-2 py-1 text-lapis-dark">
+                    Generated pedagogy
+                  </span>
+                  {block.citations.length > 0 && (
+                    <span className="rounded-md bg-gold-soft px-2 py-1 text-ink">
+                      Source-grounded
+                    </span>
+                  )}
+                </div>
+                {block.citations.length > 0 && (
+                  <details className="mt-4 rounded-xl border border-ink/10 bg-paper px-4 py-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-lapis-dark">
+                      Inspect linked source evidence
+                    </summary>
+                    <ul className="mt-4 space-y-4">
+                      {block.citations.map((citation) => {
+                        const span = run.sourceGraph.spans[citation.spanId];
+                        if (!span) return null;
+                        return (
+                          <li key={`${block.id}-${citation.spanId}`} className="border-l-2 border-gold pl-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-soft">
+                              {citation.purpose} · page {span.pageNumber}
+                            </p>
+                            <blockquote className="mt-2 text-sm leading-6">“{span.exactText}”</blockquote>
+                            <a href={`#citation-${citation.spanId}`} className="mt-2 inline-block text-xs font-semibold text-lapis underline-offset-4 hover:underline">
+                              Open in citation record
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                )}
               </div>
               <span className="self-start rounded-md bg-lapis-soft px-2 py-1 text-xs font-semibold text-lapis-dark">
                 {block.citations.length} citation{block.citations.length === 1 ? "" : "s"}
@@ -173,7 +223,7 @@ export default async function CompilationRunReview({
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           {Object.entries(run.sourceGraph.spans).map(([id, span]) => (
-            <figure key={id} className="rounded-xl border border-ink/10 bg-paper p-5">
+            <figure id={`citation-${id}`} key={id} className="scroll-mt-32 rounded-xl border border-ink/10 bg-paper p-5">
               <blockquote className="leading-7">“{span.exactText}”</blockquote>
               <figcaption className="mt-4 flex flex-wrap justify-between gap-2 font-mono text-xs text-ink-soft">
                 <span>{id}</span>
@@ -184,28 +234,80 @@ export default async function CompilationRunReview({
         </div>
       </section>
 
-      <section id="provenance" className="mt-6 grid scroll-mt-32 gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-ink/10 bg-paper p-5">
-          <h2 className="font-semibold">Deterministic validation</h2>
-          <p className="mt-2 text-sm leading-6 text-ink-soft">
-            {run.validation.validatorVersion} accepted the artifact with {run.validation.warningCount} warning{run.validation.warningCount === 1 ? "" : "s"}.
-            Private answer truth is excluded from this page.
+      <section id="validation" className="mt-6 scroll-mt-32 rounded-[1.6rem] border border-ink/10 bg-surface/65 p-6 sm:p-8">
+        <p className="eyebrow">Publication gate</p>
+        <h2 className="mt-3 font-display text-3xl font-semibold">Deterministic validation</h2>
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl bg-paper p-4">
+            <p className="text-sm text-ink-soft">Status</p>
+            <p className={`mt-1 font-semibold capitalize ${accepted ? "text-correct" : "text-wrong"}`}>{run.validation.status.replace("-", " ")}</p>
+          </div>
+          <div className="rounded-xl bg-paper p-4">
+            <p className="text-sm text-ink-soft">Blocking issues</p>
+            <p className="mt-1 font-mono text-xl font-semibold tabular-nums">{run.validation.blockingIssueCount}</p>
+          </div>
+          <div className="rounded-xl bg-paper p-4">
+            <p className="text-sm text-ink-soft">Warnings</p>
+            <p className="mt-1 font-mono text-xl font-semibold tabular-nums">{run.validation.warningCount}</p>
+          </div>
+        </div>
+        <p className="mt-5 max-w-3xl text-sm leading-6 text-ink-soft">
+          {run.validation.validatorVersion} checked references, source spans, answer privacy,
+          activity structure and publication safety. Private answer truth is excluded from
+          this page and remains server-side.
+        </p>
+      </section>
+
+      <section id="provenance" className="mt-6 scroll-mt-32 rounded-[1.6rem] border border-ink/10 bg-paper p-6 sm:p-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">Provenance</p>
+            <h2 className="mt-3 font-display text-3xl font-semibold">Model and runtime trace</h2>
+          </div>
+          <p className="font-mono text-xs text-ink-soft">
+            {run.mode} · {run.repaired ? "bounded repair used" : "no repair needed"}
           </p>
         </div>
-        <div className="rounded-xl border border-ink/10 bg-paper p-5">
-          <h2 className="font-semibold">Model trace</h2>
+        <div className="mt-6 overflow-x-auto">
+          <table className="w-full min-w-[42rem] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-ink/15 text-ink-soft">
+                <th className="pb-3 pr-5 font-medium">Stage</th>
+                <th className="pb-3 pr-5 font-medium">Provider</th>
+                <th className="pb-3 pr-5 font-medium">Requested</th>
+                <th className="pb-3 pr-5 font-medium">Resolved</th>
+                <th className="pb-3 text-right font-medium">Duration</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink/10 font-mono text-xs">
+              {run.telemetry.map((item) => (
+                <tr key={`${item.stage}-${item.outputSha256}`}>
+                  <td className="py-3 pr-5 font-semibold text-ink">{item.stage.replaceAll("_", " ")}</td>
+                  <td className="py-3 pr-5 text-ink-soft">{item.provider}</td>
+                  <td className="py-3 pr-5 text-ink-soft">{item.requestedModel}</td>
+                  <td className="py-3 pr-5">
+                    {item.resolvedModel}
+                    {item.requestedModel !== item.resolvedModel && (
+                      <span className="ml-2 rounded bg-gold-soft px-1.5 py-0.5 font-sans text-[0.68rem] font-semibold text-ink">
+                        substituted
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 text-right tabular-nums text-ink-soft">{(item.durationMs / 1_000).toFixed(2)}s</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-5 border-t border-ink/10 pt-5">
           <p className="mt-2 text-sm leading-6 text-ink-soft">
-            {run.telemetry.length} recorded stages · {run.repaired ? "one bounded repair used" : "no repair needed"}.
+            Created {new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(run.createdAt))}.
+            Hashes for every stage output are retained in the run record.
           </p>
-          <ul className="mt-3 space-y-1 font-mono text-xs text-ink-soft">
-            {run.telemetry.map((item) => (
-              <li key={`${item.stage}-${item.outputSha256}`}>{item.stage}: {item.resolvedModel}</li>
-            ))}
-          </ul>
         </div>
       </section>
 
-      {learnerCompatible ? (
+      {learnerCompatible && accepted ? (
         <Link
           href={`/learn/${run.runId}`}
           className="mt-7 block min-h-14 rounded-xl bg-lapis px-6 py-4 text-center text-lg font-semibold text-white transition hover:bg-lapis-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
@@ -214,8 +316,9 @@ export default async function CompilationRunReview({
         </Link>
       ) : (
         <p role="alert" className="mt-7 rounded-xl bg-wrong-soft p-5 text-wrong">
-          Learner launch is blocked because this accepted artifact contains a lesson
-          block that this renderer does not support yet.
+          {accepted
+            ? "Learner launch is blocked because this artifact contains a lesson block that this renderer does not support yet."
+            : "Learner launch is blocked because deterministic publication validation did not accept this artifact."}
         </p>
       )}
     </div>
