@@ -13,6 +13,8 @@ export interface MaiaOutbox {
   stepId: string;
 }
 
+const MAX_MAIA_MESSAGE_LENGTH = 2_000;
+
 export default function MaiaPanel({
   sessionId,
   stepId,
@@ -217,13 +219,19 @@ export default function MaiaPanel({
         className="border-t border-ink/10 p-3"
       >
         {retryMessage && !streaming && <button type="button" onClick={() => send(retryMessage)} className="mb-2 text-xs font-semibold text-lapis-dark underline underline-offset-4">Retry last question</button>}
+        <div className="mb-2 flex items-center justify-between gap-3 text-xs text-ink-soft">
+          <span id="maia-message-help">Ask about your reasoning, not for the final answer.</span>
+          <span className="shrink-0 font-mono tabular-nums">{input.length}/{MAX_MAIA_MESSAGE_LENGTH}</span>
+        </div>
         <div className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={streaming}
+            maxLength={MAX_MAIA_MESSAGE_LENGTH}
             placeholder="Ask Maia…"
             aria-label="Message for Maia"
+            aria-describedby="maia-message-help"
             className="min-w-0 flex-1 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none transition focus:border-lapis disabled:opacity-60"
           />
           {streaming ? <button type="button" onClick={() => requestController.current?.abort()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium">Cancel</button> : <button type="submit" disabled={!input.trim()} className="rounded-lg bg-lapis px-4 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50">Send</button>}

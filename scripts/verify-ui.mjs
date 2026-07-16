@@ -464,12 +464,26 @@ async function desktopFlow() {
   });
   await expectVisible(page.getByRole("button", { name: "Checking…" }), "answer pending state");
   await expectVisible(page.getByText("Not yet — stay with it."), "wrong-answer feedback");
+  const wrongFeedback = page.getByRole("alert").filter({ hasText: "Not yet" });
+  if (!(await wrongFeedback.evaluate((element) => element === document.activeElement))) {
+    failures.push("lesson feedback: wrong-answer result did not receive focus");
+  }
+  await page.getByRole("button", { name: "Try the answer again" }).click();
+  if (!(await answerInput.evaluate((input) => input === document.activeElement))) {
+    failures.push("lesson feedback: retry action did not return focus to the answer");
+  }
   await page.unroute("**/api/sessions/*/answer", delayedAnswer);
   if (rapidAnswerRequests !== 1) failures.push(`lesson answer lock: expected 1 request, received ${rapidAnswerRequests}`);
   await page.getByRole("button", { name: "Take a hint" }).click();
   await expectVisible(page.getByText(/^1\./), "first deterministic hint");
 
-  await page.getByLabel("Message for Maia").fill("Give me a nudge");
+  const maiaInput = page.getByLabel("Message for Maia");
+  await maiaInput.fill("x".repeat(2_050));
+  if ((await maiaInput.inputValue()).length !== 2_000) {
+    failures.push("Maia composer: browser limit did not match the server limit");
+  }
+  await expectVisible(page.getByText("2000/2000", { exact: true }), "Maia character limit");
+  await maiaInput.fill("Give me a nudge");
   await page.getByRole("button", { name: "Send" }).click();
   await expectVisible(page.getByText(/Maia is offline/), "deterministic Maia fallback");
 
@@ -561,6 +575,28 @@ async function desktopFlow() {
   const notFoundPage = await context.newPage();
   await notFoundPage.goto(`${baseURL}/missing-route`);
   await expectVisible(notFoundPage.getByText("404", { exact: true }), "404 page");
+  await context.close();
+}
+
+async function multipleChoiceConfirmationFlow() {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  watch(page, "multiple-choice-confirmation");
+  let answerRequests = 0;
+  await page.route("**/api/sessions/*/answer", async (route) => {
+    answerRequests += 1;
+    await route.continue();
+  });
+  await page.goto(`${baseURL}/lessons/fractions-unlike-denominators`);
+  const firstChoice = page.getByRole("radio").first();
+  await page.getByText("yes", { exact: true }).click();
+  if (!(await firstChoice.isChecked())) failures.push("multiple choice: clicking the option label did not select its radio");
+  if (answerRequests !== 0) failures.push("multiple choice: selecting an option submitted before confirmation");
+  await expectVisible(page.getByRole("button", { name: "Check answer" }), "multiple-choice confirmation action");
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await expectVisible(page.getByText("Not yet — stay with it."), "multiple-choice deterministic feedback");
+  if (answerRequests !== 1) failures.push(`multiple choice: expected 1 confirmed request, received ${answerRequests}`);
   await context.close();
 }
 
@@ -731,6 +767,7 @@ try {
   }
   if (process.env.MUSEION_A11Y_ONLY !== "1" && process.env.MUSEION_KEYBOARD_ONLY !== "1" && process.env.MUSEION_PERFORMANCE_ONLY !== "1") {
     await desktopFlow();
+    await multipleChoiceConfirmationFlow();
     await learnerRecoveryFlow();
     await staleMaiaFlow();
     await queuedMaiaOutboxFlow();

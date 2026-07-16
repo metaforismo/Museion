@@ -103,8 +103,11 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
+  const [answerFocusRequest, setAnswerFocusRequest] = useState(0);
+  const [chatSyncKey, setChatSyncKey] = useState(0);
   const outboxSeq = useRef(0);
   const actionInFlight = useRef(false);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   const beginAction = useCallback((action: Exclude<PendingAction, null>) => {
     if (actionInFlight.current) return false;
@@ -195,6 +198,11 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   }, [lesson.id, mode, applyState]);
 
   const step: PublicStep | undefined = activeLesson.steps[stepIndex];
+
+  useEffect(() => {
+    if (!feedback) return;
+    feedbackRef.current?.focus({ preventScroll: true });
+  }, [feedback]);
 
   const submitAnswer = useCallback(
     async (answer: string, retry?: Extract<RetryableMutation, { kind: "answer" }>) => {
@@ -375,7 +383,12 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
         setRecoveryNeeded(response.status !== 404 && response.status !== 410);
         return;
       }
-      applyState((await response.json()) as SessionStateResponse);
+      const recoveredState = (await response.json()) as SessionStateResponse;
+      applyState(recoveredState);
+      // An explicit recovery is the one point where the server's durable
+      // history should replace Maia's local transcript. Normal lesson state
+      // updates keep local cancellation and delivery notices intact.
+      setChatSyncKey((key) => key + 1);
       setShowSolution(false);
       setHintNote(null);
     } catch (error) {
@@ -526,12 +539,19 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                 step={step}
                 disabled={busy || feedback?.kind === "correct"}
                 checking={pendingAction === "answer"}
+                focusRequest={answerFocusRequest}
                 onSubmit={submitAnswer}
               />
             </div>
 
             {feedback?.kind === "correct" && (
-              <div className="mt-4 rounded-lg bg-correct-soft px-4 py-3 animate-fade-up">
+              <div
+                ref={feedbackRef}
+                tabIndex={-1}
+                role="status"
+                aria-live="polite"
+                className="mt-4 rounded-lg bg-correct-soft px-4 py-3 outline-none animate-fade-up"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="font-medium text-correct">
                     Correct — nice reasoning.
@@ -572,10 +592,21 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
             )}
 
             {feedback?.kind === "wrong" && (
-              <div className="mt-4 rounded-lg bg-wrong-soft px-4 py-3">
-                <p className="font-medium text-wrong">Not yet — stay with it.</p>
+              <div
+                ref={feedbackRef}
+                tabIndex={-1}
+                role="alert"
+                className="mt-4 rounded-lg bg-wrong-soft px-4 py-3 outline-none"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="font-medium text-wrong">Not yet — stay with it.</p>
+                  <span className="font-mono text-xs text-wrong">
+                    Attempt {feedback.attempts}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm text-ink-soft">
-                  Try again{mode === "lesson" ? ", take a hint," : ""} or{" "}
+                  Your answer was checked deterministically. Try a different line of reasoning
+                  {mode === "lesson" ? ", take a hint," : ""} or{" "}
                   <button
                     onClick={() => sendToMaia(ASK_WHY_MESSAGE, step.id)}
                     className="font-medium text-lapis underline-offset-2 hover:underline"
@@ -584,6 +615,13 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
                   </button>
                   .
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setAnswerFocusRequest((request) => request + 1)}
+                  className="mt-3 min-h-11 text-sm font-semibold text-wrong underline underline-offset-4"
+                >
+                  Try the answer again
+                </button>
               </div>
             )}
 
@@ -621,6 +659,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
       </div>
 
       <MaiaPanel
+        key={`${sessionId}:${chatSyncKey}`}
         sessionId={sessionId}
         stepId={step?.id ?? ""}
         sessionVersion={sessionVersion}
@@ -788,47 +827,73 @@ function AnswerControl({
   step,
   disabled,
   checking,
+  focusRequest,
   onSubmit,
 }: {
   step: PublicStep;
   disabled: boolean;
   checking: boolean;
+  focusRequest: number;
   onSubmit: (answer: string) => void;
 }) {
   const [value, setValue] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
+  const firstControlRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (focusRequest > 0 && !disabled) firstControlRef.current?.focus();
+  }, [disabled, focusRequest]);
 
   if (step.kind === "multipleChoice" && step.options) {
     return (
-      <div className="flex flex-col gap-2.5">
-        {step.options.map((option, i) => (
-          <button
-            type="button"
-            key={option}
-            disabled={disabled}
-            onClick={() => {
-              setSelected(i);
-              onSubmit(String(i));
-            }}
-            className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left font-medium transition disabled:opacity-60 ${
-              selected === i
-                ? "border-lapis bg-lapis-soft text-lapis-dark"
-                : "border-ink/15 bg-surface hover:border-lapis"
-            }`}
-          >
-            <span
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm font-semibold ${
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (selected !== null) onSubmit(String(selected));
+        }}
+      >
+        <fieldset disabled={disabled} className="flex flex-col gap-2.5">
+          <legend className="sr-only">Choose one answer</legend>
+          {step.options.map((option, i) => (
+            <label
+              key={option}
+              className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left font-medium transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-lapis ${
                 selected === i
-                  ? "bg-lapis text-white"
-                  : "bg-paper text-ink-soft"
+                  ? "border-lapis bg-lapis-soft text-lapis-dark"
+                  : "border-ink/15 bg-surface hover:border-lapis"
               }`}
             >
-              {String.fromCharCode(65 + i)}
-            </span>
-            <span className="capitalize">{option}</span>
-          </button>
-        ))}
-      </div>
+              <input
+                ref={i === 0 ? firstControlRef : undefined}
+                type="radio"
+                name={`${step.id}-answer`}
+                value={i}
+                checked={selected === i}
+                onChange={() => setSelected(i)}
+                className="sr-only"
+              />
+              <span
+                aria-hidden="true"
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm font-semibold ${
+                  selected === i
+                    ? "bg-lapis text-white"
+                    : "bg-paper text-ink-soft"
+                }`}
+              >
+                {String.fromCharCode(65 + i)}
+              </span>
+              <span className="capitalize">{option}</span>
+            </label>
+          ))}
+        </fieldset>
+        <button
+          type="submit"
+          disabled={disabled || selected === null}
+          className="mt-3 rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {checking ? "Checking…" : "Check answer"}
+        </button>
+      </form>
     );
   }
 
@@ -841,9 +906,11 @@ function AnswerControl({
       className="flex flex-col gap-3 sm:flex-row"
     >
       <input
+        ref={firstControlRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={disabled}
+        maxLength={1_000}
         placeholder={step.kind === "expression" ? "e.g. 5/6" : "Your answer"}
         aria-label="Your answer"
         inputMode={step.kind === "numeric" ? "decimal" : "text"}
