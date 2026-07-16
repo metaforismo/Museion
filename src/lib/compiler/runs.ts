@@ -24,6 +24,7 @@ export const CompileAudienceSchema = z.object({
 }).strict();
 
 export const CompilerRunRequestSchema = z.object({
+  requestId: z.string().uuid().optional(),
   document: SourceDocumentSchema,
   audience: CompileAudienceSchema,
   templateId: CourseTemplateIdSchema.default("socratic-foundations"),
@@ -162,10 +163,18 @@ export async function enqueueCompilerRun(
   document: SourceDocument,
   audience: CompileAudience,
   templateId: CourseTemplateId,
+  requestId?: string,
 ): Promise<CompilerJobView> {
+  if (requestId) {
+    const existing = compilerJobs.get(requestId);
+    if (existing) {
+      if (existing.ownerId !== ownerId) throw new Error("COMPILER_JOB_ALREADY_RUNNING");
+      return jobView(existing);
+    }
+  }
   const ownedActive = [...compilerJobs.values()].filter((job) => job.ownerId === ownerId && ["queued", "running"].includes(job.status));
   if (ownedActive.length >= 1) throw new Error("COMPILER_JOB_ALREADY_RUNNING");
-  const runId = crypto.randomUUID();
+  const runId = requestId ?? crypto.randomUUID();
   const now = new Date().toISOString();
   const controller = new AbortController();
   const job: CompilerJob = {

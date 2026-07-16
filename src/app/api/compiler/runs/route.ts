@@ -8,7 +8,16 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "INVALID_COMPILER_REQUEST" }, { status: 400 });
   const { learnerId, isNew } = await resolveLearnerId();
   try {
-    const response = NextResponse.json(await enqueueCompilerRun(learnerId, parsed.data.document, parsed.data.audience, parsed.data.templateId), { status: 202 });
+    const response = NextResponse.json(
+      await enqueueCompilerRun(
+        learnerId,
+        parsed.data.document,
+        parsed.data.audience,
+        parsed.data.templateId,
+        parsed.data.requestId,
+      ),
+      { status: 202 },
+    );
     response.headers.set("Cache-Control", "no-store");
     if (isNew) setLearnerCookie(response, learnerId);
     return response;

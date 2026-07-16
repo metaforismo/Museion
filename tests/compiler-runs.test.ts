@@ -84,6 +84,23 @@ describe("compiler run lifecycle", () => {
     expect("templateId" in view && view.templateId).toBe("exam-practice");
   });
 
+  it("returns the same active job for an idempotent retry", async () => {
+    const document = SourceDocumentSchema.parse(goldenDocumentJson);
+    const requestId = "123e4567-e89b-42d3-a456-426614174000";
+    const queued = await enqueueCompilerRun("creator-a", document, audience, "exam-practice", requestId);
+    const retried = await enqueueCompilerRun("creator-a", document, audience, "exam-practice", requestId);
+
+    expect(retried).toEqual(queued);
+    expect(retried.runId).toBe(requestId);
+
+    let view = await getCompilerRunStatus(requestId, "creator-a");
+    for (let attempt = 0; attempt < 20 && "status" in view && view.status !== "succeeded"; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      view = await getCompilerRunStatus(requestId, "creator-a");
+    }
+    expect(view.status).toBe("succeeded");
+  });
+
   it("caps retained compiler runs per owner", async () => {
     const document = SourceDocumentSchema.parse(goldenDocumentJson);
     for (let index = 0; index < 5; index += 1) {

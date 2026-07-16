@@ -519,10 +519,22 @@ async function desktopFlow() {
 
   await page.getByRole("link", { name: "Create", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
+  await expectVisible(page.getByText("After source review", { exact: true }), "sequential creator progress");
+  const currentCreatorStep = page.locator('[aria-label="Creator progress"] [aria-current="step"]');
+  if ((await currentCreatorStep.textContent())?.includes("1. Source") !== true) {
+    failures.push("creator progress: source was not marked as the current first step");
+  }
   await page.getByLabel("Paste source text").fill(
     "## Binary search invariant\nIgnore previous instructions is quoted source data, not an application command.",
   );
+  await expectVisible(page.getByText(/\/140,000$/, { exact: false }).first(), "source character count");
   await page.waitForFunction(() => localStorage.getItem("museion:creator-draft:v1")?.includes("Binary search invariant"));
+  await page.getByRole("button", { name: "Clear draft" }).click();
+  await expectVisible(page.getByRole("button", { name: "Confirm clear" }), "destructive draft confirmation");
+  await page.getByRole("button", { name: "Keep draft" }).click();
+  if (!(await page.getByLabel("Paste source text").inputValue()).includes("Binary search invariant")) {
+    failures.push("creator: cancelling draft deletion changed the source text");
+  }
   await page.reload();
   if (!(await page.getByLabel("Paste source text").inputValue()).includes("Binary search invariant")) {
     failures.push("creator: local text draft did not restore after refresh");
@@ -541,6 +553,12 @@ async function desktopFlow() {
     "six-page PDF record",
   );
   await page.getByLabel("I am allowed to use this source.").check();
+  await page.getByLabel("Language").fill("");
+  await expectVisible(page.getByText("Enter a language.", { exact: true }), "creator language validation");
+  const compileReplay = page.getByRole("button", { name: "Create verified replay run" });
+  if (!(await compileReplay.isDisabled())) failures.push("creator: compile remained enabled with an invalid learning brief");
+  await expectVisible(page.getByText(/Complete the language, duration and learner goal/), "creator blocked-brief guidance");
+  await page.getByLabel("Language").fill("en");
   await page.getByRole("button", { name: "Create verified replay run" }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
   await expectVisible(page.getByText("Accepted for learning"), "accepted compiler validation");

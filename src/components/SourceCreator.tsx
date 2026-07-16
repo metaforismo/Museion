@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { parseCreatorDraft, serializeCreatorDraft } from "@/lib/client/creator-draft";
+import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
 import type { SourceDocument } from "@/lib/source";
 import {
   MAX_NORMALIZED_CHARACTERS,
@@ -62,7 +63,9 @@ function elapsedLabel(createdAt: string): string {
 
 export default function SourceCreator() {
   const compileLock = useRef(false);
+  const compileRequestId = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const normalizationSeq = useRef(0);
   const suppressNextDraftSave = useRef(false);
   const [title, setTitle] = useState("Binary Search Notes");
   const [text, setText] = useState("");
@@ -81,6 +84,8 @@ export default function SourceCreator() {
   const [sourceAuthorized, setSourceAuthorized] = useState(false);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [clearConfirmation, setClearConfirmation] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [job, setJob] = useState<CompilerJob | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"loading" | "empty" | "saved" | "saving" | "error">("loading");
@@ -122,6 +127,7 @@ export default function SourceCreator() {
     setJob(null);
     setSourceAuthorized(false);
     setWarningsAccepted(false);
+    setClearConfirmation(false);
     if (fileInput.current) fileInput.current.value = "";
     setDraftStatus(storageAvailable ? "empty" : "error");
     setError(null);
@@ -236,6 +242,11 @@ export default function SourceCreator() {
   };
 
   const invalidateNormalizedSource = () => {
+    normalizationSeq.current += 1;
+    if (busy) {
+      setBusy(false);
+      setError("The source changed during normalization, so Museion discarded the outdated result. Normalize it again when ready.");
+    }
     if (!document) return;
     setDocument(null);
     setSourceAuthorized(false);
@@ -245,30 +256,40 @@ export default function SourceCreator() {
   };
 
   const normalizePastedText = async () => {
+    const requestId = normalizationSeq.current + 1;
+    normalizationSeq.current = requestId;
     setBusy(true);
     setError(null);
     try {
-      acceptDocument(await ingestTextSource({ title, text, mediaType }));
+      const next = await ingestTextSource({ title, text, mediaType });
+      if (requestId !== normalizationSeq.current) return;
+      acceptDocument(next);
     } catch (cause) {
+      if (requestId !== normalizationSeq.current) return;
       setDocument(null);
       setError(errorMessage(cause));
     } finally {
-      setBusy(false);
+      if (requestId === normalizationSeq.current) setBusy(false);
     }
   };
 
   const normalizeFile = async (file: File | undefined) => {
     if (!file) return;
+    const requestId = normalizationSeq.current + 1;
+    normalizationSeq.current = requestId;
     setBusy(true);
     setError(null);
     try {
-      acceptDocument(await ingestSourceFile(file));
+      const next = await ingestSourceFile(file);
+      if (requestId !== normalizationSeq.current) return;
+      acceptDocument(next);
       setText("");
     } catch (cause) {
+      if (requestId !== normalizationSeq.current) return;
       setDocument(null);
       setError(errorMessage(cause));
     } finally {
-      setBusy(false);
+      if (requestId === normalizationSeq.current) setBusy(false);
     }
   };
 
@@ -282,19 +303,32 @@ export default function SourceCreator() {
     setCompiling(true);
     setError(null);
     try {
-      const response = await fetch("/api/compiler/runs", {
+      compileRequestId.current ??= crypto.randomUUID();
+      const response = await fetchWithTimeout("/api/compiler/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ document, audience: { level, language, targetMinutes, learnerGoal }, templateId }),
+        body: JSON.stringify({
+          requestId: compileRequestId.current,
+          document,
+          audience: { level, language, targetMinutes, learnerGoal },
+          templateId,
+        }),
       });
       const payload = await response.json().catch(() => null);
+      compileRequestId.current = null;
       if (!response.ok) {
         throw new Error(`${compilerErrorMessage(payload?.error)} No partial course was published.`);
       }
       setJob(payload as CompilerJob);
       sessionStorage.setItem(ACTIVE_RUN_KEY, (payload as CompilerJob).runId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Compilation failed safely.");
+      setError(
+        cause instanceof RequestTimeoutError
+          ? "Starting the compilation timed out. Try once more: Museion will reconnect to the same request instead of creating a duplicate."
+          : cause instanceof Error
+            ? cause.message
+            : "Compilation failed safely.",
+      );
     } finally {
       compileLock.current = false;
       setCompiling(false);
@@ -305,14 +339,20 @@ export default function SourceCreator() {
     if (!job) return;
     setCancelBusy(true);
     try {
-      const response = await fetch(`/api/compiler/runs/${job.runId}`, { method: "DELETE" });
+      const response = await fetchWithTimeout(`/api/compiler/runs/${job.runId}`, { method: "DELETE" });
       if (!response.ok) throw new Error("The compiler had already finished or could not be cancelled.");
       setJob({ ...job, status: "cancelled" });
       sessionStorage.removeItem(ACTIVE_RUN_KEY);
       setCompiling(false);
       setError("Compilation was cancelled. Your source and learning brief are still here.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Cancellation failed. Check the run status and try again.");
+      setError(
+        cause instanceof RequestTimeoutError
+          ? "Cancellation timed out. Museion will keep checking the run; do not start a duplicate."
+          : cause instanceof Error
+            ? cause.message
+            : "Cancellation failed. Check the run status and try again.",
+      );
     } finally {
       setCancelBusy(false);
     }
@@ -330,6 +370,7 @@ export default function SourceCreator() {
 
   const learningBriefReady = Boolean(learnerGoal.trim() && language.trim() && targetMinutes >= 3 && targetMinutes <= 60);
   const sourceReady = Boolean(document && sourceAuthorized && warningsAccepted);
+  const readyToCompile = sourceReady && learningBriefReady;
   const draftStatusLabel = draftStatus === "loading"
     ? "Loading draft…"
     : draftStatus === "saving"
@@ -365,18 +406,29 @@ export default function SourceCreator() {
             />
             {draftStatusLabel}
           </span>
-          <button type="button" disabled={activeJob} onClick={clearDraft} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
+          {clearConfirmation ? (
+            <span className="inline-flex items-center gap-3">
+              <button type="button" disabled={activeJob} onClick={clearDraft} className="font-semibold text-wrong underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40">Confirm clear</button>
+              <button type="button" onClick={() => setClearConfirmation(false)} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink">Keep draft</button>
+            </span>
+          ) : (
+            <button type="button" disabled={activeJob} onClick={() => setClearConfirmation(true)} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
+          )}
           <span className="text-xs text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
         </div>
       </div>
 
       <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-2xl border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
         {[
-          { label: "1. Source", detail: document ? "Normalized" : "Add and inspect", ready: Boolean(document) },
-          { label: "2. Learning design", detail: learningBriefReady ? COURSE_TEMPLATES[templateId].name : "Complete the brief", ready: learningBriefReady },
-          { label: "3. Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : sourceReady ? "Ready" : "Needs review", ready: activeJob || sourceReady },
+          { label: "1. Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", ready: Boolean(document), current: !document },
+          { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? COURSE_TEMPLATES[templateId].name : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
+          { label: "3. Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : "Needs review", ready: activeJob || readyToCompile, current: Boolean(document && learningBriefReady && !sourceReady) },
         ].map((step) => (
-          <li key={step.label} className={`rounded-xl px-4 py-3 ${step.ready ? "bg-lapis-soft" : "bg-paper"}`}>
+          <li
+            key={step.label}
+            aria-current={step.current ? "step" : undefined}
+            className={`rounded-xl px-4 py-3 ${step.ready ? "bg-lapis-soft" : step.current ? "border border-lapis/25 bg-surface" : "bg-paper"}`}
+          >
             <span className="block text-sm font-semibold">{step.label}</span>
             <span className="mt-0.5 block text-xs text-ink-soft">{step.detail}</span>
           </li>
@@ -445,6 +497,9 @@ export default function SourceCreator() {
             placeholder="Paste an authorized source here…"
             className="mt-2 w-full resize-y rounded-lg border border-ink/15 px-3 py-3 leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
           />
+          <p className="mt-2 text-right font-mono text-xs tabular-nums text-ink-soft">
+            {text.length.toLocaleString("en-US")}/{MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")}
+          </p>
           <button
             type="button"
             disabled={busy || activeJob || !title.trim() || !text.trim()}
@@ -462,9 +517,30 @@ export default function SourceCreator() {
           <label
             htmlFor="source-file"
             aria-disabled={busy || activeJob}
-            className={`flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed border-lapis/40 bg-lapis-soft px-5 py-5 text-center transition ${busy || activeJob ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:border-lapis"}`}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              if (!busy && !activeJob) setDragActive(true);
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragActive(false);
+              if (!busy && !activeJob) void normalizeFile(event.dataTransfer.files[0]);
+            }}
+            className={`flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed px-5 py-5 text-center transition ${
+              busy || activeJob
+                ? "cursor-not-allowed border-lapis/25 bg-lapis-soft opacity-50"
+                : dragActive
+                  ? "cursor-copy border-lapis bg-lapis-soft outline-2 outline-offset-2 outline-lapis"
+                  : "cursor-pointer border-lapis/40 bg-lapis-soft hover:border-lapis"
+            }`}
           >
-            <span className="font-medium text-lapis-dark">Choose TXT, Markdown or PDF</span>
+            <span className="font-medium text-lapis-dark">
+              {busy ? "Normalizing source…" : dragActive ? "Drop the source here" : "Choose or drop TXT, Markdown or PDF"}
+            </span>
             <span className="mt-1 text-sm text-ink-soft">
               PDF must contain selectable text. OCR is intentionally unsupported.
             </span>
@@ -589,10 +665,10 @@ export default function SourceCreator() {
                 <h3 className="mt-5 border-t border-ink/10 pt-4 font-semibold">Learning brief</h3>
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <label className="text-sm">Level<select value={level} onChange={(event) => setLevel(event.target.value as typeof level)} className="mt-1 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2"><option value="novice">Novice</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
-                  <label className="text-sm">Language<input value={language} maxLength={35} onChange={(event) => setLanguage(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /></label>
-                  <label className="text-sm">Minutes<input type="number" min={3} max={60} value={targetMinutes} onChange={(event) => setTargetMinutes(Number(event.target.value))} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /></label>
+                  <label className="text-sm">Language<input value={language} maxLength={35} aria-invalid={!language.trim()} aria-describedby={!language.trim() ? "language-error" : undefined} onChange={(event) => setLanguage(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" />{!language.trim() && <span id="language-error" className="mt-1 block text-xs text-wrong">Enter a language.</span>}</label>
+                  <label className="text-sm">Minutes<input type="number" min={3} max={60} value={targetMinutes} aria-invalid={targetMinutes < 3 || targetMinutes > 60} aria-describedby={targetMinutes < 3 || targetMinutes > 60 ? "duration-error" : undefined} onChange={(event) => setTargetMinutes(Number(event.target.value))} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" />{(targetMinutes < 3 || targetMinutes > 60) && <span id="duration-error" className="mt-1 block text-xs text-wrong">Choose 3 to 60 minutes.</span>}</label>
                 </div>
-                <label className="mt-3 block text-sm">Learner goal<textarea value={learnerGoal} maxLength={600} rows={3} onChange={(event) => setLearnerGoal(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /></label>
+                <label className="mt-3 block text-sm">Learner goal<textarea value={learnerGoal} maxLength={600} rows={3} aria-invalid={!learnerGoal.trim()} aria-describedby="learner-goal-help" onChange={(event) => setLearnerGoal(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /><span id="learner-goal-help" className={`mt-1 flex justify-between gap-3 text-xs ${learnerGoal.trim() ? "text-ink-soft" : "text-wrong"}`}><span>{learnerGoal.trim() ? "Describe what the learner should do without assistance." : "Enter a learner goal."}</span><span className="shrink-0 font-mono tabular-nums">{learnerGoal.length}/600</span></span></label>
               </div>
               {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-lg border border-lapis px-5 py-2.5 text-center font-medium text-lapis">Open checked golden review</Link>}
               {activeJob && job && <div className="mt-5 rounded-2xl bg-ink p-5 text-white" aria-live="polite">
@@ -601,11 +677,12 @@ export default function SourceCreator() {
                 <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/40"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-xs">{stage.model}</span></li>; })}</ol>
                 <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
               </div>}
-              <button type="button" disabled={compiling || activeJob || !sourceReady || !learningBriefReady} onClick={() => void compile()} className="sticky bottom-3 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[0_12px_32px_rgba(19,28,49,0.18)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
+              <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-3 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[0_12px_32px_rgba(19,28,49,0.18)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
                 {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
               </button>
               {!sourceAuthorized && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Confirm source authorization to continue.</p>}
               {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
+              {sourceReady && !learningBriefReady && <p className="mt-2 text-center text-xs font-medium text-wrong">Complete the language, duration and learner goal before compiling.</p>}
               <p className="mt-1 text-center text-xs text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
             </>
           )}
