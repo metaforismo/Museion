@@ -11,6 +11,22 @@ export const dynamic = "force-dynamic";
 
 function formatTemplate(value: string) { return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
+function CoursePathCard({ course, index }: { course: (typeof coursePaths)[number]; index: number }) {
+  return <Link href={`/courses/${course.id}`} className="group flex min-h-56 flex-col border-t border-ink/15 px-1 py-5 transition hover:border-lapis">
+    <div className="flex items-center justify-between gap-4">
+      <span className="font-mono text-[0.66rem] font-semibold tabular-nums text-lapis-dark">PATH {String(index + 1).padStart(2, "0")}</span>
+      <span className="text-xs text-ink-soft">{course.subject}</span>
+    </div>
+    <h3 className="mt-5 max-w-sm font-display text-2xl font-semibold tracking-[-0.03em] transition group-hover:text-lapis-dark">{course.title}</h3>
+    <p className="mt-2 max-w-md text-sm leading-6 text-ink-soft">{course.tagline}</p>
+    <div className="mt-auto pt-6">
+      <div className="mb-3 flex items-center justify-between text-[0.68rem] text-ink-soft"><span>{course.lessonIds.length} connected lessons</span><span>{course.estimatedMinutes} min</span></div>
+      <div className="flex items-center gap-1.5" aria-hidden="true">{course.lessonIds.map((lessonId, lessonIndex) => <span key={lessonId} className={`h-1.5 flex-1 rounded-full transition-colors ${lessonIndex === 0 ? "bg-lapis" : "bg-ink/10 group-hover:bg-lapis/25"}`} />)}</div>
+      <span className="mt-4 inline-flex text-sm font-semibold text-lapis-dark">Open learning path <span className="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span></span>
+    </div>
+  </Link>;
+}
+
 export default async function DashboardPage() {
   const learnerId = await readLearnerId();
   const snapshot = await buildDashboardSnapshot(learnerId ?? "new-learner");
@@ -38,8 +54,12 @@ export default async function DashboardPage() {
 
     <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)]">
       <div className="space-y-6">
-        <section aria-labelledby="active-title"><div className="mb-3 flex items-end justify-between"><div><p className="text-xs font-medium text-ink-soft">Courses</p><h2 id="active-title" className="mt-1 text-xl font-semibold">Continue learning</h2></div><Link href="/library" className="text-sm font-medium text-lapis-dark">View library</Link></div>
-          {hasActivity ? <div className="grid gap-3 sm:grid-cols-2">{snapshot.activeLearning.map((item) => <Link key={item.id} href={item.href} className="group rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] transition hover:-translate-y-0.5 hover:border-lapis/30"><div className="flex items-center justify-between gap-3"><span className="rounded-full bg-paper px-2.5 py-1 text-[0.68rem] font-medium text-ink-soft">{item.kind === "generated" ? "From your source" : "Museion lesson"}</span><span className="text-xs tabular-nums text-ink-soft">{Math.round(item.progress * 100)}%</span></div><h3 className="mt-4 font-semibold group-hover:text-lapis-dark">{item.title}</h3><p className="mt-1.5 text-sm text-ink-soft">{item.detail}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/8"><div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, item.progress * 100)}%` }} /></div></Link>)}</div> : <div className="grid gap-3 sm:grid-cols-2">{coursePaths.map((course, index) => <Link key={course.id} href={`/courses/${course.id}`} className={`group rounded-2xl border border-ink/10 p-5 shadow-[var(--shadow-tight)] transition hover:-translate-y-0.5 hover:border-lapis/30 ${index === 0 ? "bg-gold-soft" : "bg-lapis-soft"}`}><div className="flex items-center justify-between gap-3"><span className="rounded-full bg-surface/80 px-2.5 py-1 text-[0.68rem] font-medium text-ink-soft">Museion course</span><span className="text-xs text-ink-soft">{course.lessonIds.length} lessons</span></div><h3 className="mt-4 text-lg font-semibold group-hover:text-lapis-dark">{course.title}</h3><p className="mt-1.5 text-sm leading-6 text-ink-soft">{course.tagline}</p><span className="mt-4 inline-flex text-sm font-semibold text-lapis-dark">Explore path <span className="ml-1" aria-hidden="true">→</span></span></Link>)}</div>}
+        {hasActivity && <section aria-labelledby="active-title"><div className="mb-3 flex items-end justify-between"><div><p className="text-xs font-medium text-ink-soft">Current thread</p><h2 id="active-title" className="mt-1 text-xl font-semibold">Continue learning</h2></div><Link href="/library" className="text-sm font-medium text-lapis-dark">View library</Link></div>
+          <div className="grid gap-3 sm:grid-cols-2">{snapshot.activeLearning.map((item) => <Link key={item.id} href={item.href} className="group rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] transition hover:-translate-y-0.5 hover:border-lapis/30"><div className="flex items-center justify-between gap-3"><span className="text-[0.68rem] font-medium text-ink-soft">{item.kind === "generated" ? "From your source" : "Museion lesson"}</span><span className="font-mono text-xs tabular-nums text-ink-soft">{Math.round(item.progress * 100)}%</span></div><h3 className="mt-4 font-semibold group-hover:text-lapis-dark">{item.title}</h3><p className="mt-1.5 text-sm text-ink-soft">{item.detail}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/8"><div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, item.progress * 100)}%` }} /></div></Link>)}</div>
+        </section>}
+
+        <section aria-labelledby="paths-title"><div className="mb-1 flex items-end justify-between"><div><p className="text-xs font-medium text-ink-soft">Museion curriculum</p><h2 id="paths-title" className="mt-1 text-xl font-semibold">{hasActivity ? "Explore another path" : "Choose a learning path"}</h2></div><Link href="/library" className="text-sm font-medium text-lapis-dark">All lessons</Link></div>
+          <div className="grid gap-x-6 sm:grid-cols-2">{coursePaths.map((course, index) => <CoursePathCard key={course.id} course={course} index={index} />)}</div>
         </section>
 
         <section aria-labelledby="evidence-title" className="rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] sm:p-6"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-medium text-ink-soft">Understanding evidence</p><h2 id="evidence-title" className="mt-1 text-xl font-semibold">What the record supports</h2></div><Link href="/progress" className="text-sm font-medium text-lapis-dark">See evidence</Link></div>

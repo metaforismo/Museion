@@ -488,8 +488,11 @@ async function desktopFlow() {
 
   await page.goto(`${baseURL}/library`);
   await expectVisible(page.getByRole("heading", { name: /Learn through designed investigations/ }), "library heading");
-  await expectVisible(page.getByRole("link", { name: /Explore course/ }).first(), "authored course entry");
-  await page.getByRole("link", { name: /Explore course/ }).first().click();
+  const firstAuthoredCourse = page
+    .getByRole("region", { name: "Follow a designed reasoning path." })
+    .getByRole("link", { name: /Algebra as Balance/ });
+  await expectVisible(firstAuthoredCourse, "authored course entry");
+  await firstAuthoredCourse.click();
   await page.waitForURL((url) => url.pathname === "/courses/algebra-as-balance");
   await expectVisible(page.getByRole("heading", { name: "Algebra as Balance" }), "authored course detail");
   await expectVisible(page.getByText(/one immediate near-transfer observation/), "course evidence boundary");
