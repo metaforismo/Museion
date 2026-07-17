@@ -10,9 +10,9 @@ describe("curriculum graph", () => {
 
   it("recommends only unlocked nodes", () => {
     const start = recommendCurriculumNodes(museionFoundations, new Set());
-    expect(start.map(({ id }) => id)).toEqual(["negative-numbers", "order-of-operations", "sorted-search-space"]);
+    expect(start.map(({ id }) => id)).toEqual(["negative-numbers", "order-of-operations", "sorted-search-space", "claims-to-evidence-operationalize"]);
     const afterFoundations = recommendCurriculumNodes(museionFoundations, new Set(["negative-numbers", "order-of-operations"]));
-    expect(afterFoundations.map(({ id }) => id)).toEqual(["fractions-unlike-denominators", "linear-equations-intro", "binary-numbers", "algebra-balance-equality-as-invariant", "sorted-search-space", "functions-as-change-input-output"]);
+    expect(afterFoundations.map(({ id }) => id)).toEqual(["fractions-unlike-denominators", "linear-equations-intro", "binary-numbers", "algebra-balance-equality-as-invariant", "sorted-search-space", "functions-as-change-input-output", "claims-to-evidence-operationalize"]);
   });
 
   it("fails closed on dangling prerequisites and cycles", () => {
@@ -33,6 +33,8 @@ describe("curriculum graph", () => {
       "search-by-halving",
       "probability-as-evidence",
       "functions-as-change",
+      "claims-to-evidence",
+      "samples-to-conclusions",
     ]);
     for (const course of coursePaths) {
       expect(new Set(course.lessonIds).size).toBe(course.lessonIds.length);

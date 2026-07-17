@@ -89,6 +89,52 @@ export const coursePaths = [
     sourceLabels: ["OpenStax Precalculus 2e · Functions and function notation"],
     evidenceBoundary: "Correct responses are observations on the registered rules and nearby contexts; they do not establish retention, calculus readiness, or real-world predictive validity.",
   }),
+  CoursePathSchema.parse({
+    id: "claims-to-evidence",
+    title: "Claims to Evidence",
+    tagline: "Turn a broad claim into a comparison that could prove it wrong.",
+    description: "A research-literacy path through operational definitions, observation versus inference, and falsifiable comparisons. Learners specify what would be recorded, diagnose overclaiming, and design a fair test whose outcome could challenge the original claim.",
+    subject: "Research Methods",
+    level: "developing",
+    learnerBand: "Ages 12–16 · early secondary",
+    lessonIds: [
+      "claims-to-evidence-operationalize",
+      "claims-to-evidence-observation-inference",
+      "claims-to-evidence-falsifiable-comparison",
+    ],
+    prerequisites: ["Read short scenarios", "Compare counts and simple fractions", "Distinguish a question from an answer"],
+    outcomes: [
+      "Define an observable outcome, population, and recording rule.",
+      "Separate a recorded observation from an explanation or prediction.",
+      "Design a fair comparison with a result that could count against the claim.",
+    ],
+    estimatedMinutes: 55,
+    sourceLabels: ["NIST/SEMATECH e-Handbook · hypothesis tests", "NIST/SEMATECH e-Handbook · product and process comparisons"],
+    evidenceBoundary: "The path records performance on finite fictional scenarios and one immediate near-transfer task; it does not establish durable mastery, research competence, or general learning gains.",
+  }),
+  CoursePathSchema.parse({
+    id: "samples-to-conclusions",
+    title: "Samples to Conclusions",
+    tagline: "Ask who could enter the sample before trusting its estimate.",
+    description: "A research-literacy path through sampling frames, repeated-sample variability, and bounded estimates. Learners calculate proportions, identify coverage gaps, and keep conclusions inside the population and collection process the evidence can support.",
+    subject: "Research Methods",
+    level: "developing",
+    learnerBand: "Ages 12–16 · fraction foundations",
+    lessonIds: [
+      "samples-to-conclusions-sampling-frame",
+      "samples-to-conclusions-variability",
+      "samples-to-conclusions-bounded-estimates",
+    ],
+    prerequisites: ["Part–whole fractions", "Decimal or percent conversion", "Read and compare two counts"],
+    outcomes: [
+      "Separate the target population from the reachable sampling frame.",
+      "Interpret different sample proportions as expected variability rather than automatic error.",
+      "Report an estimate with its scope and collection limits visible.",
+    ],
+    estimatedMinutes: 55,
+    sourceLabels: ["NIST/SEMATECH e-Handbook · sampling", "NIST/SEMATECH e-Handbook · random sampling"],
+    evidenceBoundary: "The path observes reasoning on small stated samples and one immediate near-transfer task; it is not a retention test, survey qualification, or proof of statistical judgment.",
+  }),
 ] as const;
 
 export function getCoursePath(courseId: string) {

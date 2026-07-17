@@ -16,6 +16,12 @@ import probabilityBaseRates from "./lessons/probability-as-evidence-base-rates";
 import functionsInputOutput from "./lessons/functions-as-change-input-output";
 import functionsRateOfChange from "./lessons/functions-as-change-rate-of-change";
 import functionsLinearModels from "./lessons/functions-as-change-linear-models";
+import claimsOperationalize from "./lessons/claims-to-evidence-operationalize";
+import claimsObservationInference from "./lessons/claims-to-evidence-observation-inference";
+import claimsFalsifiableComparison from "./lessons/claims-to-evidence-falsifiable-comparison";
+import samplesSamplingFrame from "./lessons/samples-to-conclusions-sampling-frame";
+import samplesVariability from "./lessons/samples-to-conclusions-variability";
+import samplesBoundedEstimates from "./lessons/samples-to-conclusions-bounded-estimates";
 
 export * from "./types";
 export { validateLesson } from "./validate";
@@ -38,6 +44,12 @@ const LESSONS: readonly Lesson[] = [
   functionsInputOutput,
   functionsRateOfChange,
   functionsLinearModels,
+  claimsOperationalize,
+  claimsObservationInference,
+  claimsFalsifiableComparison,
+  samplesSamplingFrame,
+  samplesVariability,
+  samplesBoundedEstimates,
 ];
 
 export function allLessons(): readonly Lesson[] {
