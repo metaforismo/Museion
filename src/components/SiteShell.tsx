@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import AppIcon from "./AppIcon";
 import AppSidebar from "./AppSidebar";
+import AppCommandPalette, { type SearchableLesson } from "./AppCommandPalette";
 import SiteHeader from "./SiteHeader";
 
 const PUBLIC_ROUTES = new Set(["/", "/welcome", "/about", "/privacy", "/terms"]);
@@ -24,21 +25,33 @@ function MobileBottomNav() {
   return <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-ink/10 bg-surface/95 px-1 pb-[max(.35rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">{items.map(([href, label, icon]) => { const active = pathname === href || pathname.startsWith(`${href}/`); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg text-[0.66rem] font-medium ${active ? "text-lapis-dark" : "text-ink-soft"}`}><AppIcon name={icon} className="h-5 w-5" />{label}</Link>; })}</nav>;
 }
 
-export default function SiteShell({ children }: { children: ReactNode }) {
+export default function SiteShell({ children, lessons }: { children: ReactNode; lessons: SearchableLesson[] }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const mobileDrawer = useRef<HTMLElement>(null);
   const publicRoute = PUBLIC_ROUTES.has(pathname);
   const focusRoute = FOCUS_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const openSearch = () => setSearchOpen(true);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       try { setCollapsed(localStorage.getItem(SIDEBAR_KEY) === "1"); } catch { /* storage is optional */ }
     });
     return () => cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen((value) => !value);
+      }
+    };
+    window.addEventListener("keydown", handleSearchShortcut);
+    return () => window.removeEventListener("keydown", handleSearchShortcut);
   }, []);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setSidebarOpen(false));
@@ -67,10 +80,10 @@ export default function SiteShell({ children }: { children: ReactNode }) {
     <aside aria-label="Application navigation" className={`fixed inset-y-0 left-0 z-30 hidden border-r border-ink/10 transition-[width] lg:block ${collapsed ? "w-20" : "w-[15.5rem]"}`}><AppSidebar collapsed={collapsed} onToggle={toggle} /></aside>
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-ink/10 bg-surface/95 px-4 backdrop-blur lg:col-start-2 lg:px-6">
       <button ref={menuButton} type="button" aria-label="Open navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-ink/15 lg:hidden"><span aria-hidden="true" className="grid gap-1"><span className="h-px w-4 bg-ink"/><span className="h-px w-4 bg-ink"/><span className="h-px w-4 bg-ink"/></span></button>
-      <div className="hidden min-w-0 items-center gap-3 lg:flex"><AppIcon name="search" className="h-4 w-4 text-ink-soft"/><span className="text-sm text-ink-soft">Search courses and concepts</span><kbd className="rounded border border-ink/10 bg-paper px-1.5 py-0.5 text-[0.65rem] text-ink-soft">⌘ K</kbd></div>
-      <div className="ml-auto flex items-center gap-2"><span className="hidden items-center gap-2 rounded-full bg-correct-soft px-3 py-1.5 text-xs font-medium text-correct sm:flex"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-correct"/>Checks ready</span><Link href="/create" className="rounded-lg bg-ink px-3.5 py-2 text-sm font-semibold text-white hover:bg-lapis-dark">New course</Link></div>
+      <button type="button" onClick={openSearch} aria-label="Search Museion" className="hidden min-h-11 min-w-0 items-center gap-3 rounded-xl px-3 text-left transition-colors hover:bg-paper lg:flex"><AppIcon name="search" className="h-4 w-4 text-ink-soft"/><span className="text-sm text-ink-soft">Search courses and concepts</span><kbd className="rounded border border-ink/10 bg-paper px-1.5 py-0.5 text-[0.65rem] text-ink-soft">⌘ K</kbd></button>
+      <div className="ml-auto flex items-center gap-2"><button type="button" onClick={openSearch} aria-label="Search Museion" className="grid min-h-11 min-w-11 place-items-center rounded-lg text-ink-soft hover:bg-paper hover:text-ink lg:hidden"><AppIcon name="search" className="h-5 w-5"/></button><Link href="/create" className="rounded-lg bg-ink px-3.5 py-2 text-sm font-semibold text-white hover:bg-lapis-dark">New course</Link></div>
     </header>
     {sidebarOpen && <div className="fixed inset-0 z-40 lg:hidden"><button type="button" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="absolute inset-0 bg-ink/30"/><aside ref={mobileDrawer} id="mobile-app-navigation" aria-label="Application navigation" className="relative h-full w-[min(19rem,86vw)] border-r border-ink/10 bg-surface shadow-2xl"><button ref={closeButton} type="button" onClick={() => setSidebarOpen(false)} className="absolute right-3 top-3 z-10 min-h-11 rounded-lg px-3 text-sm font-medium text-ink-soft">Close</button><AppSidebar onNavigate={() => setSidebarOpen(false)} /></aside></div>}
-    <main id="main-content" tabIndex={-1} className="min-w-0 pb-20 lg:col-start-2 lg:pb-0">{children}</main><MobileBottomNav />
+    <main id="main-content" tabIndex={-1} className="min-w-0 pb-20 lg:col-start-2 lg:pb-0">{children}</main><MobileBottomNav /><AppCommandPalette lessons={lessons} open={searchOpen} onClose={() => setSearchOpen(false)} />
   </div>;
 }
