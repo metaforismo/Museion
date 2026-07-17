@@ -145,6 +145,59 @@ async function mobileNavigationFlow() {
   await context.close();
 }
 
+async function globalSearchFlow() {
+  const desktop = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce" });
+  await desktop.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await desktop.newPage();
+  watch(page, "global-search");
+  await page.goto(`${baseURL}/dashboard`);
+
+  const searchTrigger = page.getByRole("button", { name: "Search Museion" });
+  await searchTrigger.click();
+  const searchInput = page.getByRole("combobox", { name: "Search Museion" });
+  await expectVisible(searchInput, "global search input");
+  if (!(await searchInput.evaluate((input) => input === document.activeElement))) {
+    failures.push("global search: input did not receive focus when opened");
+  }
+  await searchInput.fill("concept-that-does-not-exist");
+  await expectVisible(page.getByText("No matching destination"), "global search empty state");
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expectVisible(page.getByRole("option", { name: /Home/ }), "global search reset");
+  await page.waitForFunction(() => document.activeElement?.id === "global-search");
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog", { name: "Search Museion" }).waitFor({ state: "detached" });
+  if (!(await searchTrigger.evaluate((button) => button === document.activeElement))) failures.push("global search: focus did not return to its trigger");
+
+  await searchTrigger.click();
+  await searchInput.fill("binary");
+  await expectVisible(page.getByRole("option", { name: /Binary Numbers/ }), "global concept result");
+  await page.keyboard.press("Enter");
+  await page.waitForURL((url) => url.pathname === "/lessons/binary-numbers");
+  await expectVisible(page.getByRole("heading", { name: "Binary Numbers" }), "global search destination rendered");
+
+  const shortcutPage = await desktop.newPage();
+  watch(shortcutPage, "global-search-shortcut");
+  await shortcutPage.goto(`${baseURL}/dashboard`, { waitUntil: "networkidle" });
+  // Chrome on macOS may reserve synthetic Meta+K for the omnibox. The product
+  // handler supports both modifiers; Control+K exercises the page-owned path.
+  await shortcutPage.keyboard.press("Control+K");
+  await expectVisible(shortcutPage.getByRole("dialog", { name: "Search Museion" }), "global search keyboard shortcut");
+  await shortcutPage.keyboard.press("Escape");
+  await desktop.close();
+
+  const mobile = await browser.newContext({ viewport: { width: 320, height: 700 }, reducedMotion: "reduce" });
+  await mobile.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const mobilePage = await mobile.newPage();
+  watch(mobilePage, "global-search-mobile");
+  await mobilePage.goto(`${baseURL}/dashboard`);
+  await mobilePage.getByRole("button", { name: "Search Museion" }).click();
+  await expectVisible(mobilePage.getByRole("dialog", { name: "Search Museion" }), "mobile global search");
+  await mobilePage.getByRole("combobox", { name: "Search Museion" }).fill("fractions");
+  await mobilePage.getByRole("option", { name: /Fractions/ }).click();
+  await mobilePage.waitForURL((url) => url.pathname.includes("fractions"));
+  await mobile.close();
+}
+
 async function keyboardFill(page, locator, value) {
   await locator.focus();
   await page.keyboard.press("ControlOrMeta+A");
@@ -821,6 +874,7 @@ try {
   } else {
     await accessibilityFlow();
     await mobileNavigationFlow();
+    await globalSearchFlow();
   }
   if (process.env.MUSEION_A11Y_ONLY !== "1" && process.env.MUSEION_KEYBOARD_ONLY !== "1" && process.env.MUSEION_PERFORMANCE_ONLY !== "1") {
     await desktopFlow();

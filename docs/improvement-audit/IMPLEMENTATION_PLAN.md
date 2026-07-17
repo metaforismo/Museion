@@ -86,3 +86,12 @@ Status legend: `[ ]` pending, `[-]` active, `[x]` verified, `[~]` deferred.
 - **Scope:** Concrete learning preview, animated observable-method diagram, research and evidence-boundary sections, reproducible landing/dashboard screenshots, README product tour.
 - **Acceptance:** Product value is visible above the fold; screenshots come from the production browser suite and regenerate deterministically.
 - **Verification:** The landing and application workspace now use separate shells; the README captures both real production states.
+
+## P1-J — Global product search
+
+- **Status:** `[x]`
+- **Reason:** The application header advertised search and `Command-K`, but the control was non-interactive.
+- **Scope:** Server-sanitized lesson index, global command palette, page/lesson/concept matching, desktop and mobile triggers, keyboard navigation, focus restoration, and an honest empty state.
+- **Privacy boundary:** Only lesson IDs, titles, tracks, descriptions, and concept labels cross the server/client boundary; answer specifications, solutions, hints, and misconceptions remain server-owned.
+- **Acceptance:** `Command/Ctrl-K` opens search; Arrow keys and Enter navigate; Escape restores focus; mobile has an equivalent trigger; no static runtime-readiness claim appears in the shell.
+- **Verification:** Browser flow covers desktop and mobile search, concept matching, empty/reset state, shortcut opening, route navigation, Escape close, and trigger focus restoration.

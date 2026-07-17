@@ -11,6 +11,9 @@
 | Review | No signal | Empty queue; no invented schedule | Added |
 | Sidebar | Storage unavailable | Expanded navigation remains usable | Added |
 | Sidebar | Mobile route change | Drawer closes and bottom nav updates | Added |
+| Search | No match | Honest empty state with reset; no invented suggestions | Added |
+| Search | Keyboard-only | Command/Ctrl-K, arrows, Enter, Escape and focus restoration | Added |
+| Search | Private lesson truth | Index contains public metadata only | Added |
 | Lesson | Refresh | Existing session recovery path | Existing |
 | Maia | Cancel while provider runs | No hint, version, event, or transcript mutation | Added |
 | Maia | Timeout/invalid output | Verified deterministic guidance only | Existing |
