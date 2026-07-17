@@ -28,7 +28,7 @@ Museion is not a chat wrapper. It turns authorized source material into a bounde
 5. tutor with Maia without revealing the answer;
 6. finish with one locked, immediate near-transfer observation—and describe it no more strongly than the evidence allows.
 
-The Build Week release includes four deep Museion-authored course paths, seventeen deterministic lessons, a research-led source-to-learning homepage, responsive learning workspace, global course/lesson/concept search, deterministic review queue, creator provenance review, polished keyless replay, and explicit limitations for the current persistence model.
+The Build Week release includes six deep Museion-authored course paths, twenty-three deterministic lessons, a research-led source-to-learning homepage, responsive learning workspace, global course/lesson/concept search, deterministic review queue, creator provenance review, polished keyless replay, and explicit limitations for the current persistence model.
 
 Its visible learning protocol is **Ground → Predict → Interact → Diagnose → Explain → Transfer → Revisit**. The final two moves are intentionally narrow: transfer is one immediate unassisted observation, while delayed revisit is only partially implemented.
 
@@ -52,11 +52,11 @@ The application-wide command palette searches real destinations, authored lesson
 
 ### Authored courses are the product core
 
-Museion ships complete learning paths, not a wall of disconnected AI-generated cards. **Algebra as Balance** builds relational equality into reversible two-step reasoning. **Search by Halving** derives binary search from its sorted-input contract and candidate invariant. **Probability as Evidence** keeps sample spaces, conditions, and base rates visible before trusting a claim. **Functions as Change** connects input-output rules to rate, initial value, and the limits of a linear model. Every course documents its prerequisites, sources, misconception model, private answer verification, accessibility decisions, and narrow evidence boundary. Course context follows the learner into each lesson, exposes the current position, returns to the right path, and offers the next authored lesson only after completion.
+Museion ships complete learning paths, not a wall of disconnected AI-generated cards. **Algebra as Balance** builds relational equality into reversible two-step reasoning. **Search by Halving** derives binary search from its sorted-input contract and candidate invariant. **Probability as Evidence** keeps sample spaces, conditions, and base rates visible before trusting a claim. **Functions as Change** connects input-output rules to rate, initial value, and the limits of a linear model. **Claims to Evidence** makes observations, inferences, and falsifiable comparisons explicit. **Samples to Conclusions** keeps sampling frames, variability, and the scope of an estimate visible. Every course documents its prerequisites, sources, misconception model, private answer verification, accessibility decisions, and narrow evidence boundary. Course context follows the learner into each lesson, exposes the current position, returns to the right path, and offers the next authored lesson only after completion.
 
 | Course library | Algebra as Balance |
 |---|---|
-| ![Museion course library with four authored learning paths](docs/assets/screenshots/library-desktop.png) | ![Algebra as Balance course sequence and evidence boundary](docs/assets/screenshots/course-algebra-desktop.png) |
+| ![Museion course library with six authored learning paths](docs/assets/screenshots/library-desktop.png) | ![Algebra as Balance course sequence and evidence boundary](docs/assets/screenshots/course-algebra-desktop.png) |
 
 ### Responsive by construction
 

@@ -19,6 +19,11 @@ async function capture({ name, route, width = 1440, height = 1000, waitFor = "ma
   await page.goto(`${baseURL}${route}`, { waitUntil: "domcontentloaded" });
   await page.locator(waitFor).waitFor({ state: "visible", timeout: 15_000 });
   if (prepare) await prepare(page);
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
   await page.screenshot({ path: path.join(outputDir, `${name}.png`), fullPage: false });
   await context.close();
 }
