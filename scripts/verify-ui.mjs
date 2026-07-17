@@ -494,9 +494,14 @@ async function desktopFlow() {
   await expectVisible(page.getByRole("heading", { name: "Algebra as Balance" }), "authored course detail");
   await expectVisible(page.getByText(/one immediate near-transfer observation/), "course evidence boundary");
   await page.goto(`${baseURL}/library`);
-  await page.keyboard.press("/");
   const catalogSearch = page.getByLabel("Find a lesson or concept");
   const catalogResults = page.getByRole("region", { name: "Lesson catalog results" });
+  await expectVisible(catalogSearch, "catalog search after route return");
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await page.keyboard.press("/");
+    if (await catalogSearch.evaluate((input) => input === document.activeElement)) break;
+    await page.waitForTimeout(50);
+  }
   if (!(await catalogSearch.evaluate((input) => input === document.activeElement))) {
     failures.push("catalog: slash shortcut did not focus search");
   }
