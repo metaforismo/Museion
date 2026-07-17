@@ -43,6 +43,52 @@ export const coursePaths = [
     sourceLabels: ["NIST Dictionary of Algorithms and Data Structures", "Python Software Foundation bisect documentation"],
     evidenceBoundary: "The path checks the declared convention and one immediate near-transfer response; it makes no retention, standards-alignment, or speedup claim.",
   }),
+  CoursePathSchema.parse({
+    id: "probability-as-evidence",
+    title: "Probability as Evidence",
+    tagline: "Name the reference group before trusting a probability claim.",
+    description: "A count-based path through finite sample spaces, conditional evidence, and base rates. Learners keep denominators visible, diagnose reversed conditions, and finish by interpreting what a complete count table actually supports.",
+    subject: "Arithmetic",
+    level: "developing",
+    learnerBand: "Ages 12+ · fraction foundations",
+    lessonIds: [
+      "probability-as-evidence-sample-spaces",
+      "probability-as-evidence-conditional-evidence",
+      "probability-as-evidence-base-rates",
+    ],
+    prerequisites: ["Whole-number counting", "Simple fractions", "Part-to-whole comparison"],
+    outcomes: [
+      "State the finite sample space before forming a probability.",
+      "Use the supplied evidence subgroup without reversing the condition.",
+      "Separate a base rate, a signal, and the conclusion supported after that signal.",
+    ],
+    estimatedMinutes: 55,
+    sourceLabels: ["OpenStax Introductory Statistics 2e · Chapter 3"],
+    evidenceBoundary: "The path records performance on finite stated scenarios and immediate near transfer; it does not measure real-world judgment, delayed retention, or durable probability mastery.",
+  }),
+  CoursePathSchema.parse({
+    id: "functions-as-change",
+    title: "Functions as Change",
+    tagline: "Read a rule as a relationship, then ask where its model stops.",
+    description: "A three-lesson path from input-output rules to rate, initial value, and bounded linear prediction. Learners evaluate, compare, diagnose rate-intercept confusion, and keep model claims inside their stated context.",
+    subject: "Algebra",
+    level: "developing",
+    learnerBand: "Ages 13+ · early secondary",
+    lessonIds: [
+      "functions-as-change-input-output",
+      "functions-as-change-rate-of-change",
+      "functions-as-change-linear-models",
+    ],
+    prerequisites: ["Whole-number arithmetic", "Operation precedence", "Read paired values in a table"],
+    outcomes: [
+      "Evaluate a function and test whether each input has one output.",
+      "Distinguish rate of change from an initial value.",
+      "Build a simple linear prediction and state its range and assumptions.",
+    ],
+    estimatedMinutes: 55,
+    sourceLabels: ["OpenStax Precalculus 2e · Functions and function notation"],
+    evidenceBoundary: "Correct responses are observations on the registered rules and nearby contexts; they do not establish retention, calculus readiness, or real-world predictive validity.",
+  }),
 ] as const;
 
 export function getCoursePath(courseId: string) {

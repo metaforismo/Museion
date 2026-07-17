@@ -10,6 +10,12 @@ import orderOfOperations from "./lessons/order-of-operations";
 import binarySearchInvariant from "./lessons/search-by-halving-binary-search-invariant";
 import logarithmicReasoning from "./lessons/search-by-halving-logarithmic-reasoning-and-transfer";
 import sortedSearchSpace from "./lessons/search-by-halving-sorted-search-space";
+import probabilitySampleSpaces from "./lessons/probability-as-evidence-sample-spaces";
+import probabilityConditionalEvidence from "./lessons/probability-as-evidence-conditional-evidence";
+import probabilityBaseRates from "./lessons/probability-as-evidence-base-rates";
+import functionsInputOutput from "./lessons/functions-as-change-input-output";
+import functionsRateOfChange from "./lessons/functions-as-change-rate-of-change";
+import functionsLinearModels from "./lessons/functions-as-change-linear-models";
 
 export * from "./types";
 export { validateLesson } from "./validate";
@@ -26,6 +32,12 @@ const LESSONS: readonly Lesson[] = [
   sortedSearchSpace,
   binarySearchInvariant,
   logarithmicReasoning,
+  probabilitySampleSpaces,
+  probabilityConditionalEvidence,
+  probabilityBaseRates,
+  functionsInputOutput,
+  functionsRateOfChange,
+  functionsLinearModels,
 ];
 
 export function allLessons(): readonly Lesson[] {
