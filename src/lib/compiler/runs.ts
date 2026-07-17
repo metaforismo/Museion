@@ -52,6 +52,7 @@ function compilerRunView(record: CompilerRunRecord) {
       title: record.document.title,
       sha256: record.document.sha256,
       pages: record.document.pages.length,
+      sourceReference: record.document.sourceReference ?? null,
     },
     audience: record.audience,
     templateId: record.templateId ?? record.result.templateId ?? "socratic-foundations",

@@ -10,6 +10,21 @@ export const SourceMediaTypeSchema = z.enum([
   "application/pdf",
 ]);
 
+export const SourceReferenceKindSchema = z.enum([
+  "webpage",
+  "youtube_video",
+  "youtube_playlist",
+  "book",
+]);
+
+export const SourceReferenceSchema = z
+  .object({
+    kind: SourceReferenceKindSchema,
+    url: z.string().url().max(2_048),
+    label: z.string().trim().min(1).max(200),
+  })
+  .strict();
+
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const SourcePageSchema = z
@@ -38,6 +53,7 @@ export const SourceDocumentSchema = z
     title: z.string().min(1).max(200),
     mediaType: SourceMediaTypeSchema,
     originalFileName: z.string().min(1).max(255).nullable(),
+    sourceReference: SourceReferenceSchema.optional(),
     language: z.string().min(2).max(35),
     sha256: Sha256Schema,
     byteLength: z.number().int().nonnegative(),
@@ -64,6 +80,8 @@ export const SourceSpanSchema = z
   });
 
 export type SourceMediaType = z.infer<typeof SourceMediaTypeSchema>;
+export type SourceReference = z.infer<typeof SourceReferenceSchema>;
+export type SourceReferenceKind = z.infer<typeof SourceReferenceKindSchema>;
 export type SourcePage = z.infer<typeof SourcePageSchema>;
 export type SourceWarning = z.infer<typeof SourceWarningSchema>;
 export type SourceDocument = z.infer<typeof SourceDocumentSchema>;

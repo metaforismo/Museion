@@ -5,18 +5,21 @@ import { useEffect, useRef, useState } from "react";
 
 import { parseCreatorDraft, serializeCreatorDraft } from "@/lib/client/creator-draft";
 import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
-import type { SourceDocument } from "@/lib/source";
+import type { SourceDocument, SourceReferenceKind } from "@/lib/source";
 import {
   MAX_NORMALIZED_CHARACTERS,
   MAX_SOURCE_BYTES,
   MAX_SOURCE_PAGES,
   SourceIngestionError,
-  ingestSourceFile,
+  inferSourceReferenceKind,
+  ingestSourceFiles,
   ingestTextSource,
+  normalizeSourceUrl,
 } from "@/lib/source";
 import { COURSE_TEMPLATES, type CourseTemplateId } from "@/lib/compiler/templates";
 
 type TextMediaType = "text/plain" | "text/markdown";
+type SourceMode = "paste" | "files" | "reference";
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 const DRAFT_KEY = "museion:creator-draft:v1";
 const ACTIVE_RUN_KEY = "museion:active-compiler-run:v1";
@@ -43,6 +46,7 @@ const COMPILE_STAGES = [
 
 function errorMessage(error: unknown): string {
   if (error instanceof SourceIngestionError) return error.message;
+  if (error instanceof Error && error.message) return error.message;
   return "The source could not be normalized. Check the file and try again.";
 }
 
@@ -70,6 +74,9 @@ export default function SourceCreator() {
   const [title, setTitle] = useState("Binary Search Notes");
   const [text, setText] = useState("");
   const [mediaType, setMediaType] = useState<TextMediaType>("text/markdown");
+  const [sourceMode, setSourceMode] = useState<SourceMode>("paste");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [sourceKind, setSourceKind] = useState<SourceReferenceKind>("webpage");
   const [document, setDocument] = useState<SourceDocument | null>(null);
   const [selectedPage, setSelectedPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +105,9 @@ export default function SourceCreator() {
       setTitle(saved.title);
       setText(saved.text);
       setMediaType(saved.mediaType);
+      setSourceMode(saved.sourceMode ?? "paste");
+      setSourceUrl(saved.sourceUrl ?? "");
+      setSourceKind(saved.sourceKind ?? inferSourceReferenceKind(saved.sourceUrl ?? ""));
       setTemplateId(saved.templateId);
       setLearnerGoal(saved.learnerGoal);
       setLevel(saved.level);
@@ -122,6 +132,9 @@ export default function SourceCreator() {
       storageAvailable = false;
     }
     setText("");
+    setSourceMode("paste");
+    setSourceUrl("");
+    setSourceKind("webpage");
     setTitle("Untitled source");
     setDocument(null);
     setJob(null);
@@ -152,7 +165,7 @@ export default function SourceCreator() {
     const statusTimer = window.setTimeout(() => setDraftStatus("saving"), 0);
     const timer = window.setTimeout(() => {
       try {
-        localStorage.setItem(DRAFT_KEY, serializeCreatorDraft({ title, text, mediaType, templateId, learnerGoal, level, language, targetMinutes }));
+        localStorage.setItem(DRAFT_KEY, serializeCreatorDraft({ title, text, mediaType, sourceMode, sourceUrl, sourceKind, templateId, learnerGoal, level, language, targetMinutes }));
         setDraftStatus("saved");
       } catch {
         setDraftStatus("error");
@@ -162,7 +175,7 @@ export default function SourceCreator() {
       window.clearTimeout(statusTimer);
       window.clearTimeout(timer);
     };
-  }, [draftReady, language, learnerGoal, level, mediaType, targetMinutes, templateId, text, title]);
+  }, [draftReady, language, learnerGoal, level, mediaType, sourceKind, sourceMode, sourceUrl, targetMinutes, templateId, text, title]);
 
   useEffect(() => {
     const runId = sessionStorage.getItem(ACTIVE_RUN_KEY);
@@ -261,7 +274,15 @@ export default function SourceCreator() {
     setBusy(true);
     setError(null);
     try {
-      const next = await ingestTextSource({ title, text, mediaType });
+      const normalizedUrl = sourceMode === "reference" ? normalizeSourceUrl(sourceUrl) : null;
+      const next = await ingestTextSource({
+        title,
+        text,
+        mediaType,
+        ...(normalizedUrl
+          ? { sourceReference: { kind: sourceKind, url: normalizedUrl, label: title.trim() } }
+          : {}),
+      });
       if (requestId !== normalizationSeq.current) return;
       acceptDocument(next);
     } catch (cause) {
@@ -273,14 +294,14 @@ export default function SourceCreator() {
     }
   };
 
-  const normalizeFile = async (file: File | undefined) => {
-    if (!file) return;
+  const normalizeFiles = async (files: File[]) => {
+    if (!files.length) return;
     const requestId = normalizationSeq.current + 1;
     normalizationSeq.current = requestId;
     setBusy(true);
     setError(null);
     try {
-      const next = await ingestSourceFile(file);
+      const next = await ingestSourceFiles({ title, files });
       if (requestId !== normalizationSeq.current) return;
       acceptDocument(next);
       setText("");
@@ -394,6 +415,11 @@ export default function SourceCreator() {
           Museion first normalizes the source, fixes page boundaries and hashes
           every page. Nothing is compiled until you can inspect that record.
         </p>
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-lapis/15 bg-lapis-soft/55 px-4 py-3 text-sm">
+          <span className="font-semibold text-lapis-dark">Source → Codex → validated course</span>
+          <span className="text-ink-soft">When ChatGPT via Codex is connected, Museion runs the Luna/Terra/Sol compiler and publishes only after deterministic gates pass.</span>
+          <Link href="/settings" className="font-semibold text-lapis-dark underline underline-offset-4">Check connection</Link>
+        </div>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
           <span
             role="status"
@@ -462,7 +488,74 @@ export default function SourceCreator() {
             className="mt-2 w-full rounded-lg border border-ink/15 px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
           />
 
-          <div className="mt-5 flex flex-wrap items-end gap-3">
+          <div className="mt-6" role="radiogroup" aria-label="Source method">
+            <p className="text-sm font-medium">How are you bringing the source?</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {([
+                ["paste", "Paste text", "Notes or transcript"],
+                ["files", "Upload files", "PDF, TXT or Markdown"],
+                ["reference", "Link + content", "Video, playlist or book"],
+              ] as const).map(([id, label, detail]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={sourceMode === id}
+                  disabled={activeJob}
+                  onClick={() => {
+                    invalidateNormalizedSource();
+                    setSourceMode(id);
+                  }}
+                  className={`min-h-20 rounded-xl border p-3 text-left transition ${sourceMode === id ? "border-lapis bg-lapis-soft" : "border-ink/10 bg-surface hover:border-lapis/35"}`}
+                >
+                  <span className="block text-sm font-semibold">{label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-ink-soft">{detail}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {sourceMode === "reference" && (
+            <div className="mt-5 rounded-xl border border-lapis/15 bg-lapis-soft/60 p-4">
+              <label className="block text-sm font-medium" htmlFor="source-url">Source link</label>
+              <input
+                id="source-url"
+                type="url"
+                inputMode="url"
+                value={sourceUrl}
+                disabled={activeJob}
+                placeholder="https://youtube.com/playlist?list=…"
+                onChange={(event) => {
+                  invalidateNormalizedSource();
+                  setSourceUrl(event.target.value);
+                  setSourceKind(inferSourceReferenceKind(event.target.value));
+                }}
+                className="mt-2 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"
+              />
+              <label className="mt-3 block text-sm font-medium" htmlFor="source-kind">Reference type</label>
+              <select
+                id="source-kind"
+                value={sourceKind}
+                disabled={activeJob}
+                onChange={(event) => {
+                  invalidateNormalizedSource();
+                  setSourceKind(event.target.value as SourceReferenceKind);
+                }}
+                className="mt-2 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"
+              >
+                <option value="youtube_video">YouTube video</option>
+                <option value="youtube_playlist">YouTube playlist</option>
+                <option value="book">Book or chapter</option>
+                <option value="webpage">Web page</option>
+              </select>
+              <p className="mt-3 text-xs leading-5 text-ink-soft">
+                The link records provenance; Museion compiles only the authorized transcript, excerpt or notes you provide below. It does not scrape playlists, bypass paywalls or copy a book from its URL.
+              </p>
+            </div>
+          )}
+
+          {sourceMode !== "files" && <>
+          {sourceMode === "paste" && <div className="mt-5 flex flex-wrap items-end gap-3">
             <label className="min-w-44 flex-1 text-sm font-medium" htmlFor="source-format">
               Pasted text format
               <select
@@ -479,10 +572,10 @@ export default function SourceCreator() {
                 <option value="text/plain">Plain text</option>
               </select>
             </label>
-          </div>
+          </div>}
 
           <label className="mt-5 block text-sm font-medium" htmlFor="source-text">
-            Paste source text
+            {sourceMode === "reference" ? "Authorized transcript, excerpt or notes" : "Paste source text"}
           </label>
           <textarea
             id="source-text"
@@ -494,7 +587,7 @@ export default function SourceCreator() {
               setText(event.target.value);
             }}
             rows={10}
-            placeholder="Paste an authorized source here…"
+            placeholder={sourceMode === "reference" ? "Paste an authorized transcript, exported captions, chapter excerpt, or your own source notes…" : "Paste an authorized source here…"}
             className="mt-2 w-full resize-y rounded-lg border border-ink/15 px-3 py-3 leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
           />
           <p className="mt-2 text-right font-mono text-xs tabular-nums text-ink-soft">
@@ -502,18 +595,15 @@ export default function SourceCreator() {
           </p>
           <button
             type="button"
-            disabled={busy || activeJob || !title.trim() || !text.trim()}
+            disabled={busy || activeJob || !title.trim() || !text.trim() || (sourceMode === "reference" && !sourceUrl.trim())}
             onClick={() => void normalizePastedText()}
             className="mt-3 w-full rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50"
           >
-            {busy ? "Normalizing…" : "Normalize pasted source"}
+            {busy ? "Normalizing…" : sourceMode === "reference" ? "Normalize linked source record" : "Normalize pasted source"}
           </button>
+          </>}
 
-          <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wider text-ink-soft">
-            <span className="h-px flex-1 bg-ink/10" /> or upload a file
-            <span className="h-px flex-1 bg-ink/10" />
-          </div>
-
+          {sourceMode === "files" && <div className="mt-5">
           <label
             htmlFor="source-file"
             aria-disabled={busy || activeJob}
@@ -528,7 +618,7 @@ export default function SourceCreator() {
             onDrop={(event) => {
               event.preventDefault();
               setDragActive(false);
-              if (!busy && !activeJob) void normalizeFile(event.dataTransfer.files[0]);
+              if (!busy && !activeJob) void normalizeFiles(Array.from(event.dataTransfer.files));
             }}
             className={`flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed px-5 py-5 text-center transition ${
               busy || activeJob
@@ -539,30 +629,32 @@ export default function SourceCreator() {
             }`}
           >
             <span className="font-medium text-lapis-dark">
-              {busy ? "Normalizing source…" : dragActive ? "Drop the source here" : "Choose or drop TXT, Markdown or PDF"}
+              {busy ? "Normalizing source set…" : dragActive ? "Drop the source set here" : "Choose or drop up to 8 source files"}
             </span>
             <span className="mt-1 text-sm text-ink-soft">
-              PDF must contain selectable text. OCR is intentionally unsupported.
+              TXT, Markdown and selectable-text PDF. Use a chapter or bounded excerpt for long books.
             </span>
           </label>
           <input
             ref={fileInput}
             id="source-file"
             type="file"
+            multiple
             accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
             disabled={busy || activeJob}
             onChange={(event) => {
               const input = event.currentTarget;
-              void normalizeFile(input.files?.[0]).finally(() => {
+              void normalizeFiles(Array.from(input.files ?? [])).finally(() => {
                 input.value = "";
               });
             }}
             className="sr-only"
           />
           <p className="mt-3 text-xs leading-relaxed text-ink-soft">
-            Limits: {(MAX_SOURCE_BYTES / 1024 / 1024).toFixed(0)} MB, {MAX_SOURCE_PAGES}{" "}
-            pages, {MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")} normalized characters.
+            Combined limits: 8 files, {(MAX_SOURCE_BYTES / 1024 / 1024).toFixed(0)} MB, {MAX_SOURCE_PAGES}{" "}
+            pages and {MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")} normalized characters. File bytes are never kept in the browser draft.
           </p>
+          </div>}
 
         </section>
 
@@ -594,6 +686,15 @@ export default function SourceCreator() {
                   <dd className="mt-1 font-semibold">{document.charCount.toLocaleString()}</dd>
                 </div>
               </dl>
+              {document.sourceReference && (
+                <div className="mt-4 rounded-lg border border-lapis/15 bg-lapis-soft/60 p-3 text-sm">
+                  <p className="font-semibold capitalize">{document.sourceReference.kind.replaceAll("_", " ")} reference</p>
+                  <a href={document.sourceReference.url} target="_blank" rel="noreferrer" className="mt-1 block break-all text-xs font-medium text-lapis-dark underline underline-offset-4">
+                    {document.sourceReference.url}
+                  </a>
+                  <p className="mt-2 text-xs leading-5 text-ink-soft">Reference metadata is hash-bound to this record. Course claims still derive only from the normalized text shown below.</p>
+                </div>
+              )}
               <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-3 text-xs">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-ink-soft">Document SHA-256</p>
