@@ -15,7 +15,7 @@
 - [ ] Add supervised youth mode and product-level deletion
 - [x] Complete production browser matrix and canonical screenshots
 - [x] Final suite/build/audit and README
-- [ ] Create reviewable commits, push the branch and open a draft PR
+- [x] Create reviewable commits, push the branch and open draft PR #7
 
 ## Completed locally in this redesign pass
 
