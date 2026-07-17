@@ -1,5 +1,7 @@
 # Improvement verification log
 
+> Historical baseline only. Current candidate evidence is recorded in `docs/redesign/VERIFICATION_LOG.md`.
+
 ## Baseline — 2026-07-17
 
 | Command or check | Result | Route / viewport | Evidence / issue |

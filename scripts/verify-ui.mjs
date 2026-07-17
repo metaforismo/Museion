@@ -474,7 +474,9 @@ async function desktopFlow() {
 
   await page.goto(`${baseURL}/welcome`);
   await page.getByRole("button", { name: "Skip" }).click();
-  await page.waitForURL((url) => url.pathname === "/");
+  await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
+  await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "onboarding dashboard destination");
+  await page.goto(`${baseURL}/`);
   await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "landing heading");
   await expectVisible(page.getByText("The model is useful. It is not the authority."), "product contract");
   await expectVisible(page.getByRole("link", { name: "Open Museion", exact: true }), "workspace entry");
@@ -486,27 +488,28 @@ async function desktopFlow() {
   await expectVisible(page.getByRole("heading", { name: /Build the foundations through active practice/ }), "library heading");
   await page.keyboard.press("/");
   const catalogSearch = page.getByLabel("Find a lesson or concept");
+  const catalogResults = page.getByRole("region", { name: "Lesson catalog results" });
   if (!(await catalogSearch.evaluate((input) => input === document.activeElement))) {
     failures.push("catalog: slash shortcut did not focus search");
   }
   await catalogSearch.fill("binary");
-  await expectVisible(page.getByRole("link", { name: /Binary Numbers/ }), "catalog concept search");
-  if (await page.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
+  await expectVisible(catalogResults.getByRole("link", { name: /Binary Numbers/ }), "catalog concept search");
+  if (await catalogResults.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
     failures.push("catalog: search retained a non-matching lesson");
   }
   await catalogSearch.fill("concept-that-does-not-exist");
-  await expectVisible(page.getByRole("heading", { name: "No lesson matches yet" }), "catalog empty state");
+  await expectVisible(catalogResults.getByRole("heading", { name: "No lesson matches yet" }), "catalog empty state");
   await page.getByRole("button", { name: "Reset the catalog" }).click();
   await page.getByRole("button", { name: "Computer Science" }).click();
-  await expectVisible(page.getByRole("link", { name: /Binary Numbers/ }), "catalog subject filter");
-  if (await page.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
+  await expectVisible(catalogResults.getByRole("link", { name: /Binary Numbers/ }), "catalog subject filter");
+  if (await catalogResults.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
     failures.push("catalog: subject filter retained an algebra lesson");
   }
   await page.getByRole("button", { name: "Clear search and filters" }).click();
-  await expectVisible(page.getByRole("link", { name: /Solving Linear Equations/ }), "catalog reset");
+  await expectVisible(catalogResults.getByRole("link", { name: /Solving Linear Equations/ }), "catalog reset");
   await page.screenshot({ path: path.join(outputDir, "desktop-catalog.png"), fullPage: true });
 
-  await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
+  await catalogResults.getByRole("link", { name: /Solving Linear Equations/ }).click();
   await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "first lesson step");
 
   let rapidAnswerRequests = 0;
@@ -585,7 +588,7 @@ async function desktopFlow() {
   await expectVisible(page.getByText(/Observed in guided work|Hint-free practice completed/).first(), "recorded evidence state");
   await expectVisible(page.getByText(/Retention is not measured/), "retention boundary");
 
-  await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Create from source", exact: true }).click();
+  await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
   await expectVisible(page.getByText("After source review", { exact: true }), "sequential creator progress");
   const currentCreatorStep = page.locator('[aria-label="Creator progress"] [aria-current="step"]');
@@ -604,6 +607,7 @@ async function desktopFlow() {
     failures.push("creator: cancelling draft deletion changed the source text");
   }
   await page.reload();
+  await page.waitForFunction(() => document.querySelector("#source-text")?.value.includes("Binary search invariant"));
   if (!(await page.getByLabel("Paste source text").inputValue()).includes("Binary search invariant")) {
     failures.push("creator: local text draft did not restore after refresh");
   }
@@ -734,13 +738,15 @@ async function mobileFlow() {
   await page.screenshot({ path: path.join(outputDir, "mobile-onboarding.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Skip" }).click();
-  await page.waitForURL((url) => url.pathname === "/");
+  await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
+  await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "mobile onboarding dashboard destination");
+  await page.goto(`${baseURL}/`);
   await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "mobile redesigned home");
   const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   if (homeOverflow) failures.push("mobile homepage: horizontal overflow");
   await page.screenshot({ path: path.join(outputDir, "mobile-home.png"), fullPage: true });
   await page.goto(`${baseURL}/library`);
-  await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
+  await page.getByRole("region", { name: "Lesson catalog results" }).getByRole("link", { name: /Solving Linear Equations/ }).click();
   await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "mobile lesson");
   await expectVisible(page.getByRole("button", { name: "Ask Maia" }), "mobile collapsed Maia trigger");
   if (await page.getByRole("log", { name: "Conversation with Maia" }).count()) failures.push("mobile lesson: Maia conversation is expanded before the learner asks");

@@ -1,5 +1,7 @@
 # Museion visual audit
 
+> Historical snapshot from the pre-V2 audit. Current visual decisions are documented under `docs/redesign/`.
+
 Audit date: 2026-07-17. Baseline revision: `c1968fe`. This audit uses the production build, the in-app Browser at 390 x 844, and existing Playwright screenshots under `output/playwright/smoke/`.
 
 ## Priority summary

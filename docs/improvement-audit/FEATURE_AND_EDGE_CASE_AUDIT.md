@@ -1,5 +1,7 @@
 # Feature and edge-case audit
 
+> Historical snapshot from the pre-V2 audit. Current conclusions and remaining boundaries live in `docs/redesign/EDGE_CASE_AUDIT.md`.
+
 Audit date: 2026-07-17. Findings are source-backed and prioritized; speculative roadmap items are separated from confirmed gaps.
 
 ## P0

@@ -30,6 +30,8 @@ Museion is not a chat wrapper. It turns authorized source material into a bounde
 
 The Build Week release includes a research-led source-to-learning homepage, responsive learning workspace, global lesson/concept search, deterministic review queue, creator provenance review, polished keyless replay, and explicit limitations for the current persistence model.
 
+Its visible learning protocol is **Ground → Predict → Interact → Diagnose → Explain → Transfer → Revisit**. The final two moves are intentionally narrow: transfer is one immediate unassisted observation, while delayed revisit is only partially implemented.
+
 ## Product tour
 
 ### Source-grounded learning, before the first click
@@ -52,11 +54,17 @@ The application-wide command palette searches real destinations, authored lesson
 
 ![Museion mobile dashboard with its next action, review queue, and bottom navigation](docs/assets/screenshots/dashboard-mobile.png)
 
+### Maia lives inside the learning move
+
+Maia is an original Museion companion—a “living idea” manually reconstructed as flat SVG after Imagegen concept exploration. She can question, point and annotate registered lesson targets; all learner-visible model text is leak-gated before delivery, and chat stops auto-scrolling when the learner reads an earlier message.
+
+![Maia providing bounded deterministic guidance beside a checked misconception](docs/assets/screenshots/maia-intervention-desktop.png)
+
 ### Source, review, learn, observe
 
-| Creator Studio | Deterministic review |
+| Creator Studio | Source-grounded course review |
 |---|---|
-| ![Museion Creator Studio](docs/assets/screenshots/creator-desktop.png) | ![Museion deterministic review queue](docs/assets/screenshots/review-desktop.png) |
+| ![Museion Creator Studio](docs/assets/screenshots/creator-desktop.png) | ![Museion source-grounded course review](docs/assets/screenshots/course-review-desktop.png) |
 
 | Focused lesson | Evidence boundary |
 |---|---|
@@ -64,14 +72,14 @@ The application-wide command palette searches real destinations, authored lesson
 
 ## Why
 
-Generic LLM chatbots harm learning not by being wrong, but by being right **too early**: they hand over answers and skip the cognitive work that produces learning. A field experiment with ~1,000 high-school students (Bastani et al., *PNAS* 2025) found that unrestricted GPT access boosted in-session performance by 48% — and **lowered** unassisted exam scores by 17%. The "crutch effect" is real. A guardrailed tutor that gives hints instead of answers eliminated that harm.
+Giving an answer too early can improve assisted performance without improving learning. In one randomized field experiment with nearly 1,000 Turkish high-school mathematics students, unrestricted GPT improved practice performance but reduced subsequent unassisted performance; a guardrailed tutor improved practice while substantially mitigating that negative effect. That result motivates Museion’s constraints, but its population, prompts and outcomes do not establish a Museion effect.
 
 Museion is built around that finding, plus the rest of the learning-science stack:
 
 | Design principle | Evidence |
 |---|---|
-| Tutor must not reveal answers; it scaffolds reasoning | Bastani et al. 2025 (crutch effect); Kestin et al. 2025 (well-designed AI tutor ≈ 2× learning gains vs. active classroom) |
-| Step-based tutoring, not answer-based | VanLehn 2011: step-granularity ITS reach *d* = 0.76, close to human tutors (*d* = 0.79); answer-based systems lag far behind |
+| Tutor must not reveal answers; it scaffolds reasoning | Bastani et al. 2025 motivates guarded tutoring; Kestin et al. 2025 reports higher immediate post-test performance in one expert-designed Harvard physics context |
+| Step-based tutoring, not answer-based | VanLehn 2011 reviews tutoring systems by interaction granularity; Museion treats this as a design hypothesis, not a borrowed effect size |
 | Help must fade as mastery grows | Scaffolding & fading (Wood, Bruner & Ross 1976); expertise reversal effect (Kalyuga & Sweller): guidance that helps novices hurts experts |
 | Some help is necessary — pure discovery fails | Kirschner, Sweller & Clark 2006; the "assistance dilemma" (Koedinger & Aleven 2007): the question is *how much help, when* |
 | Measure learning, not performance | Soderstrom & Bjork: in-session success with help is performance; what counts is delayed, unassisted transfer |
@@ -147,11 +155,11 @@ The balanced Build Week policy routes Source Graph extraction to `gpt-5.6-luna`,
 The Build Week source path starts at `/create`: paste text/Markdown or choose a selectable-text PDF, then inspect normalized pages, warnings, and SHA-256 hashes. The checked six-page binary-search source resolves to `/create/review`, where concepts, claims, exact quotations, blueprint objectives, block citations, hashes, and blocking validators are inspectable. `/judge` then runs the complete keyless replay: five artifact-driven blocks, one locked near-transfer attempt, and a reconciled evidence ledger. Arbitrary sources remain normalized but are not falsely presented as compiled until a live provider has produced and passed every validator.
 
 ```bash
-npm test        # 163 offline tests; 17 explicit live cases skip without opt-in
+npm test        # offline suite; explicit live cases skip without opt-in
 npm run build   # production build
 # With `npm run dev` running in another terminal:
 npm run verify:ui  # Chrome: legacy path + full judge path 20× desktop and once at 320 px
-npm run screenshots # regenerate the 9 README/product screenshots from real routes
+npm run screenshots # regenerate 14 README/product screenshots from real routes
 ```
 
 ## Project layout

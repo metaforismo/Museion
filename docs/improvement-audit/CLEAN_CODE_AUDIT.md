@@ -1,5 +1,7 @@
 # Clean-code audit
 
+> Historical snapshot from the pre-V2 audit. Current conclusions and remaining boundaries live in `docs/redesign/CLEAN_CODE_AUDIT.md`.
+
 Audit date: 2026-07-17.
 
 ## P1 component boundaries

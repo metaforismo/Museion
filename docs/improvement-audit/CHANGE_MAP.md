@@ -1,5 +1,7 @@
 # Local change map
 
+> Historical snapshot from the pre-V2 audit. For current scope and delivery status, use `docs/redesign/CHANGE_MAP.md` and `docs/redesign/VERIFICATION_LOG.md`.
+
 All work in this audit remains local and uncommitted. This map groups files into coherent future review units; it does not authorize staging, commits, pushes, pull requests, deployment, or submission.
 
 ## Future review unit 1 — Visual system and learner navigation
