@@ -94,6 +94,22 @@ export function getSessionForLearner(
   return session;
 }
 
+/**
+ * Return a learner's recent sessions without touching their TTL timestamps.
+ *
+ * Dashboard reads must not accidentally keep abandoned sessions alive. The
+ * returned array is newest-first and remains server-only: answers and private
+ * verifier results must never be serialized wholesale to the browser.
+ */
+export function listSessionsForLearner(learnerId: string): LearnerSession[] {
+  pruneSessions();
+  return [...sessionLearners.entries()]
+    .filter(([, owner]) => owner === learnerId)
+    .sort(([left], [right]) => (sessionTouched.get(right) ?? 0) - (sessionTouched.get(left) ?? 0))
+    .map(([sessionId]) => sessions.get(sessionId))
+    .filter((session): session is LearnerSession => Boolean(session));
+}
+
 // -- learner profiles ----------------------------------------------------
 
 export function getOrCreateProfile(learnerId: string): LearnerProfile {

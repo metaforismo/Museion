@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "verify:ui": "node scripts/verify-ui.mjs",
     "verify:bundle": "node scripts/verify-bundle.mjs",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "generate:golden-source": "node scripts/generate-golden-source.mjs",
     "generate:golden-course": "node scripts/generate-golden-course.mjs",
     "redteam": "vitest run tests/redteam.live.test.ts"

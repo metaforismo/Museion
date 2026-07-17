@@ -36,6 +36,7 @@ export default function MaiaPanel({
   const [deliverySource, setDeliverySource] = useState<MaiaResponse["source"] | null>(null);
   const [resolvedModel, setResolvedModel] = useState<string | null>(null);
   const [retryMessage, setRetryMessage] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastOutboxId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
@@ -53,6 +54,7 @@ export default function MaiaPanel({
       const message = text.trim();
       if (!message || sendInFlight.current) return false;
       sendInFlight.current = true;
+      setMobileOpen(true);
       const scope = `${sessionId}:${stepId}`;
       setStreaming(true);
       setDeliverySource(null);
@@ -148,7 +150,7 @@ export default function MaiaPanel({
   return (
     <aside
       aria-label="Maia, your tutor"
-      className="flex h-[36rem] min-w-0 flex-col rounded-xl border border-ink/10 bg-surface shadow-sm lg:sticky lg:top-6"
+      className="min-w-0 rounded-xl border border-ink/10 bg-surface shadow-sm lg:sticky lg:top-6"
     >
       <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
         <span
@@ -163,18 +165,20 @@ export default function MaiaPanel({
             asks the right questions — never gives the answer
           </p>
         </div>
-        <span className={`ml-auto rounded-md px-2 py-1 text-[0.68rem] font-semibold ${deliverySource === "deterministic" ? "bg-gold-soft text-ink" : "bg-correct-soft text-correct"}`}>
-          {deliverySource === "openai-codex" ? resolvedModel ?? "GPT-5.6 Terra" : deliverySource === "openai-api" ? "OpenAI API" : deliverySource === "deterministic" ? "Verified fallback" : "Grounded tutor"}
-        </span>
+        <button type="button" aria-expanded={mobileOpen} aria-controls="maia-conversation" onClick={() => setMobileOpen((open) => !open)} className="ml-auto min-h-11 rounded-lg px-3 text-sm font-semibold text-lapis-dark lg:hidden">{mobileOpen ? "Close" : "Ask Maia"}</button>
       </div>
-
-      <div
-        ref={scrollRef}
-        role="log"
-        aria-live="polite"
-        aria-label="Conversation with Maia"
-        className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
-      >
+      <div id="maia-conversation" className={`${mobileOpen ? "flex" : "hidden"} h-[28rem] flex-col lg:flex lg:h-[32rem]`}>
+        <details className="border-b border-ink/10 px-4 py-2 text-xs text-ink-soft">
+          <summary className="cursor-pointer font-medium">Tutor status</summary>
+          <p className="mt-2">{deliverySource === "openai-codex" ? resolvedModel ?? "GPT-5.6 Terra via Codex" : deliverySource === "openai-api" ? "OpenAI API" : deliverySource === "deterministic" ? "Verified deterministic guidance" : "Grounded tutor ready"}</p>
+        </details>
+        <div
+          ref={scrollRef}
+          role="log"
+          aria-live="polite"
+          aria-label="Conversation with Maia"
+          className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+        >
         {messages.length === 0 && (
           <div className="text-sm text-ink-soft">
             <p>
@@ -209,9 +213,9 @@ export default function MaiaPanel({
               (streaming && i === messages.length - 1 ? "…" : "")}
           </div>
         ))}
-      </div>
+        </div>
 
-      <form
+        <form
         onSubmit={(e) => {
           e.preventDefault();
           if (send(input)) setInput("");
@@ -236,7 +240,8 @@ export default function MaiaPanel({
           />
           {streaming ? <button type="button" onClick={() => requestController.current?.abort()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium">Cancel</button> : <button type="submit" disabled={!input.trim()} className="rounded-lg bg-lapis px-4 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50">Send</button>}
         </div>
-      </form>
+        </form>
+      </div>
     </aside>
   );
 }

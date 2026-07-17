@@ -6,8 +6,10 @@ import { chromium } from "playwright";
 
 const baseURL = process.env.MUSEION_BASE_URL ?? "http://localhost:3000";
 const outputDir = path.resolve("output/playwright/smoke");
+const readmeImageDir = path.resolve("docs/images");
 const pdfFixture = path.resolve("tests/fixtures/binary-search-golden-source.pdf");
 await mkdir(outputDir, { recursive: true });
+await mkdir(readmeImageDir, { recursive: true });
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const failures = [];
@@ -56,6 +58,9 @@ async function accessibilityFlow() {
     "/",
     "/welcome",
     "/create",
+    "/dashboard",
+    "/library",
+    "/review",
     "/settings",
     "/create/review",
     "/judge",
@@ -82,11 +87,11 @@ async function accessibilityFlow() {
   await mobile.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
   const mobilePage = await mobile.newPage();
   watch(mobilePage, "accessibility-mobile");
-  for (const route of ["/", "/create", "/settings", "/judge"]) {
+  for (const route of ["/", "/dashboard", "/library", "/review", "/progress", "/create", "/settings", "/judge"]) {
     await mobilePage.goto(`${baseURL}${route}`);
     await mobilePage.locator("main").waitFor({ state: "visible" });
     await scanPage(mobilePage, `mobile ${route}`);
-    const currentLink = mobilePage.getByRole("navigation", { name: "Primary navigation" }).locator('[aria-current="page"]:visible');
+    const currentLink = mobilePage.getByRole("navigation", { name: "Mobile navigation" }).locator('[aria-current="page"]:visible');
     if (await currentLink.count()) {
       const visible = await currentLink.evaluate((link) => {
         const rect = link.getBoundingClientRect();
@@ -111,35 +116,31 @@ async function mobileNavigationFlow() {
   await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
   const page = await context.newPage();
   watch(page, "mobile-navigation");
-  await page.goto(`${baseURL}/`);
+  await page.goto(`${baseURL}/progress`);
 
-  const moreButton = page.getByRole("button", { name: "More pages" });
-  await keyboardActivate(page, moreButton);
+  const menuButton = page.getByRole("button", { name: "Open navigation" });
+  await keyboardActivate(page, menuButton);
+  await expectVisible(page.getByRole("complementary", { name: "Application navigation" }), "mobile navigation drawer");
   await expectVisible(page.getByRole("link", { name: "Settings", exact: true }), "mobile Settings destination");
+  if (!(await page.getByRole("button", { name: "Close", exact: true }).evaluate((button) => button === document.activeElement))) {
+    failures.push("mobile navigation: close button did not receive focus when the drawer opened");
+  }
   await page.keyboard.press("Escape");
-  if (await page.locator("#mobile-more-navigation").count()) failures.push("mobile navigation: Escape did not close the More menu");
-  if (!(await moreButton.evaluate((button) => button === document.activeElement))) {
-    failures.push("mobile navigation: focus did not return to the More button after Escape");
+  if (await page.locator("#mobile-app-navigation").count()) failures.push("mobile navigation: Escape did not close the drawer");
+  if (!(await menuButton.evaluate((button) => button === document.activeElement))) {
+    failures.push("mobile navigation: focus did not return to the menu button after Escape");
   }
 
-  await moreButton.click();
+  await menuButton.click();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.waitForURL((url) => url.pathname === "/settings");
-  const settingsButton = page.getByRole("button", { name: /Settings, current page; more pages/ });
-  if ((await settingsButton.getAttribute("aria-current")) !== "page") {
-    failures.push("mobile navigation: current secondary page is not exposed on the compact navigation");
+  await menuButton.click();
+  const activeSettings = page.getByRole("link", { name: "Settings", exact: true });
+  if ((await activeSettings.getAttribute("aria-current")) !== "page") {
+    failures.push("mobile navigation: current page is not exposed in the drawer");
   }
-  const mobileHeaderCollision = await page.evaluate(() => {
-    const brand = document.querySelector("[data-mobile-brand]");
-    const navigation = document.querySelector('nav[aria-label="Primary navigation"]');
-    if (!(brand instanceof HTMLElement) || !(navigation instanceof HTMLElement)) return true;
-    const brandRect = brand.getBoundingClientRect();
-    const navigationRect = navigation.getBoundingClientRect();
-    return brandRect.right > navigationRect.left;
-  });
-  if (mobileHeaderCollision) failures.push("mobile navigation: brand and compact navigation overlap");
   if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) {
-    failures.push("mobile navigation: compact header causes horizontal overflow");
+    failures.push("mobile navigation: drawer causes horizontal overflow");
   }
   await context.close();
 }
@@ -189,9 +190,9 @@ async function keyboardJudgeFlow() {
   await expectVisible(page.getByText("The reasoning order is valid."), "keyboard sequence");
   await keyboardActivate(page, page.getByRole("button", { name: /Finish lesson/ }));
 
-  await keyboardActivate(page, page.getByRole("button", { name: "Start locked transfer" }));
+  await keyboardActivate(page, page.getByRole("button", { name: "Start independent challenge" }));
   await expectVisible(page.getByText("Maia 0 · hints 0 · solutions 0"), "keyboard transfer lock");
-  await keyboardFill(page, page.getByLabel("Final index"), "4");
+  await keyboardFill(page, page.getByLabel("Your number"), "4");
   await keyboardActivate(page, page.getByRole("button", { name: "Submit only attempt" }));
   await expectVisible(page.getByRole("heading", { name: "Correct" }), "keyboard transfer result");
   await expectVisible(page.getByRole("heading", { name: "Evidence ledger" }), "keyboard evidence ledger");
@@ -280,6 +281,7 @@ async function staleMaiaFlow() {
     await new Promise((resolve) => setTimeout(resolve, 3_000));
     await route.continue();
   });
+  await page.getByRole("button", { name: "Ask Maia" }).click();
   await page.getByLabel("Message for Maia").fill("Explain this step without giving the answer");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("button", { name: /Continue/ }).click();
@@ -330,6 +332,7 @@ async function staleQueuedOutboxFlow() {
 
   await page.goto(`${baseURL}/lessons/linear-equations-intro`);
   await submitTextAnswer(page, "6");
+  await page.getByRole("button", { name: "Ask Maia" }).click();
   await page.getByLabel("Message for Maia").fill("Explain this step without giving the answer");
   await page.getByRole("button", { name: "Send" }).click();
   await expectVisible(page.getByRole("button", { name: "Cancel" }), "Maia request before queued self-explanation");
@@ -419,11 +422,15 @@ async function desktopFlow() {
   await page.goto(`${baseURL}/welcome`);
   await page.getByRole("button", { name: "Skip" }).click();
   await page.waitForURL((url) => url.pathname === "/");
-  await expectVisible(page.getByRole("heading", { name: /Learn by reasoning/ }), "catalog heading");
-  await expectVisible(page.getByText("Every link in the chain is inspectable."), "source-to-evidence narrative");
-  const activeLessons = await page.getByRole("link", { name: "Lessons", exact: true }).getAttribute("aria-current");
-  if (activeLessons !== "page") failures.push("desktop: Lessons navigation is not marked current");
+  await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "landing heading");
+  await expectVisible(page.getByText("The model is useful. It is not the authority."), "product contract");
+  await expectVisible(page.getByRole("link", { name: "Open Museion", exact: true }), "workspace entry");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(150);
+  await page.screenshot({ path: path.join(readmeImageDir, "museion-landing.png"), fullPage: false });
 
+  await page.goto(`${baseURL}/library`);
+  await expectVisible(page.getByRole("heading", { name: /Build the foundations through active practice/ }), "library heading");
   await page.keyboard.press("/");
   const catalogSearch = page.getByLabel("Find a lesson or concept");
   if (!(await catalogSearch.evaluate((input) => input === document.activeElement))) {
@@ -505,19 +512,27 @@ async function desktopFlow() {
   await page.screenshot({ path: path.join(outputDir, "desktop-complete.png"), fullPage: true });
 
   await page.getByRole("link", { name: /Try practice mode/ }).click();
-  await expectVisible(page.getByText(/Practice mode: no hint ladder/), "practice mode");
+  await expectVisible(page.getByText(/Practice mode removes the hint ladder/), "practice mode");
   if (await page.getByRole("button", { name: "Take a hint" }).count()) {
     failures.push("practice: hint control is visible");
   }
 
-  await page.getByRole("link", { name: "Progress", exact: true }).click();
-  await expectVisible(page.getByRole("heading", { name: "My progress" }), "progress page");
-  await expectVisible(page.getByText("Solving Linear Equations").first(), "completed lesson progress");
-  await expectVisible(page.getByText(/not proof of durable mastery or transfer/), "truthful progress boundary");
-  await expectVisible(page.getByRole("progressbar", { name: /adaptive support estimate/ }).first(), "accessible support estimate");
-  await expectVisible(page.getByRole("link", { name: "Practice without hints" }).first(), "recommended practice action");
+  await page.goto(`${baseURL}/dashboard`);
+  await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "dashboard page");
+  await expectVisible(page.getByText("Review queue", { exact: true }), "dashboard review queue");
+  await expectVisible(page.getByText(/not proof of retained mastery/), "truthful dashboard boundary");
+  await expectVisible(page.getByRole("heading", { name: "What the record supports" }), "dashboard evidence summary");
+  const activeProgress = await page.getByRole("link", { name: "Home", exact: true }).getAttribute("aria-current");
+  if (activeProgress !== "page") failures.push("dashboard: Home navigation is not marked current");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(150);
+  await page.screenshot({ path: path.join(readmeImageDir, "museion-dashboard.png"), fullPage: false });
+  await page.goto(`${baseURL}/progress`);
+  await expectVisible(page.getByRole("heading", { name: /What Museion observed/ }), "evidence page");
+  await expectVisible(page.getByText(/Observed in guided work|Hint-free practice completed/).first(), "recorded evidence state");
+  await expectVisible(page.getByText(/Retention is not measured/), "retention boundary");
 
-  await page.getByRole("link", { name: "Create", exact: true }).click();
+  await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Create from source", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
   await expectVisible(page.getByText("After source review", { exact: true }), "sequential creator progress");
   const currentCreatorStep = page.locator('[aria-label="Creator progress"] [aria-current="step"]');
@@ -585,7 +600,7 @@ async function desktopFlow() {
   await expectVisible(page.getByText("Verified replay", { exact: true }), "compiler-run learner launch");
   await expectVisible(page.getByRole("heading", { name: /Binary Search/ }), "compiler-run learner title");
 
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.goto(`${baseURL}/settings`);
   await expectVisible(page.getByRole("heading", { name: "Choose how Museion thinks." }), "AI settings");
   await expectVisible(page.getByText("Local AI disabled", { exact: true }).first(), "hosted-safe AI state");
   await expectVisible(page.getByRole("list", { name: "Live AI readiness" }), "AI readiness checklist");
@@ -667,19 +682,28 @@ async function mobileFlow() {
 
   await page.getByRole("button", { name: "Skip" }).click();
   await page.waitForURL((url) => url.pathname === "/");
-  await expectVisible(page.getByRole("heading", { name: /Learn by reasoning/ }), "mobile redesigned home");
+  await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "mobile redesigned home");
   const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   if (homeOverflow) failures.push("mobile homepage: horizontal overflow");
   await page.screenshot({ path: path.join(outputDir, "mobile-home.png"), fullPage: true });
+  await page.goto(`${baseURL}/library`);
   await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
   await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "mobile lesson");
+  await expectVisible(page.getByRole("button", { name: "Ask Maia" }), "mobile collapsed Maia trigger");
+  if (await page.getByRole("log", { name: "Conversation with Maia" }).count()) failures.push("mobile lesson: Maia conversation is expanded before the learner asks");
+  const titleCollidesWithStep = await page.evaluate(() => {
+    const title = document.querySelector("main h1")?.getBoundingClientRect();
+    const step = [...document.querySelectorAll("main span")].find((node) => node.textContent?.startsWith("Step "))?.getBoundingClientRect();
+    return Boolean(title && step && !(title.right <= step.left || step.right <= title.left || title.bottom <= step.top || step.bottom <= title.top));
+  });
+  if (titleCollidesWithStep) failures.push("mobile lesson: title overlaps the step count");
   const lessonOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
   if (lessonOverflow) failures.push("mobile lesson: horizontal overflow");
   await page.screenshot({ path: path.join(outputDir, "mobile-lesson.png"), fullPage: true });
 
-  await page.getByRole("link", { name: "Create", exact: true }).click();
+  await page.goto(`${baseURL}/create`);
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "mobile source creator");
   const creatorOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -728,13 +752,13 @@ async function completeJudge(page, label, takeScreenshot = false) {
   await expectVisible(page.getByText("The reasoning order is valid."), `${label} sequence`);
   await page.getByRole("button", { name: /Finish lesson/ }).click();
 
-  await page.getByRole("button", { name: "Start locked transfer" }).click();
+  await page.getByRole("button", { name: "Start independent challenge" }).click();
   await expectVisible(page.getByText("Maia 0 · hints 0 · solutions 0"), `${label} transfer lock`);
-  await page.getByLabel("Final index").fill("4.5");
-  await page.getByLabel("Final index").blur();
-  await expectVisible(page.getByText(/Enter one whole-number index/), `${label} transfer integer validation`);
-  if (await page.getByRole("button", { name: "Submit only attempt" }).isEnabled()) failures.push(`${label}: invalid decimal transfer answer can be submitted`);
-  await page.getByLabel("Final index").fill("4");
+  await page.getByLabel("Your number").fill("not-a-number");
+  await page.getByLabel("Your number").blur();
+  await expectVisible(page.getByText("Enter a valid number."), `${label} transfer numeric validation`);
+  if (await page.getByRole("button", { name: "Submit only attempt" }).isEnabled()) failures.push(`${label}: invalid numeric transfer answer can be submitted`);
+  await page.getByLabel("Your number").fill("4");
   await page.getByRole("button", { name: "Submit only attempt" }).click();
   await expectVisible(page.getByRole("heading", { name: "Correct" }), `${label} transfer result`);
   await expectVisible(page.getByRole("heading", { name: "Evidence ledger" }), `${label} evidence ledger`);
@@ -753,7 +777,7 @@ async function judgeRecoveryFlow() {
   await page.evaluate((id) => localStorage.setItem(`museion_judge_session_v1:${id}:block`, "999"), sessionId);
   await page.reload();
   await expectVisible(page.getByRole("radio").first(), "judge recovery clamps skipped interactive block");
-  if (await page.getByRole("button", { name: "Start locked transfer" }).count()) failures.push("judge recovery: corrupted local index skipped to transfer");
+  if (await page.getByRole("button", { name: "Start independent challenge" }).count()) failures.push("judge recovery: corrupted local index skipped to transfer");
 
   await page.route(`**/api/judge/${sessionId}`, (route) => route.request().method() === "GET"
     ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "temporary outage" }) })

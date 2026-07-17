@@ -129,4 +129,24 @@ describe("Maia pre-delivery gate", () => {
     await expect(pending).rejects.toThrow(/Session changed/);
     expect(learner.chatHistory).toEqual([]);
   });
+
+  it("does not mutate the session when a live Maia request is cancelled", async () => {
+    const controller = new AbortController();
+    const provider: TutorProvider = {
+      id: "cancelled",
+      available: () => true,
+      generate: (_context, options) => new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      }),
+    };
+    const learner = session();
+    const pending = maiaRespond(learner, "Help", provider, controller.signal);
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(learner.version).toBe(0);
+    expect(learner.revealedHints()).toEqual([]);
+    expect(learner.chatHistory).toEqual([]);
+    expect(learner.events).toEqual([]);
+  });
 });

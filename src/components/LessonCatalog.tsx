@@ -175,7 +175,7 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
                   </div>
                   {lesson.practiceAvailable && (
                     <p className={`mt-4 border-t pt-3 text-xs font-medium ${featured ? "border-white/10 text-white/65" : "border-ink/10 text-ink-soft"}`}>
-                      Unassisted practice available after the lesson
+                      Hint-free practice available after the lesson
                     </p>
                   )}
                 </Link>

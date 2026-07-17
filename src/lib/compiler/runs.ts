@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { SourceDocumentSchema, type SourceDocument } from "@/lib/source";
+import { SourceDocumentSchema, verifySourceDocumentIntegrity, type SourceDocument } from "@/lib/source";
 import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-state";
 
 import { CompilerFailure, compileCourse, type CompileAudience, type CompileResult } from "./orchestrator";
@@ -76,6 +76,7 @@ export async function createCompilerRun(
     onStage?: (stage: CompilerStage | "critic_after_repair") => void;
   } = {},
 ): Promise<CompilerRunView> {
+  await verifySourceDocumentIntegrity(document);
   const backend = stateBackend();
   await backend.prune("compiler_run");
   if ((await backend.list<CompilerRunRecord>("compiler_run", ownerId)).length >= MAX_COMPILER_RUNS_PER_OWNER) {
@@ -237,6 +238,15 @@ export function cancelCompilerRun(runId: string, ownerId: string): boolean {
 
 export async function getCompilerRun(runId: string, ownerId: string): Promise<CompilerRunView> {
   return compilerRunView(await getPrivateCompilerRun(runId, ownerId));
+}
+
+/** Recent validated courses for an owner. Private source bytes stay omitted. */
+export async function listCompilerRuns(ownerId: string): Promise<CompilerRunView[]> {
+  const records = await stateBackend().list<CompilerRunRecord>("compiler_run", ownerId);
+  return records
+    .map(({ payload }) => payload)
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+    .map(compilerRunView);
 }
 
 export async function getPrivateCompilerRun(runId: string, ownerId: string): Promise<CompilerRunRecord> {

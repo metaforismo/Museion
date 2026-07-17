@@ -12,6 +12,7 @@ import {
   normalizeSourceText,
   resolveExactSourceSpan,
   validateSourceSpan,
+  verifySourceDocumentIntegrity,
 } from "@/lib/source";
 
 const CREATED_AT = "2026-07-15T00:00:00.000Z";
@@ -39,6 +40,14 @@ describe("source normalization and provenance", () => {
     expect(first.sha256).toBe(second.sha256);
     expect(first.pages[0].sha256).toBe(second.pages[0].sha256);
     expect(first.id).toBe(second.id);
+  });
+
+  it("rejects browser-forged document identity and page metadata", async () => {
+    const document = await ingestTextSource({ title: "Trusted", text: "A source-bound claim.", createdAt: CREATED_AT });
+    await expect(verifySourceDocumentIntegrity(document)).resolves.toBeUndefined();
+    await expect(verifySourceDocumentIntegrity({ ...document, sha256: "0".repeat(64) })).rejects.toMatchObject({ code: "invalid_source" });
+    await expect(verifySourceDocumentIntegrity({ ...document, pages: [{ ...document.pages[0], text: "Changed source text." }] })).rejects.toMatchObject({ code: "invalid_source" });
+    await expect(verifySourceDocumentIntegrity({ ...document, pages: [{ ...document.pages[0], charCount: 999 }] })).rejects.toMatchObject({ code: "invalid_source" });
   });
 
   it("resolves and validates exact UTF-16 spans", async () => {

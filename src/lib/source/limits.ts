@@ -10,6 +10,7 @@ export type SourceErrorCode =
   | "textless_pdf"
   | "unsupported_media_type"
   | "invalid_pdf"
+  | "invalid_source"
   | "quote_not_found"
   | "ambiguous_quote";
 

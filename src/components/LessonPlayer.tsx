@@ -481,14 +481,14 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
               Back to lessons
             </Link>
             <span className="rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft">
-              {mode === "practice" ? "Unassisted practice" : activeLesson.track}
+              {mode === "practice" ? "Hint-free practice" : activeLesson.track}
             </span>
           </div>
-          <div className="mb-2 flex items-baseline justify-between">
-            <h1 className="font-display text-2xl font-semibold">
+          <div className="mb-2 grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-4">
+            <h1 className="min-w-0 font-display text-2xl font-semibold">
               {activeLesson.title}
             </h1>
-            <span className="text-sm text-ink-soft">
+            <span className="whitespace-nowrap text-sm text-ink-soft">
               Step {Math.min(stepIndex + 1, activeLesson.steps.length)} of{" "}
               {activeLesson.steps.length}
             </span>
@@ -516,8 +516,8 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
           </div>
           {mode === "practice" && (
             <p className="mt-2 text-xs text-ink-soft">
-              Practice mode: no hint ladder — retrieval is the workout. Maia is
-              still here if you need a question answered with a question.
+              Practice mode removes the hint ladder. Maia can still ask a guiding question,
+              so this is not the independent transfer checkpoint.
             </p>
           )}
         </div>
@@ -625,7 +625,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
               </div>
             )}
 
-            {/* Hint ladder: lesson mode only — practice is unassisted. */}
+            {/* Hint ladder: lesson mode only. Practice remains hint-free, while Maia is available. */}
             {mode === "lesson" && (
               <div className="mt-6 border-t border-ink/10 pt-4">
                 <div className="flex items-center justify-between">
@@ -685,19 +685,19 @@ function CompletionScreen({
   const practiceDone = mode === "practice";
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:py-24">
-      <p className="eyebrow">{practiceDone ? "Unassisted practice recorded" : "Lesson path completed"}</p>
+      <p className="eyebrow">{practiceDone ? "Hint-free practice recorded" : "Lesson path completed"}</p>
       <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
         {practiceDone ? "Practice complete" : "Lesson complete"}
       </h1>
       <p className="mt-4 max-w-[62ch] text-lg leading-8 text-ink-soft">
         {practiceDone
-          ? `You completed an unassisted retrieval run on “${lesson.title}”.`
+          ? `You completed a hint-free retrieval run on “${lesson.title}”.`
           : `You worked through every step of “${lesson.title}”. The real test is what stays with you — come back in a few days and try it without Maia.`}
       </p>
 
       <div className="mt-6 border-l-2 border-gold pl-4 text-sm leading-6 text-ink-soft">
         {practiceDone
-          ? "This records one completed unassisted practice run. It does not establish long-term retention or transfer."
+          ? "This records one completed hint-free practice run. Maia remained available, so this is not an unassisted transfer observation."
           : "This records completion of the assisted lesson path. Completion is not the same as proven mastery."}
       </div>
 

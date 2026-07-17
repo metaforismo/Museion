@@ -1,0 +1,17 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { buildDashboardSnapshot } from "@/lib/dashboard";
+import { readLearnerId } from "@/lib/server/learner";
+
+export const metadata: Metadata = { title: "Review", description: "A deterministic review queue from recorded learning signals." };
+export const dynamic = "force-dynamic";
+
+export default async function ReviewPage() {
+  const learnerId = await readLearnerId();
+  const snapshot = await buildDashboardSnapshot(learnerId ?? "new-learner");
+  return <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10"><header className="grid gap-5 border-b border-ink/10 pb-7 md:grid-cols-[1fr_auto] md:items-end"><div><p className="text-sm font-medium text-lapis-dark">Review</p><h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.04em]">Revisit what the record can justify.</h1><p className="mt-3 max-w-2xl leading-7 text-ink-soft">Items come from registered misconceptions or assisted completions. Museion does not invent a schedule when timestamps or retention evidence are missing.</p></div><span className="rounded-full bg-surface px-4 py-2 text-sm font-medium text-ink-soft">{snapshot.reviewQueue.length} ready</span></header>
+    <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]"><section aria-labelledby="queue-title"><h2 id="queue-title" className="text-xl font-semibold">Your queue</h2>{snapshot.reviewQueue.length ? <ol className="mt-4 space-y-3">{snapshot.reviewQueue.map((item, index) => <li key={item.id}><Link href={item.href} className="grid gap-4 rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] sm:grid-cols-[2.25rem_1fr_auto] sm:items-center"><span className="grid h-9 w-9 place-items-center rounded-xl bg-paper text-sm font-semibold tabular-nums">{index + 1}</span><span><span className="block font-semibold">{item.concept}</span><span className="mt-1 block text-sm leading-5 text-ink-soft">{item.reason}</span></span><span className="text-sm font-semibold text-lapis-dark">Review →</span></Link></li>)}</ol> : <div className="mt-4 rounded-2xl border border-dashed border-ink/15 bg-surface p-7"><h3 className="font-semibold">No review signal yet.</h3><p className="mt-2 text-sm leading-6 text-ink-soft">Complete checked work first. Your queue will stay empty rather than guessing.</p><Link href="/library" className="mt-5 inline-flex rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white">Choose a lesson</Link></div>}</section>
+      <aside className="rounded-2xl bg-ink p-6 text-white"><p className="text-xs font-medium text-gold">How ranking works</p><ol className="mt-5 space-y-4 text-sm"><li><strong className="block">1. Unresolved misconception</strong><span className="mt-1 block leading-5 text-white/60">A registered error pattern still needs correction.</span></li><li><strong className="block">2. Corrected, then rechecked</strong><span className="mt-1 block leading-5 text-white/60">A later answer was correct, but retention remains unknown.</span></li><li><strong className="block">3. Assisted completion</strong><span className="mt-1 block leading-5 text-white/60">Hint-free practice can add a distinct observation.</span></li></ol><p className="mt-6 border-t border-white/15 pt-5 text-xs leading-5 text-white/55">No streak, urgency score, or “overdue” label is inferred without a real scheduler.</p></aside>
+    </div>
+  </div>;
+}

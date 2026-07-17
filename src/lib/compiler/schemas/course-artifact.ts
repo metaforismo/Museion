@@ -186,7 +186,7 @@ export type GeneratedCourseCandidate = z.infer<typeof GeneratedCourseCandidateSc
 export type LearningBlock = z.infer<typeof LearningBlockSchema>;
 
 export interface ArtifactIssue {
-  code: "record_key_mismatch" | "dangling_reference" | "citation_not_found" | "missing_citation" | "invalid_answer_spec" | "missing_transfer" | "invalid_source_provenance" | "source_id_mismatch" | "source_hash_mismatch" | "source_graph_hash_mismatch";
+  code: "record_key_mismatch" | "dangling_reference" | "citation_not_found" | "missing_citation" | "invalid_answer_spec" | "missing_transfer" | "invalid_source_provenance" | "source_id_mismatch" | "source_hash_mismatch" | "source_graph_hash_mismatch" | "unsupported_learner_structure";
   path: string;
   message: string;
   severity: "blocking";
@@ -208,6 +208,9 @@ export function validateArtifactReferences(
   const conceptIds = new Set(artifact.concepts.map((item) => item.id));
   const answerSpecIds = new Set(Object.keys(artifact.answerSpecs));
   const misconceptionIds = new Set(Object.keys(artifact.misconceptions));
+  if (artifact.source.origin === "source_graph" && artifact.lessons.length !== 1) {
+    issues.push({ code: "unsupported_learner_structure", path: "lessons", message: "The current learner experience requires exactly one lesson", severity: "blocking" });
+  }
   if ((artifact.source.origin === "source_graph") !== (artifact.source.sourceGraphSha256 !== null)) {
     issues.push({ code: "invalid_source_provenance", path: "source.sourceGraphSha256", message: "Only source-graph artifacts may carry a Source Graph hash", severity: "blocking" });
   }
@@ -225,6 +228,9 @@ export function validateArtifactReferences(
     });
     lesson.blockIds.forEach((id) => {
       if (!artifact.blocks[id]) issues.push({ code: "dangling_reference", path: `lessons[${lessonIndex}].blockIds`, message: `Unknown block ${id}`, severity: "blocking" });
+      if (artifact.source.origin === "source_graph" && (artifact.blocks[id]?.kind === "guided-response" || artifact.blocks[id]?.kind === "transfer-challenge")) {
+        issues.push({ code: "unsupported_learner_structure", path: `lessons[${lessonIndex}].blockIds`, message: `${artifact.blocks[id].kind} must not appear in the guided lesson sequence`, severity: "blocking" });
+      }
     });
   });
   artifact.objectives.forEach((objective, objectiveIndex) => {
@@ -252,6 +258,15 @@ export function validateArtifactReferences(
     });
     if ((block.kind === "guided-response" || block.kind === "transfer-challenge") && !answerSpecIds.has(block.answerSpecId)) {
       issues.push({ code: "invalid_answer_spec", path: `blocks.${blockId}.answerSpecId`, message: `Unknown answer spec ${block.answerSpecId}`, severity: "blocking" });
+    }
+    if (block.kind === "guided-response" || block.kind === "transfer-challenge") {
+      const spec = artifact.answerSpecs[block.answerSpecId];
+      if (spec && spec.kind !== block.responseKind) {
+        issues.push({ code: "invalid_answer_spec", path: `blocks.${blockId}.responseKind`, message: `Response kind ${block.responseKind} does not match answer spec ${spec.kind}`, severity: "blocking" });
+      }
+      if (block.responseKind === "multiple-choice" && (block.options.length < 2 || (spec?.kind === "multiple-choice" && spec.correctIndex >= block.options.length))) {
+        issues.push({ code: "invalid_answer_spec", path: `blocks.${blockId}.options`, message: "Multiple-choice blocks require at least two options and a correct index inside the option list", severity: "blocking" });
+      }
     }
     if (block.kind === "prediction-choice" && block.correctIndex >= block.options.length) {
       issues.push({ code: "invalid_answer_spec", path: `blocks.${blockId}.correctIndex`, message: "Correct index is outside the option list", severity: "blocking" });
