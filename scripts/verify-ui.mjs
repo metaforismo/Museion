@@ -599,7 +599,7 @@ async function desktopFlow() {
   await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
   for (const method of ["Paste text", "Upload files", "Link + content"]) {
-    await expectVisible(page.getByRole("radio", { name: new RegExp(method) }), `creator source method: ${method}`);
+    await expectVisible(page.getByRole("radio", { name: method }), `creator source method: ${method}`);
   }
   await expectVisible(page.getByText("After source review", { exact: true }), "sequential creator progress");
   const currentCreatorStep = page.locator('[aria-label="Creator progress"] [aria-current="step"]');
