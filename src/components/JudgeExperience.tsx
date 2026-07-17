@@ -12,7 +12,7 @@ const SESSION_KEY = "museion_judge_session_v1";
 const RUN_KEY = "museion_judge_run_v1";
 
 class JudgeRequestError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(readonly status: number, readonly code: string, message: string) {
     super(message);
     this.name = "JudgeRequestError";
   }
@@ -24,6 +24,8 @@ function judgeErrorMessage(value: unknown, status: number): string {
     JUDGE_SESSION_QUOTA_EXCEEDED: "Too many replay sessions are still active. Reset an existing run or wait for an older session to expire.",
     COMPILER_RUN_NOT_FOUND: "This generated course is unavailable or belongs to a different browser session.",
     GENERATED_ROUTE_UNSUPPORTED_BLOCKS: "This course contains an activity that the learner renderer does not support yet.",
+    JUDGE_VERSION_CONFLICT: "This learning run changed in another tab. Museion restored the latest verified state.",
+    JUDGE_COMMAND_ID_REUSED: "Museion rejected a reused command whose contents changed and restored the verified state.",
   };
   return messages[code] ?? (code || `Request failed (${status})`);
 }
@@ -35,7 +37,8 @@ async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
     cache: "no-store",
   });
   const payload = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new JudgeRequestError(response.status, judgeErrorMessage(payload?.error, response.status));
+  const code = typeof payload?.error === "string" ? payload.error : "JUDGE_REQUEST_FAILED";
+  if (!response.ok) throw new JudgeRequestError(response.status, code, judgeErrorMessage(code, response.status));
   return payload as T;
 }
 
@@ -144,6 +147,28 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     setTutor(null);
   };
 
+  const handleMutationFailure = async (cause: unknown, fallback: string) => {
+    if (
+      session &&
+      cause instanceof JudgeRequestError &&
+      ["JUDGE_VERSION_CONFLICT", "JUDGE_COMMAND_ID_REUSED"].includes(cause.code)
+    ) {
+      try {
+        const restored = await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}`);
+        setSession(restored);
+        setBlockIndex(safeResumeIndex(restored, localStorage.getItem(`${sessionKey}:${session.sessionId}:block`)));
+        setFeedback(null);
+        setTutor(null);
+        setError(cause.message);
+        return;
+      } catch {
+        setError("The run changed elsewhere, but its latest state could not be restored. Reload before continuing.");
+        return;
+      }
+    }
+    setError(cause instanceof Error ? cause.message : fallback);
+  };
+
   const sendAction = async (blockId: string, action: RuntimeAction) => {
     if (!session) return;
     setBusy(true);
@@ -151,13 +176,13 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     try {
       const result = await jsonRequest<{ session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null }>(`/api/judge/${session.sessionId}/action`, {
         method: "POST",
-        body: JSON.stringify({ blockId, action }),
+        body: JSON.stringify({ blockId, action, expectedRevision: session.revision, commandId: crypto.randomUUID() }),
       });
       setSession(result.session);
       setFeedback(result.outcome.message);
       setTutor(result.tutor);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The action could not be checked.");
+      await handleMutationFailure(cause, "The action could not be checked.");
     } finally {
       setBusy(false);
     }
@@ -168,9 +193,12 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     setBusy(true);
     setError(null);
     try {
-      setSession(await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}/transfer`, { method: "POST", body: JSON.stringify({ kind: "start" }) }));
+      setSession(await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}/transfer`, {
+        method: "POST",
+        body: JSON.stringify({ kind: "start", expectedRevision: session.revision, commandId: crypto.randomUUID() }),
+      }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Transfer is still locked.");
+      await handleMutationFailure(cause, "Transfer is still locked.");
     } finally {
       setBusy(false);
     }
@@ -187,11 +215,17 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
       localStorage.setItem(attemptKey, attemptId);
       setSession(await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}/transfer`, {
         method: "POST",
-        body: JSON.stringify({ kind: "submit", attemptId, answer: transferAnswer.trim() }),
+        body: JSON.stringify({
+          kind: "submit",
+          attemptId,
+          answer: transferAnswer.trim(),
+          expectedRevision: session.revision,
+          commandId: attemptId,
+        }),
       }));
       localStorage.removeItem(attemptKey);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The transfer answer could not be scored.");
+      await handleMutationFailure(cause, "The transfer answer could not be scored.");
     } finally {
       setBusy(false);
     }

@@ -906,6 +906,52 @@ async function judgeRecoveryFlow() {
   await context.close();
 }
 
+async function judgeConcurrencyFlow() {
+  const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+  await context.addInitScript(() => localStorage.setItem("museion_judge_run_v1", "browser-concurrency-gate"));
+  const first = await context.newPage();
+  const second = await context.newPage();
+  first.on("pageerror", (error) => failures.push(`judge-concurrency-first page: ${error.message}`));
+  second.on("pageerror", (error) => failures.push(`judge-concurrency-second page: ${error.message}`));
+  await Promise.all([first.goto(`${baseURL}/judge`), second.goto(`${baseURL}/judge`)]);
+  await Promise.all([
+    expectVisible(first.getByText("Verified replay", { exact: true }), "judge concurrency first session"),
+    expectVisible(second.getByText("Verified replay", { exact: true }), "judge concurrency second session"),
+  ]);
+  const [firstId, secondId] = await Promise.all([
+    first.evaluate(() => localStorage.getItem("museion_judge_session_v1")),
+    second.evaluate(() => localStorage.getItem("museion_judge_session_v1")),
+  ]);
+  if (!firstId || firstId !== secondId) failures.push("judge concurrency: tabs did not converge on one stable session");
+
+  await Promise.all([
+    first.getByRole("button", { name: /Continue/ }).click(),
+    second.getByRole("button", { name: /Continue/ }).click(),
+  ]);
+  await Promise.all([first.getByRole("radio").first().check(), second.getByRole("radio").first().check()]);
+  await Promise.all([
+    first.getByRole("button", { name: "Check prediction" }).click(),
+    second.getByRole("button", { name: "Check prediction" }).click(),
+  ]);
+  await Promise.race([
+    first.getByText(/changed in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
+    second.getByText(/changed in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
+  ]).catch(() => failures.push("judge concurrency: conflict recovery notice did not appear"));
+  const restoredNotices = await Promise.all([
+    first.getByText(/changed in another tab/).count(),
+    second.getByText(/changed in another tab/).count(),
+  ]);
+  if (restoredNotices[0] + restoredNotices[1] !== 1) failures.push("judge concurrency: expected exactly one visible conflict recovery");
+  const authoritative = await first.evaluate(async (sessionId) => {
+    const response = await fetch(`/api/judge/${sessionId}`, { cache: "no-store" });
+    return response.json();
+  }, firstId);
+  if (authoritative.revision !== 1 || !authoritative.completedBlockIds?.includes("prediction_discard")) {
+    failures.push("judge concurrency: authoritative session did not retain exactly one completed mutation");
+  }
+  await context.close();
+}
+
 async function judgeFlow(viewport, label, repeat = 1) {
   for (let run = 1; run <= repeat; run += 1) {
     const context = await browser.newContext({ viewport });
@@ -945,6 +991,7 @@ try {
     await mobileFlow();
     await performanceBudgetFlow();
     await keyboardJudgeFlow();
+    await judgeConcurrencyFlow();
     await judgeRecoveryFlow();
     await judgeFlow({ width: 1440, height: 1000 }, "judge-desktop", 20);
     await judgeFlow({ width: 320, height: 700 }, "judge-mobile", 1);
