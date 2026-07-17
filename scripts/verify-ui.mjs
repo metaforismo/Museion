@@ -941,12 +941,12 @@ async function judgeConcurrencyFlow() {
     second.getByRole("button", { name: "Check prediction" }).click(),
   ]);
   await Promise.race([
-    first.getByText(/changed in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
-    second.getByText(/changed in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
+    first.getByText(/Updated in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
+    second.getByText(/Updated in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
   ]).catch(() => failures.push("judge concurrency: conflict recovery notice did not appear"));
   const restoredNotices = await Promise.all([
-    first.getByText(/changed in another tab/).count(),
-    second.getByText(/changed in another tab/).count(),
+    first.getByText(/Updated in another tab/).count(),
+    second.getByText(/Updated in another tab/).count(),
   ]);
   if (restoredNotices[0] + restoredNotices[1] !== 1) failures.push("judge concurrency: expected exactly one visible conflict recovery");
   const authoritative = await first.evaluate(async (sessionId) => {

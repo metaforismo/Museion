@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
 import type { JudgeSessionView } from "@/lib/judge/contracts";
 import type { RuntimeAction, RuntimeOutcome, RuntimeTutorIntervention } from "@/lib/runtime";
 
-import InteractiveBlock from "./blocks/InteractiveBlock";
+const InteractiveBlock = dynamic(() => import("./blocks/InteractiveBlock"), {
+  loading: () => <div role="status" className="mt-7 h-64 animate-pulse rounded-xl bg-ink/5"><span className="sr-only">Loading interactive activity.</span></div>,
+});
 
 const SESSION_KEY = "museion_judge_session_v1";
 const RUN_KEY = "museion_judge_run_v1";
@@ -145,7 +148,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     setTutor(null);
   };
 
-  const handleMutationFailure = async (cause: unknown, fallback: string) => {
+  const handleMutationFailure = async (cause: unknown) => {
     if (
       session &&
       cause instanceof JudgeRequestError && cause.status === 409
@@ -156,14 +159,14 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
         setBlockIndex(safeResumeIndex(restored, localStorage.getItem(`${sessionKey}:${session.sessionId}:block`)));
         setFeedback(null);
         setTutor(null);
-        setError("This run changed in another tab. Latest verified state restored.");
+        setError("Updated in another tab. Latest state restored.");
         return;
       } catch {
-        setError("Reload to restore the latest verified state.");
+        setError("Reload to restore state.");
         return;
       }
     }
-    setError(cause instanceof Error ? cause.message : fallback);
+    setError(cause instanceof Error ? cause.message : "Request failed.");
   };
 
   const sendAction = async (blockId: string, action: RuntimeAction) => {
@@ -179,7 +182,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
       setFeedback(result.outcome.message);
       setTutor(result.tutor);
     } catch (cause) {
-      await handleMutationFailure(cause, "The action could not be checked.");
+      await handleMutationFailure(cause);
     } finally {
       setBusy(false);
     }
@@ -195,7 +198,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
         body: JSON.stringify({ kind: "start", expectedRevision: session.revision, commandId: crypto.randomUUID() }),
       }));
     } catch (cause) {
-      await handleMutationFailure(cause, "Transfer is still locked.");
+      await handleMutationFailure(cause);
     } finally {
       setBusy(false);
     }
@@ -222,7 +225,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
       }));
       localStorage.removeItem(attemptKey);
     } catch (cause) {
-      await handleMutationFailure(cause, "The transfer answer could not be scored.");
+      await handleMutationFailure(cause);
     } finally {
       setBusy(false);
     }
