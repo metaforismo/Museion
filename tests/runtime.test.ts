@@ -8,6 +8,7 @@ import {
   validateInteractiveBlock,
   type InteractiveBlock,
 } from "@/lib/runtime";
+import { parseRuntimeInteger, validRangeBoundaries, validTraceState } from "@/lib/runtime/input";
 import goldenArtifactJson from "./fixtures/binary-search-course-artifact-v2.json";
 
 const artifact = CourseArtifactV2Schema.parse(goldenArtifactJson);
@@ -15,6 +16,19 @@ const block = <Kind extends InteractiveBlock["kind"]>(kind: Kind) =>
   Object.values(artifact.blocks).find((candidate): candidate is Extract<LearningBlock, { kind: Kind }> => candidate.kind === kind) as Extract<InteractiveBlock, { kind: Kind }>;
 
 describe("typed deterministic runtime", () => {
+  it("keeps browser numeric validation aligned with runtime action schemas", () => {
+    expect(parseRuntimeInteger(" 42 ")).toBe(42);
+    expect(parseRuntimeInteger("1.5")).toBeNull();
+    expect(parseRuntimeInteger(String(Number.MAX_SAFE_INTEGER + 1))).toBeNull();
+
+    expect(validRangeBoundaries(0, -1)).toBe(true);
+    expect(validRangeBoundaries(-1, 4)).toBe(false);
+    expect(validRangeBoundaries(0, -2)).toBe(false);
+    expect(validTraceState(0, 1, 0)).toBe(true);
+    expect(validTraceState(0, -1, 0)).toBe(false);
+    expect(validTraceState(0, 1, -1)).toBe(false);
+  });
+
   it("accepts -1 as the explicit high boundary of an empty interval", () => {
     const range = structuredClone(block("range-explorer"));
     range.target = range.values[0] - 1;

@@ -219,6 +219,11 @@ async function keyboardJudgeFlow() {
   await expectVisible(page.getByText("Prediction matches the deterministic answer."), "keyboard prediction");
   await keyboardActivate(page, page.getByRole("button", { name: /Continue/ }));
 
+  await keyboardFill(page, page.getByLabel("Next low"), "-1");
+  await keyboardFill(page, page.getByLabel("Next high"), "-2");
+  await page.getByLabel("Next high").blur();
+  await expectVisible(page.getByRole("alert").filter({ hasText: "Low must be non-negative" }), "keyboard range boundary validation");
+  if (await page.getByRole("button", { name: "Update interval" }).isEnabled()) failures.push("keyboard range: invalid negative boundaries can be submitted");
   await keyboardFill(page, page.getByLabel("Next low"), "4");
   await keyboardFill(page, page.getByLabel("Next high"), "6");
   await keyboardActivate(page, page.getByRole("button", { name: "Update interval" }));

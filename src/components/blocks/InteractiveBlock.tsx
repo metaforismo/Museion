@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { PublicLearningBlock } from "@/lib/compiler";
 import type { RuntimeAction, RuntimeState, RuntimeTutorIntervention } from "@/lib/runtime";
+import { parseRuntimeInteger, validRangeBoundaries, validTraceState } from "@/lib/runtime/input";
 
 type PublicInteractiveBlock = Extract<
   PublicLearningBlock,
@@ -17,12 +18,6 @@ export interface InteractiveBlockProps {
   feedback: string | null;
   tutor: RuntimeTutorIntervention | null;
   onAction(action: RuntimeAction): Promise<void>;
-}
-
-function integerValue(value: string): number | null {
-  if (!/^-?\d+$/.test(value.trim())) return null;
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 export default function InteractiveBlock({
@@ -49,11 +44,11 @@ export default function InteractiveBlock({
   const [fieldsTouched, setFieldsTouched] = useState(false);
   const emphasized = new Set(tutor?.turn.uiActions.map((action) => action.targetId) ?? []);
   const emphasis = (targetId: string) => emphasized.has(targetId) ? " ring-2 ring-gold ring-offset-2" : "";
-  const lowValue = integerValue(low);
-  const highValue = integerValue(high);
-  const midValue = integerValue(mid);
-  const rangeValid = lowValue !== null && highValue !== null;
-  const traceValid = rangeValid && midValue !== null;
+  const lowValue = parseRuntimeInteger(low);
+  const highValue = parseRuntimeInteger(high);
+  const midValue = parseRuntimeInteger(mid);
+  const rangeValid = validRangeBoundaries(lowValue, highValue);
+  const traceValid = validTraceState(lowValue, highValue, midValue);
 
   const move = (index: number, delta: -1 | 1) => {
     const destination = index + delta;
@@ -126,12 +121,12 @@ export default function InteractiveBlock({
           </div>
           <p className="mt-2 text-sm">Current: low {state.low}, high {state.high}, mid {state.mid ?? "—"}</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <label data-runtime-target={`control:${block.id}:low`} className={`text-sm font-medium${emphasis(`control:${block.id}:low`)}`}>Next low<input type="text" inputMode="numeric" value={low} aria-invalid={fieldsTouched && lowValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setLow(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
-            <label data-runtime-target={`control:${block.id}:high`} className={`text-sm font-medium${emphasis(`control:${block.id}:high`)}`}>Next high<input type="text" inputMode="numeric" value={high} aria-invalid={fieldsTouched && highValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setHigh(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
+            <label data-runtime-target={`control:${block.id}:low`} className={`text-sm font-medium${emphasis(`control:${block.id}:low`)}`}>Next low<input type="text" inputMode="numeric" value={low} aria-invalid={fieldsTouched && (lowValue === null || lowValue < 0)} aria-describedby={`${block.id}-range-help`} onBlur={() => setFieldsTouched(true)} onChange={(event) => setLow(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
+            <label data-runtime-target={`control:${block.id}:high`} className={`text-sm font-medium${emphasis(`control:${block.id}:high`)}`}>Next high<input type="text" inputMode="numeric" value={high} aria-invalid={fieldsTouched && (highValue === null || highValue < -1)} aria-describedby={`${block.id}-range-help`} onBlur={() => setFieldsTouched(true)} onChange={(event) => setHigh(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
           </div>
-          {fieldsTouched && !rangeValid && <p role="alert" className="mt-2 text-sm text-wrong">Enter whole-number boundaries. A high boundary of -1 is valid when the interval becomes empty.</p>}
+          <p id={`${block.id}-range-help`} role={fieldsTouched && !rangeValid ? "alert" : undefined} className={`mt-2 text-sm ${fieldsTouched && !rangeValid ? "text-wrong" : "text-ink-soft"}`}>Low must be non-negative. High may be -1 only when the interval becomes empty.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" disabled={busy || state.status !== "active" || !rangeValid} onClick={() => { setFieldsTouched(true); if (lowValue !== null && highValue !== null) void onAction({ kind: "range_update", low: lowValue, high: highValue }); }} className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white disabled:opacity-50">Update interval</button>
+            <button type="button" disabled={busy || state.status !== "active" || !rangeValid} onClick={() => { setFieldsTouched(true); if (rangeValid && lowValue !== null && highValue !== null) void onAction({ kind: "range_update", low: lowValue, high: highValue }); }} className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white disabled:opacity-50">Update interval</button>
             <button type="button" disabled={busy || state.mid === null || state.status !== "active"} onClick={() => state.mid !== null && void onAction({ kind: "range_confirm_found", index: state.mid })} className="rounded-lg border border-lapis px-5 py-2.5 font-medium text-lapis disabled:opacity-50">Confirm target at mid</button>
           </div>
         </div>
@@ -141,12 +136,12 @@ export default function InteractiveBlock({
         <div className="mt-5">
           <p className="text-sm text-ink-soft">Enter the next inclusive-boundary state. The expected trace remains server-side.</p>
           <div className="mt-3 grid grid-cols-3 gap-3">
-            <label className="text-sm font-medium">Low<input type="text" inputMode="numeric" value={low} aria-invalid={fieldsTouched && lowValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setLow(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
-            <label className="text-sm font-medium">High<input type="text" inputMode="numeric" value={high} aria-invalid={fieldsTouched && highValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setHigh(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
-            <label className="text-sm font-medium">Mid<input type="text" inputMode="numeric" value={mid} aria-invalid={fieldsTouched && midValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setMid(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
+            <label data-runtime-target={`control:${block.id}:low`} className={`text-sm font-medium${emphasis(`control:${block.id}:low`)}`}>Low<input type="text" inputMode="numeric" value={low} aria-invalid={fieldsTouched && (lowValue === null || lowValue < 0)} aria-describedby={`${block.id}-trace-help`} onBlur={() => setFieldsTouched(true)} onChange={(event) => setLow(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
+            <label data-runtime-target={`control:${block.id}:high`} className={`text-sm font-medium${emphasis(`control:${block.id}:high`)}`}>High<input type="text" inputMode="numeric" value={high} aria-invalid={fieldsTouched && (highValue === null || highValue < 0)} aria-describedby={`${block.id}-trace-help`} onBlur={() => setFieldsTouched(true)} onChange={(event) => setHigh(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
+            <label data-runtime-target={`control:${block.id}:mid`} className={`text-sm font-medium${emphasis(`control:${block.id}:mid`)}`}>Mid<input type="text" inputMode="numeric" value={mid} aria-invalid={fieldsTouched && (midValue === null || midValue < 0)} aria-describedby={`${block.id}-trace-help`} onBlur={() => setFieldsTouched(true)} onChange={(event) => setMid(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
           </div>
-          {fieldsTouched && !traceValid && <p role="alert" className="mt-2 text-sm text-wrong">Enter a whole number for every boundary and midpoint.</p>}
-          <button type="button" disabled={busy || state.complete || !traceValid} onClick={() => { setFieldsTouched(true); if (lowValue !== null && highValue !== null && midValue !== null) void onAction({ kind: "trace_submit", low: lowValue, high: highValue, mid: midValue }); }} className="mt-4 rounded-lg bg-lapis px-5 py-2.5 font-medium text-white disabled:opacity-50">Check next state</button>
+          <p id={`${block.id}-trace-help`} role={fieldsTouched && !traceValid ? "alert" : undefined} className={`mt-2 text-sm ${fieldsTouched && !traceValid ? "text-wrong" : "text-ink-soft"}`}>Enter a non-negative whole number for every boundary and midpoint.</p>
+          <button type="button" disabled={busy || state.complete || !traceValid} onClick={() => { setFieldsTouched(true); if (traceValid && lowValue !== null && highValue !== null && midValue !== null) void onAction({ kind: "trace_submit", low: lowValue, high: highValue, mid: midValue }); }} className="mt-4 rounded-lg bg-lapis px-5 py-2.5 font-medium text-white disabled:opacity-50">Check next state</button>
         </div>
       )}
 
