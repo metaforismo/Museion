@@ -15,6 +15,15 @@ const block = <Kind extends InteractiveBlock["kind"]>(kind: Kind) =>
   Object.values(artifact.blocks).find((candidate): candidate is Extract<LearningBlock, { kind: Kind }> => candidate.kind === kind) as Extract<InteractiveBlock, { kind: Kind }>;
 
 describe("typed deterministic runtime", () => {
+  it("accepts -1 as the explicit high boundary of an empty interval", () => {
+    const range = structuredClone(block("range-explorer"));
+    range.target = range.values[0] - 1;
+    const current = { kind: "range-explorer", low: 0, high: 0, mid: 0, step: 0, status: "active" } as const;
+    const outcome = reduceBlock(range, current, { kind: "range_update", low: 0, high: -1 });
+
+    expect(outcome.state).toMatchObject({ high: -1, mid: null, status: "absent" });
+  });
+
   it.each(["prediction-choice", "range-explorer", "state-trace", "sequence-builder"] as const)("validates golden %s", (kind) => {
     expect(validateInteractiveBlock(block(kind))).toEqual([]);
   });

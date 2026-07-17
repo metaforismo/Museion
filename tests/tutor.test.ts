@@ -7,7 +7,7 @@ import type {
   TutorProviderResult,
   TutorTurn,
 } from "@/lib/maia/contracts";
-import { maiaRespond } from "@/lib/maia/tutor";
+import { maiaRespond, tutorSafetyIssues } from "@/lib/maia/tutor";
 
 function result(turn: TutorTurn): TutorProviderResult {
   return {
@@ -47,6 +47,14 @@ function session(): LearnerSession {
 }
 
 describe("Maia pre-delivery gate", () => {
+  it("scans annotations and every other learner-visible action string", () => {
+    const learner = session();
+    expect(tutorSafetyIssues(learner.currentStep, {
+      ...safeTurn,
+      uiActions: [{ kind: "annotate", targetId: "prompt", text: "The answer is six." }],
+    }, ["prompt"])).toContain("answer_leak_detected");
+  });
+
   it("repairs one leaking candidate before persisting or delivering", async () => {
     const provider = new FakeProvider([
       { ...safeTurn, message: "The answer is 6." },

@@ -52,7 +52,7 @@ export const DashboardSnapshotSchema = z.object({
   runtime: z.object({
     provider: z.enum(["offline", "codex", "openai-api"]),
     label: z.string(),
-    persistence: z.enum(["process-local", "supabase"]),
+    persistence: z.enum(["process-local", "hybrid"]),
   }).strict(),
   limitations: z.array(z.string()),
   generatedAt: z.string().datetime(),

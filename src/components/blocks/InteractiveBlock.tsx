@@ -80,7 +80,7 @@ export default function InteractiveBlock({
         <fieldset className="mt-5 space-y-2" disabled={busy || state.kind !== block.kind || state.complete}>
           <legend className="sr-only">Choose your prediction</legend>
           {block.options.map((option, index) => (
-            <label key={option} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-ink/15 px-3 py-2 focus-within:ring-2 focus-within:ring-lapis">
+            <label key={option} data-runtime-target={`option:${block.id}:${index}`} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-ink/15 px-3 py-2 focus-within:ring-2 focus-within:ring-lapis${emphasis(`option:${block.id}:${index}`)}`}>
               <input type="radio" name={`${block.id}-prediction`} checked={selectedIndex === index} onChange={() => setSelectedIndex(index)} />
               <span>{option}</span>
             </label>
@@ -98,7 +98,7 @@ export default function InteractiveBlock({
             {order.map((id, index) => {
               const item = block.items.find((candidate) => candidate.id === id);
               return (
-                <li key={id} className="flex items-center gap-2 rounded-lg border border-ink/15 p-3">
+                <li key={id} data-runtime-target={`item:${block.id}:${id}`} className={`flex items-center gap-2 rounded-lg border border-ink/15 p-3${emphasis(`item:${block.id}:${id}`)}`}>
                   <span className="w-6 font-semibold" aria-hidden="true">{index + 1}.</span>
                   <span className="flex-1">{item?.label}</span>
                   <button type="button" aria-label={`Move ${item?.label} up`} disabled={busy || index === 0} onClick={() => move(index, -1)} className="min-h-10 min-w-10 rounded border border-ink/15 disabled:opacity-35">↑</button>
@@ -126,8 +126,8 @@ export default function InteractiveBlock({
           </div>
           <p className="mt-2 text-sm">Current: low {state.low}, high {state.high}, mid {state.mid ?? "—"}</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <label className="text-sm font-medium">Next low<input type="text" inputMode="numeric" value={low} aria-invalid={fieldsTouched && lowValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setLow(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
-            <label className="text-sm font-medium">Next high<input type="text" inputMode="numeric" value={high} aria-invalid={fieldsTouched && highValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setHigh(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
+            <label data-runtime-target={`control:${block.id}:low`} className={`text-sm font-medium${emphasis(`control:${block.id}:low`)}`}>Next low<input type="text" inputMode="numeric" value={low} aria-invalid={fieldsTouched && lowValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setLow(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
+            <label data-runtime-target={`control:${block.id}:high`} className={`text-sm font-medium${emphasis(`control:${block.id}:high`)}`}>Next high<input type="text" inputMode="numeric" value={high} aria-invalid={fieldsTouched && highValue === null} onBlur={() => setFieldsTouched(true)} onChange={(event) => setHigh(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono tabular-nums" /></label>
           </div>
           {fieldsTouched && !rangeValid && <p role="alert" className="mt-2 text-sm text-wrong">Enter whole-number boundaries. A high boundary of -1 is valid when the interval becomes empty.</p>}
           <div className="mt-3 flex flex-wrap gap-2">
@@ -153,6 +153,13 @@ export default function InteractiveBlock({
       <p role="status" aria-live="polite" data-runtime-target={`status:${block.id}`} className={`mt-4 min-h-6 text-sm font-medium text-ink-soft${emphasis(`status:${block.id}`)}`}>
         {feedback}
       </p>
+      {tutor?.turn.uiActions.some((action) => action.kind === "annotate" && action.text) && (
+        <div className="mt-3 rounded-lg border-l-2 border-gold bg-gold-soft px-3 py-2 text-sm leading-6 text-ink" aria-label="Maia annotation">
+          {tutor.turn.uiActions.filter((action) => action.kind === "annotate" && action.text).map((action) => (
+            <p key={`${action.targetId}:${action.text}`}>{action.text}</p>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
