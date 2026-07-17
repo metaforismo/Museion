@@ -38,7 +38,13 @@ try {
   await capture({ name: "onboarding-desktop", route: "/welcome" });
   await capture({ name: "dashboard-desktop", route: "/dashboard", prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" }); } });
   await capture({ name: "dashboard-mobile", route: "/dashboard", width: 375, height: 812, prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" }); } });
+  await capture({ name: "library-desktop", route: "/library" });
+  await capture({ name: "course-algebra-desktop", route: "/courses/algebra-as-balance" });
   await capture({ name: "creator-desktop", route: "/create" });
+  await capture({ name: "creator-linked-source-desktop", route: "/create", prepare: async (page) => {
+    await page.getByRole("radio", { name: /Link \+ content/ }).click();
+    await page.getByLabel("Source link").fill("https://www.youtube.com/playlist?list=OPEN-COURSE");
+  } });
   await capture({ name: "course-review-desktop", route: "/create/review" });
   await capture({ name: "review-desktop", route: "/review" });
   await capture({ name: "misconception-lab-desktop", route: "/review", prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/review`, { waitUntil: "domcontentloaded" }); } });
@@ -63,4 +69,4 @@ if (errors.length) {
   throw new Error(`Screenshot browser errors:\n${errors.join("\n")}`);
 }
 
-console.log(`Captured 14 Museion product screenshots in ${outputDir}`);
+console.log(`Captured 17 Museion product screenshots in ${outputDir}`);

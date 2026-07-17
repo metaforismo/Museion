@@ -60,6 +60,8 @@ async function accessibilityFlow() {
     "/create",
     "/dashboard",
     "/library",
+    "/courses/algebra-as-balance",
+    "/courses/search-by-halving",
     "/review",
     "/settings",
     "/create/review",
@@ -87,7 +89,7 @@ async function accessibilityFlow() {
   await mobile.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
   const mobilePage = await mobile.newPage();
   watch(mobilePage, "accessibility-mobile");
-  for (const route of ["/", "/dashboard", "/library", "/review", "/progress", "/create", "/settings", "/judge"]) {
+  for (const route of ["/", "/dashboard", "/library", "/courses/algebra-as-balance", "/review", "/progress", "/create", "/settings", "/judge"]) {
     await mobilePage.goto(`${baseURL}${route}`);
     await mobilePage.locator("main").waitFor({ state: "visible" });
     await scanPage(mobilePage, `mobile ${route}`);
@@ -485,7 +487,13 @@ async function desktopFlow() {
   await page.screenshot({ path: path.join(verificationImageDir, "museion-landing.png"), fullPage: false });
 
   await page.goto(`${baseURL}/library`);
-  await expectVisible(page.getByRole("heading", { name: /Build the foundations through active practice/ }), "library heading");
+  await expectVisible(page.getByRole("heading", { name: /Learn through designed investigations/ }), "library heading");
+  await expectVisible(page.getByRole("link", { name: /Explore course/ }).first(), "authored course entry");
+  await page.getByRole("link", { name: /Explore course/ }).first().click();
+  await page.waitForURL((url) => url.pathname === "/courses/algebra-as-balance");
+  await expectVisible(page.getByRole("heading", { name: "Algebra as Balance" }), "authored course detail");
+  await expectVisible(page.getByText(/one immediate near-transfer observation/), "course evidence boundary");
+  await page.goto(`${baseURL}/library`);
   await page.keyboard.press("/");
   const catalogSearch = page.getByLabel("Find a lesson or concept");
   const catalogResults = page.getByRole("region", { name: "Lesson catalog results" });
@@ -590,6 +598,9 @@ async function desktopFlow() {
 
   await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
+  for (const method of ["Paste text", "Upload files", "Link + content"]) {
+    await expectVisible(page.getByRole("radio", { name: new RegExp(method) }), `creator source method: ${method}`);
+  }
   await expectVisible(page.getByText("After source review", { exact: true }), "sequential creator progress");
   const currentCreatorStep = page.locator('[aria-label="Creator progress"] [aria-current="step"]');
   if ((await currentCreatorStep.textContent())?.includes("1. Source") !== true) {
@@ -619,6 +630,17 @@ async function desktopFlow() {
   await page.getByLabel("Source title").fill("Updated source title");
   await expectVisible(page.getByText(/Add a source to inspect its canonical pages/), "stale normalized source invalidation");
 
+  await page.getByRole("radio", { name: /Link \+ content/ }).click();
+  await page.getByLabel("Source link").fill("https://www.youtube.com/playlist?list=PL123");
+  if (await page.getByLabel("Reference type").inputValue() !== "youtube_playlist") {
+    failures.push("creator: YouTube playlist link was not classified as a playlist");
+  }
+  await page.getByLabel("Authorized transcript, excerpt or notes").fill("Authorized notes from the referenced source.");
+  await page.getByRole("button", { name: "Normalize linked source record" }).click();
+  await expectVisible(page.getByText("youtube playlist reference", { exact: true }), "hash-bound source reference");
+  await expectVisible(page.getByText(/Course claims still derive only from the normalized text/), "linked-source truth boundary");
+
+  await page.getByRole("radio", { name: /Upload files/ }).click();
   await page.locator('input[type="file"]').setInputFiles(pdfFixture);
   await expectVisible(
     page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }),

@@ -28,7 +28,7 @@ Museion is not a chat wrapper. It turns authorized source material into a bounde
 5. tutor with Maia without revealing the answer;
 6. finish with one locked, immediate near-transfer observation—and describe it no more strongly than the evidence allows.
 
-The Build Week release includes a research-led source-to-learning homepage, responsive learning workspace, global lesson/concept search, deterministic review queue, creator provenance review, polished keyless replay, and explicit limitations for the current persistence model.
+The Build Week release includes two deep Museion-authored course paths, eleven deterministic lessons, a research-led source-to-learning homepage, responsive learning workspace, global course/lesson/concept search, deterministic review queue, creator provenance review, polished keyless replay, and explicit limitations for the current persistence model.
 
 Its visible learning protocol is **Ground → Predict → Interact → Diagnose → Explain → Transfer → Revisit**. The final two moves are intentionally narrow: transfer is one immediate unassisted observation, while delayed revisit is only partially implemented.
 
@@ -50,13 +50,21 @@ The application-wide command palette searches real destinations, authored lesson
 
 ![Museion command palette searching lessons and concepts](docs/assets/screenshots/search-desktop.png)
 
+### Authored courses are the product core
+
+Museion ships complete learning paths, not a wall of disconnected AI-generated cards. **Algebra as Balance** builds relational equality into reversible two-step reasoning. **Search by Halving** builds binary search from its sorted-input contract and candidate invariant before discussing logarithmic growth. Every course documents its prerequisites, sources, misconception model, private answer verification, accessibility decisions, and narrow evidence boundary.
+
+| Course library | Algebra as Balance |
+|---|---|
+| ![Museion course library with two authored learning paths](docs/assets/screenshots/library-desktop.png) | ![Algebra as Balance course sequence and evidence boundary](docs/assets/screenshots/course-algebra-desktop.png) |
+
 ### Responsive by construction
 
 ![Museion mobile dashboard with its next action, review queue, and bottom navigation](docs/assets/screenshots/dashboard-mobile.png)
 
 ### Maia lives inside the learning move
 
-Maia is an original Museion companion—a “living idea” manually reconstructed as flat SVG after Imagegen concept exploration. She can question, point and annotate registered lesson targets; all learner-visible model text is leak-gated before delivery, and chat stops auto-scrolling when the learner reads an earlier message.
+Maia is an original Museion companion—a “living idea” manually reconstructed as flat SVG after Imagegen concept exploration. On desktop she lives in a dedicated right-hand reasoning rail, with a Codex-like conversation and composer that leave the lesson itself visually primary. She can question, point and annotate registered lesson targets; all learner-visible model text is leak-gated before delivery, and chat stops auto-scrolling when the learner reads an earlier message.
 
 ![Maia providing bounded deterministic guidance beside a checked misconception](docs/assets/screenshots/maia-intervention-desktop.png)
 
@@ -152,14 +160,14 @@ Open `/settings` to inspect the runtime, connect through the official Codex devi
 
 The balanced Build Week policy routes Source Graph extraction to `gpt-5.6-luna`, learning design/course generation and Maia to `gpt-5.6-terra`, and critic/typed repair to `gpt-5.6-sol`. Requested and resolved models are recorded. Luna may visibly fall forward within the GPT-5.6 family; Sol remains mandatory for publication validation.
 
-The Build Week source path starts at `/create`: paste text/Markdown or choose a selectable-text PDF, then inspect normalized pages, warnings, and SHA-256 hashes. The checked six-page binary-search source resolves to `/create/review`, where concepts, claims, exact quotations, blueprint objectives, block citations, hashes, and blocking validators are inspectable. `/judge` then runs the complete keyless replay: five artifact-driven blocks, one locked near-transfer attempt, and a reconciled evidence ledger. Arbitrary sources remain normalized but are not falsely presented as compiled until a live provider has produced and passed every validator.
+The secondary authoring path starts at `/create`: paste text/Markdown, upload up to eight authorized TXT/Markdown/selectable-text PDF files, or attach a sanitized HTTPS reference for a webpage, YouTube video or playlist, or book. A link is provenance, not content: Museion still requires the authorized transcript, excerpt, or notes and does not scrape videos, bypass paywalls, or pretend to compile from a URL alone. Normalized pages, warnings, source references, and SHA-256 hashes are inspectable. The checked six-page binary-search source resolves to `/create/review`, where concepts, claims, exact quotations, blueprint objectives, block citations, hashes, and blocking validators are visible. `/judge` runs the complete keyless replay. Arbitrary sources remain normalized but are not falsely presented as compiled until a live provider has produced and passed every validator.
 
 ```bash
 npm test        # offline suite; explicit live cases skip without opt-in
 npm run build   # production build
 # With `npm run dev` running in another terminal:
 npm run verify:ui  # Chrome: legacy path + full judge path 20× desktop and once at 320 px
-npm run screenshots # regenerate 14 README/product screenshots from real routes
+npm run screenshots # regenerate 17 README/product screenshots from real routes
 ```
 
 ## Project layout
