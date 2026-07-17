@@ -109,6 +109,23 @@ describe("Course Artifact v2 private/public boundary", () => {
     expect(codes).toContain("missing_transfer");
   });
 
+  it("fails closed for learner structures the current renderer cannot complete", () => {
+    const artifact = structuredClone(CourseArtifactV2Schema.parse(goldenArtifactJson));
+    artifact.lessons.push({ ...artifact.lessons[0], id: "second_lesson", blockIds: [...artifact.lessons[0].blockIds] });
+    artifact.lessons[0].blockIds.push("transfer_unseen");
+    const issues = validateArtifactReferences(artifact, new Set(Object.keys(goldenGraphJson.spans)));
+    expect(issues.filter((issue) => issue.code === "unsupported_learner_structure")).toHaveLength(2);
+  });
+
+  it("requires transfer controls and private answer specs to agree", () => {
+    const artifact = structuredClone(CourseArtifactV2Schema.parse(goldenArtifactJson));
+    const transfer = artifact.blocks.transfer_unseen;
+    if (transfer.kind !== "transfer-challenge") throw new Error("Fixture transfer block is missing");
+    transfer.responseKind = "expression";
+    const issues = validateArtifactReferences(artifact, new Set(Object.keys(goldenGraphJson.spans)));
+    expect(issues.map((issue) => issue.code)).toContain("invalid_answer_spec");
+  });
+
   it("binds source-grounded provenance to the validated document and graph", async () => {
     const artifact = CourseArtifactV2Schema.parse(goldenArtifactJson);
     const issues = validateArtifactReferences(artifact, new Set(Object.keys(goldenGraphJson.spans)), {

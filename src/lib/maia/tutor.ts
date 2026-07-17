@@ -154,6 +154,9 @@ export async function maiaRespond(
         attempt: repaired ? 2 : 1,
       });
     } catch (error) {
+      if (signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+        throw error;
+      }
       session.log("maia_provider_error", {
         stepId,
         errorName: error instanceof Error ? error.name : "UnknownError",

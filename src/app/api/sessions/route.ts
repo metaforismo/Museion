@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { buildSessionState } from "@/lib/api-types";
 import { getLesson, toPublicLesson } from "@/lib/content";
@@ -8,19 +9,22 @@ import { resolveLearnerId, setLearnerCookie } from "@/lib/server/learner";
 import { log } from "@/lib/server/log";
 import { getOrCreateProfile, saveSession } from "@/lib/store";
 
-interface CreateSessionBody {
-  lessonId?: string;
-  mode?: SessionMode;
-}
+const CreateSessionBodySchema = z.object({
+  lessonId: z.string().min(1).max(160),
+  mode: z.enum(["lesson", "practice"]).default("lesson"),
+}).strict();
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as CreateSessionBody;
+  const payload = await request.json().catch(() => null);
+  const parsed = CreateSessionBodySchema.safeParse(payload);
+  if (!parsed.success) return NextResponse.json({ error: "Invalid session request" }, { status: 400 });
+  const body = parsed.data;
   const lesson = body.lessonId ? getLesson(body.lessonId) : undefined;
   if (!lesson) {
     return NextResponse.json({ error: "Unknown lesson" }, { status: 404 });
   }
 
-  const mode: SessionMode = body.mode === "practice" ? "practice" : "lesson";
+  const mode: SessionMode = body.mode;
   if (mode === "practice" && !hasPractice(lesson)) {
     return NextResponse.json(
       { error: "Lesson has no practice exercises" },

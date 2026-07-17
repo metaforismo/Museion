@@ -171,3 +171,32 @@ export async function createSourceDocument(
     createdAt: input.createdAt ?? new Date().toISOString(),
   });
 }
+
+/**
+ * Recompute every server-authoritative source field before compilation.
+ * A browser may normalize for preview, but it cannot choose hashes or route a
+ * request into the golden replay by claiming the fixture digest.
+ */
+export async function verifySourceDocumentIntegrity(document: SourceDocument): Promise<void> {
+  SourceDocumentSchema.parse(document);
+  let previousPage = 0;
+  let charCount = 0;
+  for (const page of document.pages) {
+    if (page.pageNumber <= previousPage) throw new SourceIngestionError("invalid_source", "Source pages must be unique and ordered.");
+    previousPage = page.pageNumber;
+    const normalized = normalizeSourceText(page.text);
+    if (normalized.text !== page.text) throw new SourceIngestionError("invalid_source", "Source page text is not canonically normalized.");
+    if (page.charCount !== page.text.length) throw new SourceIngestionError("invalid_source", "Source page character count is invalid.");
+    if (page.sha256 !== await sha256Hex(page.text)) throw new SourceIngestionError("invalid_source", "Source page hash is invalid.");
+    charCount += page.charCount;
+  }
+  if (charCount !== document.charCount) throw new SourceIngestionError("invalid_source", "Source character count is invalid.");
+  const canonicalPayload = JSON.stringify({
+    normalizationVersion: SOURCE_NORMALIZATION_VERSION,
+    pages: document.pages.map(({ pageNumber, text }) => ({ pageNumber, text })),
+  });
+  const sha256 = await sha256Hex(canonicalPayload);
+  if (document.sha256 !== sha256 || document.id !== `src_${sha256.slice(0, 24)}`) {
+    throw new SourceIngestionError("invalid_source", "Source identity does not match its contents.");
+  }
+}

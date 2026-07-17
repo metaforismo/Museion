@@ -141,6 +141,16 @@ export async function getJudgeSession(sessionId: string, ownerId: string): Promi
   return view(await requireOwnedSession(sessionId, ownerId));
 }
 
+/** Owner-scoped, public-safe generated learning history. */
+export async function listJudgeSessions(ownerId: string): Promise<JudgeSessionView[]> {
+  await pruneJudgeSessions();
+  const records = await stateBackend().list<JudgeSessionRecord>("judge_session", ownerId);
+  return records
+    .map(({ payload }) => payload)
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+    .map(view);
+}
+
 export async function dispatchJudgeAction(input: {
   sessionId: string;
   ownerId: string;

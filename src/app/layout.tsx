@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-
-import SiteHeader from "@/components/SiteHeader";
+import SiteShell from "@/components/SiteShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,16 +14,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
-      <body className="flex min-h-[100dvh] flex-col">
+      <body>
         <a href="#main-content" className="skip-link">Skip to content</a>
-        <SiteHeader />
-        <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
-        <footer className="border-t border-ink/10 bg-surface/70 py-7 text-sm text-ink-soft">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-            <p>Museion — the engine owns truth; Maia owns questions.</p>
-            <nav aria-label="Legal" className="flex gap-4 text-xs font-medium"><Link href="/privacy" className="hover:text-ink">Privacy</Link><Link href="/terms" className="hover:text-ink">Terms</Link></nav>
-          </div>
-        </footer>
+        <SiteShell>{children}</SiteShell>
       </body>
     </html>
   );

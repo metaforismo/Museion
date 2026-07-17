@@ -59,9 +59,15 @@ function safeResumeIndex(session: JudgeSessionView, storedValue: string | null):
   return desired;
 }
 
-function validTransferIndex(value: string): boolean {
-  if (!/^-?\d+$/.test(value.trim())) return false;
-  return Number.isSafeInteger(Number(value));
+function validTransferAnswer(value: string, kind?: "numeric" | "multiple-choice" | "expression", optionCount = 0): boolean {
+  const normalized = value.trim();
+  if (!kind || !normalized) return false;
+  if (kind === "expression") return normalized.length <= 240;
+  if (kind === "multiple-choice") {
+    const index = Number(normalized);
+    return Number.isInteger(index) && index >= 0 && index < optionCount;
+  }
+  return normalized.length <= 64 && Number.isFinite(Number(normalized));
 }
 
 export default function JudgeExperience({ compilerRunId }: { compilerRunId?: string }) {
@@ -120,7 +126,13 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
   const lessonBlocks = session && lesson ? lesson.blockIds.map((id) => session.artifact.blocks[id]) : [];
   const currentBlock = lessonBlocks[blockIndex];
   const progress = lessonBlocks.length === 0 ? 0 : Math.round((Math.min(blockIndex, lessonBlocks.length) / lessonBlocks.length) * 100);
-  const transferAnswerValid = validTransferIndex(transferAnswer);
+  const transferId = session?.artifact.transferBlockIds[0];
+  const transferBlock = session && transferId ? session.artifact.blocks[transferId] : undefined;
+  const transferAnswerValid = validTransferAnswer(
+    transferAnswer,
+    transferBlock?.kind === "transfer-challenge" ? transferBlock.responseKind : undefined,
+    transferBlock?.kind === "transfer-challenge" ? transferBlock.options.length : 0,
+  );
   const reviewHref = compilerRunId ? `/create/review/${compilerRunId}` : "/create/review";
 
   const advance = () => {
@@ -209,8 +221,6 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
 
   if (!session) return <div className="mx-auto max-w-2xl px-4 py-20"><div role="alert" className="rounded-xl bg-wrong-soft p-6 text-wrong"><h1 className="font-display text-2xl font-semibold">Judge route unavailable</h1><p className="mt-2">{error}</p><button type="button" onClick={() => location.reload()} className="mt-4 rounded-lg bg-ink px-5 py-2.5 font-medium text-white">Retry</button></div></div>;
 
-  const transferId = session.artifact.transferBlockIds[0];
-  const transferBlock = session.artifact.blocks[transferId];
   const currentState = currentBlock ? session.blockStates[currentBlock.id] : undefined;
   const canAdvance = currentBlock?.kind === "explanation" || completeState(currentState);
 
@@ -237,9 +247,9 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
 
       {currentBlock && canAdvance && <button type="button" disabled={busy} onClick={advance} className="sticky bottom-3 mt-5 w-full rounded-xl bg-lapis px-6 py-3 font-semibold text-white shadow-[0_12px_32px_rgba(19,28,49,0.18)] transition hover:bg-lapis-dark disabled:opacity-45 lg:static lg:shadow-none">{blockIndex === lessonBlocks.length - 1 ? "Finish lesson and unlock transfer" : "Continue"}</button>}
 
-      {!currentBlock && session.transfer.status === "locked" && <section className="mt-7 rounded-xl border border-gold/30 bg-gold-soft p-7 text-center"><p className="text-sm font-semibold uppercase tracking-wide">Unassisted checkpoint</p><h2 className="mt-2 font-display text-2xl font-semibold">The lesson is complete. Transfer is now eligible.</h2><p className="mx-auto mt-3 max-w-xl text-ink-soft">Starting locks Maia, hints, solution reveal and elimination. Exactly one scored answer is accepted.</p><button type="button" disabled={busy} onClick={() => void startLockedTransfer()} className="mt-5 rounded-lg bg-ink px-6 py-3 font-semibold text-white disabled:opacity-50">Start locked transfer</button></section>}
+      {!currentBlock && session.transfer.status === "locked" && <section className="mt-7 rounded-xl border border-gold/30 bg-gold-soft p-7 text-center"><p className="text-sm font-semibold uppercase tracking-wide">Independent checkpoint</p><h2 className="mt-2 font-display text-2xl font-semibold">The lesson is complete. Your final challenge is ready.</h2><p className="mx-auto mt-3 max-w-xl text-ink-soft">Starting removes Maia, hints, solution reveal, and answer elimination. Exactly one scored answer is accepted.</p><button type="button" disabled={busy} onClick={() => void startLockedTransfer()} className="mt-5 rounded-lg bg-ink px-6 py-3 font-semibold text-white disabled:opacity-50">Start independent challenge</button></section>}
 
-      {!currentBlock && transferBlock?.kind === "transfer-challenge" && session.transfer.status === "active" && <TransferChallenge prompt={transferBlock.prompt} answer={transferAnswer} valid={transferAnswerValid} touched={transferTouched} busy={busy} onAnswer={setTransferAnswer} onTouched={() => setTransferTouched(true)} onSubmit={submitTransfer} />}
+      {!currentBlock && transferBlock?.kind === "transfer-challenge" && session.transfer.status === "active" && <TransferChallenge prompt={transferBlock.prompt} responseKind={transferBlock.responseKind} options={transferBlock.options} answer={transferAnswer} valid={transferAnswerValid} touched={transferTouched} busy={busy} onAnswer={setTransferAnswer} onTouched={() => setTransferTouched(true)} onSubmit={submitTransfer} />}
 
       {!currentBlock && session.transfer.status === "scored" && session.transfer.observation && <EvidenceResult session={session} reviewHref={reviewHref} onReset={() => setConfirmReset(true)} />}
     </div>
@@ -271,6 +281,8 @@ function ResetConfirmation({
 
 function TransferChallenge({
   prompt,
+  responseKind,
+  options,
   answer,
   valid,
   touched,
@@ -280,6 +292,8 @@ function TransferChallenge({
   onSubmit,
 }: {
   prompt: string;
+  responseKind: "numeric" | "multiple-choice" | "expression";
+  options: string[];
   answer: string;
   valid: boolean;
   touched: boolean;
@@ -297,11 +311,20 @@ function TransferChallenge({
       </div>
       <h2 className="mt-4 font-display text-2xl font-semibold">Near-transfer challenge</h2>
       <p className="mt-4 text-lg leading-relaxed">{prompt}</p>
-      <label className="mt-5 block font-medium" htmlFor="transfer-answer">
-        Final index
-        <input id="transfer-answer" type="text" inputMode="numeric" autoComplete="off" maxLength={16} value={answer} aria-invalid={invalid} aria-describedby="transfer-answer-help" onBlur={onTouched} onChange={(event) => onAnswer(event.target.value)} className="mt-2 block w-full rounded-lg border border-ink/15 px-4 py-3 font-mono text-lg tabular-nums" />
-      </label>
-      <p id="transfer-answer-help" className={`mt-2 text-sm ${invalid ? "text-wrong" : "text-ink-soft"}`}>{invalid ? "Enter one whole-number index, such as 4 or -1." : "Use a whole-number index. No hint or second scored attempt is available."}</p>
+      {responseKind === "multiple-choice" ? (
+        <fieldset className="mt-5" onBlur={onTouched}>
+          <legend className="font-medium">Choose one answer</legend>
+          <div className="mt-3 grid gap-2">
+            {options.map((option, index) => <label key={`${index}-${option}`} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition ${answer === String(index) ? "border-lapis bg-lapis-soft" : "border-ink/15 hover:border-lapis/50"}`}><input type="radio" name="transfer-answer" value={index} checked={answer === String(index)} onChange={(event) => onAnswer(event.target.value)} /><span>{option}</span></label>)}
+          </div>
+        </fieldset>
+      ) : (
+        <label className="mt-5 block font-medium" htmlFor="transfer-answer">
+          {responseKind === "numeric" ? "Your number" : "Your expression"}
+          <input id="transfer-answer" type="text" inputMode={responseKind === "numeric" ? "decimal" : "text"} autoComplete="off" maxLength={responseKind === "numeric" ? 64 : 240} value={answer} aria-invalid={invalid} aria-describedby="transfer-answer-help" onBlur={onTouched} onChange={(event) => onAnswer(event.target.value)} className="mt-2 block w-full rounded-lg border border-ink/15 px-4 py-3 font-mono text-lg tabular-nums" />
+        </label>
+      )}
+      <p id="transfer-answer-help" className={`mt-2 text-sm ${invalid ? "text-wrong" : "text-ink-soft"}`}>{invalid ? responseKind === "multiple-choice" ? "Choose one answer before submitting." : responseKind === "numeric" ? "Enter a valid number." : "Enter an expression before submitting." : "No hint or second scored attempt is available."}</p>
       <button type="button" disabled={busy || !valid} onClick={() => void onSubmit()} className="mt-4 w-full rounded-lg bg-ink px-6 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Submitting…" : "Submit only attempt"}</button>
     </section>
   );

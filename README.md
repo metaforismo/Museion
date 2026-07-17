@@ -8,7 +8,35 @@ Museion (the Mouseion of Alexandria, "seat of the Muses") pairs a millennia-old 
 
 Built with Next.js (App Router), React, Tailwind, the official Codex runtime, and an optional explicitly configured OpenAI Responses API provider.
 
-The local Build Week release also includes a complete responsive presentation layer: an asymmetric source-to-evidence homepage, active accessible navigation, creator provenance review, a polished judge journey, legal disclosures for the current in-memory build, and generated social-preview metadata.
+The local Build Week release also includes a complete responsive presentation layer: a research-led source-to-learning homepage, a real learning workspace, a deterministic review queue, accessible desktop/mobile navigation, creator provenance review, a polished interactive demo, and explicit limitations for the current persistence model.
+
+## Product tour
+
+### Source-grounded learning, before the first click
+
+The public landing page shows one learning trace directly, then explains the observable protocol, evidence boundaries, and the difference from a generic tutor. Exact source evidence, a required learner decision, bounded Maia guidance, deterministic answer checking, and locked transfer remain part of one visible method.
+
+![Museion landing page showing a source-grounded course preview](docs/assets/screenshots/landing-desktop.png)
+
+### A learning workspace, not an XP dashboard
+
+The application uses a grouped, collapsible desktop sidebar, a focus-trapped mobile drawer, and a four-action mobile bottom bar. Its server-owned dashboard combines the next justified action, active courses, review signals, misconceptions, recent sources, runtime state, and the explicit evidence boundary. It deliberately avoids streaks, invented readiness scores, and presenting an adaptive estimate as durable mastery.
+
+![Museion learning workspace with its sidebar, next action, review queue, and recent sources](docs/assets/screenshots/dashboard-desktop.png)
+
+### Responsive by construction
+
+![Museion mobile dashboard with its next action, review queue, and bottom navigation](docs/assets/screenshots/dashboard-mobile.png)
+
+### Source, review, learn, observe
+
+| Creator Studio | Deterministic review |
+|---|---|
+| ![Museion Creator Studio](docs/assets/screenshots/creator-desktop.png) | ![Museion deterministic review queue](docs/assets/screenshots/review-desktop.png) |
+
+| Focused lesson | Evidence boundary |
+|---|---|
+| ![Museion focused learning experience](docs/assets/screenshots/learning-desktop.png) | ![Museion learning evidence view](docs/assets/screenshots/evidence-desktop.png) |
 
 ## Why
 
@@ -95,10 +123,11 @@ The balanced Build Week policy routes Source Graph extraction to `gpt-5.6-luna`,
 The Build Week source path starts at `/create`: paste text/Markdown or choose a selectable-text PDF, then inspect normalized pages, warnings, and SHA-256 hashes. The checked six-page binary-search source resolves to `/create/review`, where concepts, claims, exact quotations, blueprint objectives, block citations, hashes, and blocking validators are inspectable. `/judge` then runs the complete keyless replay: five artifact-driven blocks, one locked near-transfer attempt, and a reconciled evidence ledger. Arbitrary sources remain normalized but are not falsely presented as compiled until a live provider has produced and passed every validator.
 
 ```bash
-npm test        # 156 offline tests; 17 explicit live cases skip without opt-in
+npm test        # 163 offline tests; 17 explicit live cases skip without opt-in
 npm run build   # production build
 # With `npm run dev` running in another terminal:
 npm run verify:ui  # Chrome: legacy path + full judge path 20× desktop and once at 320 px
+npm run screenshots # regenerate the 8 README/product screenshots from real routes
 ```
 
 ## Project layout
