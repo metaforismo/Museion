@@ -12,7 +12,7 @@ const SESSION_KEY = "museion_judge_session_v1";
 const RUN_KEY = "museion_judge_run_v1";
 
 class JudgeRequestError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
+  constructor(readonly status: number, message: string) {
     super(message);
     this.name = "JudgeRequestError";
   }
@@ -24,8 +24,6 @@ function judgeErrorMessage(value: unknown, status: number): string {
     JUDGE_SESSION_QUOTA_EXCEEDED: "Too many replay sessions are still active. Reset an existing run or wait for an older session to expire.",
     COMPILER_RUN_NOT_FOUND: "This generated course is unavailable or belongs to a different browser session.",
     GENERATED_ROUTE_UNSUPPORTED_BLOCKS: "This course contains an activity that the learner renderer does not support yet.",
-    JUDGE_VERSION_CONFLICT: "This learning run changed in another tab. Museion restored the latest verified state.",
-    JUDGE_COMMAND_ID_REUSED: "Museion rejected a reused command whose contents changed and restored the verified state.",
   };
   return messages[code] ?? (code || `Request failed (${status})`);
 }
@@ -38,7 +36,7 @@ async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
   });
   const payload = response.status === 204 ? null : await response.json().catch(() => null);
   const code = typeof payload?.error === "string" ? payload.error : "JUDGE_REQUEST_FAILED";
-  if (!response.ok) throw new JudgeRequestError(response.status, code, judgeErrorMessage(code, response.status));
+  if (!response.ok) throw new JudgeRequestError(response.status, judgeErrorMessage(code, response.status));
   return payload as T;
 }
 
@@ -150,8 +148,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
   const handleMutationFailure = async (cause: unknown, fallback: string) => {
     if (
       session &&
-      cause instanceof JudgeRequestError &&
-      ["JUDGE_VERSION_CONFLICT", "JUDGE_COMMAND_ID_REUSED"].includes(cause.code)
+      cause instanceof JudgeRequestError && cause.status === 409
     ) {
       try {
         const restored = await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}`);
@@ -159,10 +156,10 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
         setBlockIndex(safeResumeIndex(restored, localStorage.getItem(`${sessionKey}:${session.sessionId}:block`)));
         setFeedback(null);
         setTutor(null);
-        setError(cause.message);
+        setError("This run changed in another tab. Latest verified state restored.");
         return;
       } catch {
-        setError("The run changed elsewhere, but its latest state could not be restored. Reload before continuing.");
+        setError("Reload to restore the latest verified state.");
         return;
       }
     }

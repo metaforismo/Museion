@@ -908,6 +908,13 @@ async function judgeRecoveryFlow() {
 
 async function judgeConcurrencyFlow() {
   const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+  await context.addCookies([{
+    name: "museion_learner",
+    value: "00000000-0000-4000-8000-000000000007",
+    url: baseURL,
+    httpOnly: true,
+    sameSite: "Lax",
+  }]);
   await context.addInitScript(() => localStorage.setItem("museion_judge_run_v1", "browser-concurrency-gate"));
   const first = await context.newPage();
   const second = await context.newPage();
