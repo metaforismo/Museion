@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: { default: "Museion — reasoning, made visible", template: "%s · Museion" },
   description: "Source-grounded interactive learning with deterministic truth and a leak-gated Socratic AI tutor.",
   keywords: ["interactive learning", "Socratic tutor", "deterministic assessment", "source-grounded courses"],
+  icons: { icon: [{ url: "/brand/museion-mark.svg", type: "image/svg+xml" }], shortcut: "/brand/museion-mark.svg" },
   openGraph: { title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions.", siteName: "Museion", type: "website" },
   twitter: { card: "summary_large_image", title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions." },
 };

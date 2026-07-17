@@ -1,13 +1,13 @@
 import Link from "next/link";
 
+import BrandMark from "./BrandMark";
+
 export default function SiteHeader() {
   return (
     <header className="border-b border-ink/10 bg-paper">
       <div className="mx-auto flex min-h-18 w-full max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         <Link href="/" aria-label="Museion home" className="flex shrink-0 items-center gap-3">
-          <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-sm font-semibold text-white">
-            M
-          </span>
+          <BrandMark className="h-10 w-10 shrink-0" />
           <span className="font-display text-lg font-semibold tracking-tight">Museion</span>
         </Link>
         <nav aria-label="Public navigation" className="flex items-center gap-1 sm:gap-2">

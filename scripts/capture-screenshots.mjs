@@ -10,7 +10,7 @@ await mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const errors = [];
 
-async function capture({ name, route, width = 1440, height = 1000, waitFor = "main" }) {
+async function capture({ name, route, width = 1440, height = 1000, waitFor = "main", prepare }) {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });
   const page = await context.newPage();
   page.on("console", (message) => { if (message.type() === "error") errors.push(`${name}: ${message.text()}`); });
@@ -18,6 +18,7 @@ async function capture({ name, route, width = 1440, height = 1000, waitFor = "ma
   page.on("response", (response) => { if (response.status() >= 500) errors.push(`${name}: HTTP ${response.status()} ${response.url()}`); });
   await page.goto(`${baseURL}${route}`, { waitUntil: "domcontentloaded" });
   await page.locator(waitFor).waitFor({ state: "visible", timeout: 15_000 });
+  if (prepare) await prepare(page);
   await page.screenshot({ path: path.join(outputDir, `${name}.png`), fullPage: false });
   await context.close();
 }
@@ -31,6 +32,11 @@ try {
   await capture({ name: "learning-desktop", route: "/lessons/linear-equations-intro", waitFor: "main" });
   await capture({ name: "evidence-desktop", route: "/progress" });
   await capture({ name: "settings-desktop", route: "/settings" });
+  await capture({ name: "search-desktop", route: "/dashboard", prepare: async (page) => {
+    await page.getByRole("button", { name: "Search Museion" }).click();
+    await page.getByRole("combobox", { name: "Search Museion" }).fill("binary");
+    await page.getByRole("option", { name: /Binary Numbers/ }).waitFor({ state: "visible" });
+  } });
 } finally {
   await browser.close();
 }
@@ -39,4 +45,4 @@ if (errors.length) {
   throw new Error(`Screenshot browser errors:\n${errors.join("\n")}`);
 }
 
-console.log(`Captured 8 Museion product screenshots in ${outputDir}`);
+console.log(`Captured 9 Museion product screenshots in ${outputDir}`);
