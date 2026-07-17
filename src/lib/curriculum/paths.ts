@@ -48,3 +48,27 @@ export const coursePaths = [
 export function getCoursePath(courseId: string) {
   return coursePaths.find((course) => course.id === courseId);
 }
+
+export interface CourseLessonContext {
+  courseId: string;
+  courseTitle: string;
+  lessonIndex: number;
+  totalLessons: number;
+  previousLessonId: string | null;
+  nextLessonId: string | null;
+}
+
+export function getCourseLessonContext(courseId: string, lessonId: string): CourseLessonContext | undefined {
+  const course = getCoursePath(courseId);
+  if (!course) return undefined;
+  const lessonIndex = course.lessonIds.indexOf(lessonId);
+  if (lessonIndex < 0) return undefined;
+  return {
+    courseId: course.id,
+    courseTitle: course.title,
+    lessonIndex,
+    totalLessons: course.lessonIds.length,
+    previousLessonId: course.lessonIds[lessonIndex - 1] ?? null,
+    nextLessonId: course.lessonIds[lessonIndex + 1] ?? null,
+  };
+}

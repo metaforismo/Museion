@@ -52,7 +52,7 @@ The application-wide command palette searches real destinations, authored lesson
 
 ### Authored courses are the product core
 
-Museion ships complete learning paths, not a wall of disconnected AI-generated cards. **Algebra as Balance** builds relational equality into reversible two-step reasoning. **Search by Halving** builds binary search from its sorted-input contract and candidate invariant before discussing logarithmic growth. Every course documents its prerequisites, sources, misconception model, private answer verification, accessibility decisions, and narrow evidence boundary.
+Museion ships complete learning paths, not a wall of disconnected AI-generated cards. **Algebra as Balance** builds relational equality into reversible two-step reasoning. **Search by Halving** builds binary search from its sorted-input contract and candidate invariant before discussing logarithmic growth. Every course documents its prerequisites, sources, misconception model, private answer verification, accessibility decisions, and narrow evidence boundary. Course context follows the learner into each lesson, exposes the current position, returns to the right path, and offers the next authored lesson only after completion.
 
 | Course library | Algebra as Balance |
 |---|---|

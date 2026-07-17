@@ -493,6 +493,10 @@ async function desktopFlow() {
   await page.waitForURL((url) => url.pathname === "/courses/algebra-as-balance");
   await expectVisible(page.getByRole("heading", { name: "Algebra as Balance" }), "authored course detail");
   await expectVisible(page.getByText(/one immediate near-transfer observation/), "course evidence boundary");
+  await page.getByRole("link", { name: "Start the path", exact: true }).click();
+  await page.waitForURL((url) => url.pathname === "/lessons/algebra-balance-equality-as-invariant" && url.searchParams.get("course") === "algebra-as-balance");
+  await expectVisible(page.getByRole("link", { name: "Back to Algebra as Balance", exact: true }), "course-aware lesson return");
+  await expectVisible(page.getByText("Algebra as Balance · 1/3", { exact: true }), "course lesson position");
   await page.goto(`${baseURL}/library`);
   const catalogSearch = page.getByLabel("Find a lesson or concept");
   const catalogResults = page.getByRole("region", { name: "Lesson catalog results" });

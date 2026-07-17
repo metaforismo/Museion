@@ -18,6 +18,7 @@ import {
 } from "@/lib/client/fetch-with-timeout";
 import { sessionStorageKey } from "@/lib/client/storage";
 import type { PublicLesson, PublicStep } from "@/lib/content/types";
+import type { CourseLessonContext } from "@/lib/curriculum";
 
 type Feedback =
   | { kind: "correct"; mastery: number; solution: string | null }
@@ -48,6 +49,7 @@ interface PlayerProps {
   /** The statically-known lesson; practice sessions override its steps. */
   lesson: PublicLesson;
   mode: SessionMode;
+  courseContext?: CourseLessonContext;
 }
 
 // React's development Strict Mode mounts effects twice. Share an in-flight
@@ -82,7 +84,7 @@ function createSessionOnce(
   return creation;
 }
 
-export default function LessonPlayer({ lesson, mode }: PlayerProps) {
+export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   // The authoritative lesson comes from the session (shuffled in
   // practice mode); the prop only covers the loading state.
@@ -108,6 +110,8 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   const outboxSeq = useRef(0);
   const actionInFlight = useRef(false);
   const feedbackRef = useRef<HTMLDivElement>(null);
+  const backHref = courseContext ? `/courses/${courseContext.courseId}` : "/library";
+  const backLabel = courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
 
   const beginAction = useCallback((action: Exclude<PendingAction, null>) => {
     if (actionInFlight.current) return false;
@@ -417,7 +421,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
           <p className="mx-auto mt-3 max-w-[52ch] leading-7 text-ink-soft">{requestError} A saved session is kept unless the server confirms that it expired.</p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <button type="button" onClick={() => location.reload()} className="rounded-lg bg-ink px-5 py-2.5 font-semibold text-white transition hover:bg-lapis-dark">Retry session</button>
-            <Link href="/" className="rounded-lg border border-ink/15 bg-surface px-5 py-2.5 font-semibold transition hover:border-lapis">Back to lessons</Link>
+            <Link href={backHref} className="rounded-lg border border-ink/15 bg-surface px-5 py-2.5 font-semibold transition hover:border-lapis">{backLabel}</Link>
           </div>
         </section>
       );
@@ -438,6 +442,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
         mode={mode}
         stats={stats}
         onRestartPractice={restartPractice}
+        courseContext={courseContext}
       />
     );
   }
@@ -477,11 +482,15 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
         {/* Progress */}
         <div className="mb-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-            <Link href="/" className="inline-flex min-h-11 items-center font-semibold text-lapis-dark hover:underline">
-              Back to lessons
+            <Link href={backHref} className="inline-flex min-h-11 items-center font-semibold text-lapis-dark hover:underline">
+              {backLabel}
             </Link>
             <span className="rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft">
-              {mode === "practice" ? "Hint-free practice" : activeLesson.track}
+              {mode === "practice"
+                ? "Hint-free practice"
+                : courseContext
+                  ? `${courseContext.courseTitle} · ${courseContext.lessonIndex + 1}/${courseContext.totalLessons}`
+                  : activeLesson.track}
             </span>
           </div>
           <div className="mb-2 grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-4">
@@ -676,13 +685,18 @@ function CompletionScreen({
   mode,
   stats,
   onRestartPractice,
+  courseContext,
 }: {
   lesson: PublicLesson;
   mode: SessionMode;
   stats: SessionStats | null;
   onRestartPractice: () => void;
+  courseContext?: CourseLessonContext;
 }) {
   const practiceDone = mode === "practice";
+  const courseQuery = courseContext ? `?course=${courseContext.courseId}` : "";
+  const backHref = courseContext ? `/courses/${courseContext.courseId}` : "/library";
+  const backLabel = courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:py-24">
       <p className="eyebrow">{practiceDone ? "Hint-free practice recorded" : "Lesson path completed"}</p>
@@ -742,6 +756,14 @@ function CompletionScreen({
       )}
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
+        {!practiceDone && courseContext?.nextLessonId && (
+          <Link
+            href={`/lessons/${courseContext.nextLessonId}?course=${courseContext.courseId}`}
+            className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
+          >
+            Continue course <span aria-hidden="true">→</span>
+          </Link>
+        )}
         {practiceDone ? (
           <button
             onClick={onRestartPractice}
@@ -752,18 +774,18 @@ function CompletionScreen({
         ) : (
           lesson.practiceAvailable && (
             <Link
-              href={`/lessons/${lesson.id}/practice`}
-              className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
+              href={`/lessons/${lesson.id}/practice${courseQuery}`}
+              className={`${courseContext?.nextLessonId ? "border border-ink/15 bg-surface text-ink hover:border-lapis" : "bg-lapis text-white hover:bg-lapis-dark"} rounded-lg px-5 py-2.5 font-medium transition`}
             >
               Try practice mode
             </Link>
           )
         )}
         <Link
-          href="/"
+          href={backHref}
           className="rounded-lg border border-ink/15 bg-surface px-5 py-2.5 font-medium text-ink transition hover:border-lapis"
         >
-          Back to lessons
+          {backLabel}
         </Link>
       </div>
     </section>

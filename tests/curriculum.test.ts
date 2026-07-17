@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { allLessons } from "@/lib/content";
-import { coursePaths, museionFoundations, recommendCurriculumNodes, validateCurriculumGraph } from "@/lib/curriculum";
+import { coursePaths, getCourseLessonContext, museionFoundations, recommendCurriculumNodes, validateCurriculumGraph } from "@/lib/curriculum";
 
 describe("curriculum graph", () => {
   it("keeps the authored foundation map acyclic and fully linked", () => {
@@ -37,5 +37,22 @@ describe("curriculum graph", () => {
         if (index > 0) expect(nodes.get(lessonId)?.prerequisiteIds).toContain(course.lessonIds[index - 1]);
       }
     }
+  });
+
+  it("derives bounded previous and next navigation only for lessons in a course", () => {
+    expect(getCourseLessonContext("algebra-as-balance", "algebra-balance-equality-as-invariant")).toMatchObject({
+      courseTitle: "Algebra as Balance",
+      lessonIndex: 0,
+      totalLessons: 3,
+      previousLessonId: null,
+      nextLessonId: "algebra-balance-inverse-operations-and-isolation",
+    });
+    expect(getCourseLessonContext("algebra-as-balance", "algebra-balance-two-step-equations-and-transfer")).toMatchObject({
+      lessonIndex: 2,
+      previousLessonId: "algebra-balance-inverse-operations-and-isolation",
+      nextLessonId: null,
+    });
+    expect(getCourseLessonContext("algebra-as-balance", "binary-numbers")).toBeUndefined();
+    expect(getCourseLessonContext("missing-course", "binary-numbers")).toBeUndefined();
   });
 });

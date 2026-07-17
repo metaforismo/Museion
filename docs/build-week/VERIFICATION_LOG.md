@@ -110,12 +110,12 @@ Codex did not expose token counts or quota percentages, so none are reported. De
 |---|---|---|
 | `npm run typecheck` | Pass | Course-path contracts, eleven registered lessons, linked-source records, and updated UI types |
 | `npm run lint` | Pass | No ESLint findings |
-| `npm test` | Pass | 215 offline passed; 17 live-gated skipped |
+| `npm test` | Pass | 216 offline passed; 17 live-gated skipped |
 | Focused course/source tests | Pass | 46 checks across both authored courses, source references, file sets, draft migration, misconception triggers, and public DTO privacy |
 | `npm run build` | Pass | Both course pages statically generated; one known non-blocking Turbopack tracing warning remains for the local Codex runtime |
 | `npm run verify:bundle` | Pass | Static 2885.9 KiB / 3072 KiB; largest JS 492.3 KiB / 550 KiB; PDF worker 1274.3 KiB / 1400 KiB |
 | `npm audit --omit=dev` | Pass | 0 vulnerabilities |
-| `npm run verify:ui` (production) | Pass | Added both course pages, mobile course layout, linked YouTube-playlist record, file upload, Maia rail, accessibility scans, existing 20-context Judge gate, and no unexpected console/page/5xx failures |
+| `npm run verify:ui` (production) | Pass | Added both course pages, course-aware lesson return/position, mobile course layout, linked YouTube-playlist record, file upload, Maia rail, accessibility scans, existing 20-context Judge gate, and no unexpected console/page/5xx failures |
 | `npm run screenshots` | Pass | 17 route-backed product images, including Library, course detail, linked-source Creator, and docked Maia rail |
 
 The Creator records webpage, YouTube video/playlist, and book links only as sanitized hash-bound provenance paired with authorized transcript, excerpt, or notes. It does not fetch protected content, transcribe video automatically, or claim that a URL alone was compiled. The two new course paths are source-informed and Museion-authored; their completion evidence remains bounded to the checked items and one immediate near-transfer observation.
