@@ -443,8 +443,8 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px]">
-      <div className="min-w-0">
+    <div className="w-full px-4 py-8 lg:pr-[25rem]">
+      <div className="mx-auto min-w-0 max-w-4xl">
         {requestError && (
           <div role="alert" className="mb-5 border-l-2 border-wrong bg-wrong-soft/70 px-4 py-3">
             <p className="text-sm font-medium text-wrong">{requestError}</p>

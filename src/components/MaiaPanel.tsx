@@ -159,20 +159,26 @@ export default function MaiaPanel({
   return (
     <aside
       aria-label="Maia, your tutor"
-      className="min-w-0 rounded-xl border border-ink/10 bg-surface shadow-sm lg:sticky lg:top-6"
+      className="mt-6 min-w-0 overflow-hidden rounded-2xl border border-ink/10 bg-surface shadow-sm lg:fixed lg:inset-y-14 lg:right-0 lg:z-20 lg:mt-0 lg:flex lg:w-[23rem] lg:flex-col lg:rounded-none lg:border-y-0 lg:border-r-0 lg:shadow-[-16px_0_48px_rgba(19,28,49,0.08)]"
     >
-      <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
-        <MaiaCharacter state={streaming ? "thinking" : "attentive"} className="h-10 w-9 shrink-0" />
-        <div>
-          <p className="text-sm font-semibold leading-tight">Maia</p>
-          <p className="text-xs text-ink-soft">Socratic guidance for this step</p>
+      <div className="flex min-h-16 items-center gap-3 border-b border-ink/10 px-4 py-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-lapis-soft">
+          <MaiaCharacter state={streaming ? "thinking" : "attentive"} className="h-10 w-9" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold leading-tight">Maia</p>
+            <span className="rounded-full bg-correct-soft px-2 py-0.5 text-[0.62rem] font-semibold text-correct">Grounded</span>
+          </div>
+          <p className="mt-0.5 truncate text-xs text-ink-soft">Socratic guide · current learning move</p>
         </div>
-        <button type="button" aria-expanded={mobileOpen} aria-controls="maia-conversation" onClick={() => setMobileOpen((open) => !open)} className="ml-auto min-h-11 rounded-lg px-3 text-sm font-semibold text-lapis-dark lg:hidden">{mobileOpen ? "Close" : "Ask Maia"}</button>
+        <button type="button" aria-expanded={mobileOpen} aria-controls="maia-conversation" onClick={() => setMobileOpen((open) => !open)} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-lapis-dark lg:hidden">{mobileOpen ? "Close" : "Ask Maia"}</button>
       </div>
-      <div id="maia-conversation" className={`${mobileOpen ? "flex" : "hidden"} h-[28rem] flex-col lg:flex lg:h-[32rem]`}>
-        <details className="border-b border-ink/10 px-4 py-2 text-xs text-ink-soft">
-          <summary className="cursor-pointer font-medium">Tutor status</summary>
+      <div id="maia-conversation" className={`${mobileOpen ? "flex" : "hidden"} h-[30rem] flex-col lg:flex lg:h-auto lg:min-h-0 lg:flex-1`}>
+        <details className="border-b border-ink/10 bg-paper/55 px-4 py-2.5 text-xs text-ink-soft">
+          <summary className="cursor-pointer font-medium text-ink">Runtime and safety</summary>
           <p className="mt-2">{deliverySource === "openai-codex" ? resolvedModel ?? "GPT-5.6 Terra via Codex" : deliverySource === "openai-api" ? "OpenAI API" : deliverySource === "deterministic" ? "Verified deterministic guidance" : "Grounded tutor ready"}</p>
+          <p className="mt-1 leading-5">Replies are checked for answer leakage before delivery. Deterministic code still decides correctness.</p>
         </details>
         <div
           ref={scrollRef}
@@ -180,14 +186,14 @@ export default function MaiaPanel({
           role="log"
           aria-live="polite"
           aria-label="Conversation with Maia"
-          className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5"
         >
         {messages.length === 0 && (
           <div className="text-sm text-ink-soft">
-            <p>
-              Stuck? Tell me what you tried, or what feels confusing. I can see
-              the step you&apos;re on.
-            </p>
+            <div className="mb-4 flex items-start gap-3 rounded-xl bg-paper p-3">
+              <MaiaCharacter state="curious" className="h-12 w-10 shrink-0" />
+              <p className="leading-6">I can see this learning move. Tell me what you tried; I&apos;ll ask a smaller question without giving away the answer.</p>
+            </div>
             <div className="mt-3 flex flex-col items-start gap-2">
               {["Give me a nudge", "What is this step really asking?"].map(
                 (suggestion) => (
@@ -224,14 +230,14 @@ export default function MaiaPanel({
           e.preventDefault();
           if (send(input)) setInput("");
         }}
-        className="border-t border-ink/10 p-3"
+        className="border-t border-ink/10 bg-surface p-3"
       >
         {retryMessage && !streaming && <button type="button" onClick={() => send(retryMessage)} className="mb-2 text-xs font-semibold text-lapis-dark underline underline-offset-4">Retry last question</button>}
         <div className="mb-2 flex items-center justify-between gap-3 text-xs text-ink-soft">
           <span id="maia-message-help">Ask about your reasoning, not for the final answer.</span>
           <span className="shrink-0 font-mono tabular-nums">{input.length}/{MAX_MAIA_MESSAGE_LENGTH}</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-end gap-2 rounded-xl border border-ink/15 bg-paper p-2 focus-within:border-lapis">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -240,9 +246,9 @@ export default function MaiaPanel({
             placeholder="Ask Maia…"
             aria-label="Message for Maia"
             aria-describedby="maia-message-help"
-            className="min-w-0 flex-1 rounded-lg border border-ink/15 px-3 py-2 text-sm outline-none transition focus:border-lapis disabled:opacity-60"
+            className="min-h-10 min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none disabled:opacity-60"
           />
-          {streaming ? <button type="button" onClick={() => requestController.current?.abort()} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium">Cancel</button> : <button type="submit" disabled={!input.trim()} className="rounded-lg bg-lapis px-4 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50">Send</button>}
+          {streaming ? <button type="button" onClick={() => requestController.current?.abort()} className="min-h-10 rounded-lg border border-ink/15 bg-surface px-3 text-sm font-medium">Cancel</button> : <button type="submit" aria-label="Send message to Maia" disabled={!input.trim()} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-lapis text-lg font-medium text-white transition hover:bg-lapis-dark disabled:opacity-40">↑</button>}
         </div>
         </form>
       </div>
