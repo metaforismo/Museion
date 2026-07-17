@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import SiteShell from "@/components/SiteShell";
 import { allLessons } from "@/lib/content";
+import { coursePaths } from "@/lib/curriculum";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,11 +16,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const searchableLessons = allLessons().map(({ id, title, track, description, concepts }) => ({ id, title, track, description, concepts }));
+  const searchableCourses = coursePaths.map(({ id, title, subject, tagline }) => ({ id, title, subject, tagline }));
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
       <body>
         <a href="#main-content" className="skip-link">Skip to content</a>
-        <SiteShell lessons={searchableLessons}>{children}</SiteShell>
+        <SiteShell courses={searchableCourses} lessons={searchableLessons}>{children}</SiteShell>
       </body>
     </html>
   );

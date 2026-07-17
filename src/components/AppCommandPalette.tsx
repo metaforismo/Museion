@@ -13,12 +13,19 @@ export interface SearchableLesson {
   concepts: string[];
 }
 
+export interface SearchableCourse {
+  id: string;
+  title: string;
+  subject: string;
+  tagline: string;
+}
+
 interface CommandItem {
   id: string;
   href: string;
   label: string;
   detail: string;
-  group: "Navigate" | "Lessons";
+  group: "Navigate" | "Courses" | "Lessons";
   icon: AppIconName;
   searchText: string;
 }
@@ -44,7 +51,7 @@ function rank(item: CommandItem, query: string) {
   return 3;
 }
 
-export default function AppCommandPalette({ lessons, open, onClose }: { lessons: SearchableLesson[]; open: boolean; onClose: () => void }) {
+export default function AppCommandPalette({ courses = [], lessons = [], open, onClose }: { courses?: SearchableCourse[]; lessons?: SearchableLesson[]; open: boolean; onClose: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState("");
@@ -55,6 +62,15 @@ export default function AppCommandPalette({ lessons, open, onClose }: { lessons:
 
   const items = useMemo<CommandItem[]>(() => [
     ...NAVIGATION.map((item) => ({ ...item, searchText: normalize(`${item.label} ${item.detail}`) })),
+    ...courses.map((course) => ({
+      id: `course:${course.id}`,
+      href: `/courses/${course.id}`,
+      label: course.title,
+      detail: `${course.subject} course · ${course.tagline}`,
+      group: "Courses" as const,
+      icon: "library" as const,
+      searchText: normalize(`${course.title} ${course.subject} ${course.tagline}`),
+    })),
     ...lessons.map((lesson) => ({
       id: `lesson:${lesson.id}`,
       href: `/lessons/${lesson.id}`,
@@ -64,7 +80,7 @@ export default function AppCommandPalette({ lessons, open, onClose }: { lessons:
       icon: "lesson" as const,
       searchText: normalize(`${lesson.title} ${lesson.track} ${lesson.description} ${lesson.concepts.join(" ")}`),
     })),
-  ], [lessons]);
+  ], [courses, lessons]);
 
   const results = useMemo(() => {
     const normalizedQuery = normalize(query);
@@ -139,7 +155,7 @@ export default function AppCommandPalette({ lessons, open, onClose }: { lessons:
             aria-label="Search Museion"
             value={query}
             onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
-            placeholder="Search pages, lessons, or concepts"
+            placeholder="Search courses, lessons, or concepts"
             autoComplete="off"
             role="combobox"
             aria-autocomplete="list"

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import AppIcon from "./AppIcon";
 import AppSidebar from "./AppSidebar";
-import AppCommandPalette, { type SearchableLesson } from "./AppCommandPalette";
+import AppCommandPalette, { type SearchableCourse, type SearchableLesson } from "./AppCommandPalette";
 import BrandMark from "./BrandMark";
 import SiteHeader from "./SiteHeader";
 
@@ -26,7 +26,7 @@ function MobileBottomNav() {
   return <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-ink/10 bg-surface/95 px-1 pb-[max(.35rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">{items.map(([href, label, icon]) => { const active = pathname === href || pathname.startsWith(`${href}/`); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg text-[0.66rem] font-medium ${active ? "text-lapis-dark" : "text-ink-soft"}`}><AppIcon name={icon} className="h-5 w-5" />{label}</Link>; })}</nav>;
 }
 
-export default function SiteShell({ children, lessons }: { children: ReactNode; lessons: SearchableLesson[] }) {
+export default function SiteShell({ children, courses, lessons }: { children: ReactNode; courses: SearchableCourse[]; lessons: SearchableLesson[] }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -85,6 +85,6 @@ export default function SiteShell({ children, lessons }: { children: ReactNode; 
       <div className="ml-auto flex items-center gap-2"><button type="button" onClick={openSearch} aria-label="Search Museion" className="grid min-h-11 min-w-11 place-items-center rounded-lg text-ink-soft hover:bg-paper hover:text-ink lg:hidden"><AppIcon name="search" className="h-5 w-5"/></button><Link href="/create" className="rounded-lg bg-ink px-3.5 py-2 text-sm font-semibold text-white hover:bg-lapis-dark">New course</Link></div>
     </header>
     {sidebarOpen && <div className="fixed inset-0 z-40 lg:hidden"><button type="button" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="absolute inset-0 bg-ink/30"/><aside ref={mobileDrawer} id="mobile-app-navigation" aria-label="Application navigation" className="relative h-full w-[min(19rem,86vw)] border-r border-ink/10 bg-surface shadow-2xl"><button ref={closeButton} type="button" onClick={() => setSidebarOpen(false)} className="absolute right-3 top-3 z-10 min-h-11 rounded-lg px-3 text-sm font-medium text-ink-soft">Close</button><AppSidebar onNavigate={() => setSidebarOpen(false)} /></aside></div>}
-    <main id="main-content" tabIndex={-1} className="min-w-0 pb-20 lg:col-start-2 lg:pb-0">{children}</main><MobileBottomNav /><AppCommandPalette lessons={lessons} open={searchOpen} onClose={() => setSearchOpen(false)} />
+    <main id="main-content" tabIndex={-1} className="min-w-0 pb-20 lg:col-start-2 lg:pb-0">{children}</main><MobileBottomNav /><AppCommandPalette courses={courses} lessons={lessons} open={searchOpen} onClose={() => setSearchOpen(false)} />
   </div>;
 }

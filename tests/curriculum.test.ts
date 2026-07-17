@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { museionFoundations, recommendCurriculumNodes, validateCurriculumGraph } from "@/lib/curriculum";
+import { allLessons } from "@/lib/content";
+import { coursePaths, museionFoundations, recommendCurriculumNodes, validateCurriculumGraph } from "@/lib/curriculum";
 
 describe("curriculum graph", () => {
   it("keeps the authored foundation map acyclic and fully linked", () => {
@@ -9,9 +10,9 @@ describe("curriculum graph", () => {
 
   it("recommends only unlocked nodes", () => {
     const start = recommendCurriculumNodes(museionFoundations, new Set());
-    expect(start.map(({ id }) => id)).toEqual(["negative-numbers", "order-of-operations"]);
+    expect(start.map(({ id }) => id)).toEqual(["negative-numbers", "order-of-operations", "sorted-search-space"]);
     const afterFoundations = recommendCurriculumNodes(museionFoundations, new Set(["negative-numbers", "order-of-operations"]));
-    expect(afterFoundations.map(({ id }) => id)).toEqual(["fractions-unlike-denominators", "linear-equations-intro", "binary-numbers"]);
+    expect(afterFoundations.map(({ id }) => id)).toEqual(["fractions-unlike-denominators", "linear-equations-intro", "binary-numbers", "algebra-balance-equality-as-invariant", "sorted-search-space"]);
   });
 
   it("fails closed on dangling prerequisites and cycles", () => {
@@ -21,5 +22,20 @@ describe("curriculum graph", () => {
     const cyclic = structuredClone(museionFoundations);
     cyclic.nodes[0].prerequisiteIds = ["linear-equations-intro"];
     expect(validateCurriculumGraph(cyclic).issues.map(({ code }) => code)).toContain("cycle");
+  });
+
+  it("connects every authored course path to distinct, registered lessons in sequence", () => {
+    const lessons = new Set(allLessons().map((lesson) => lesson.id));
+    const nodes = new Map(museionFoundations.nodes.map((node) => [node.id, node]));
+
+    expect(coursePaths).toHaveLength(2);
+    for (const course of coursePaths) {
+      expect(new Set(course.lessonIds).size).toBe(course.lessonIds.length);
+      for (const [index, lessonId] of course.lessonIds.entries()) {
+        expect(lessons.has(lessonId)).toBe(true);
+        expect(nodes.get(lessonId)?.lessonId).toBe(lessonId);
+        if (index > 0) expect(nodes.get(lessonId)?.prerequisiteIds).toContain(course.lessonIds[index - 1]);
+      }
+    }
   });
 });
