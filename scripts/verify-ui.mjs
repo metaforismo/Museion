@@ -478,6 +478,9 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Skip" }).click();
   await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
   await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "onboarding dashboard destination");
+  await expectVisible(page.getByText("No evidence has been recorded", { exact: true }), "dashboard evidence empty state");
+  await expectVisible(page.getByText("Nothing needs correction yet", { exact: true }), "dashboard misconception empty state");
+  await expectVisible(page.getByText("No source has been compiled", { exact: true }), "dashboard source empty state");
   await page.goto(`${baseURL}/`);
   await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "landing heading");
   await expectVisible(page.getByText("The model is useful. It is not the authority."), "product contract");
@@ -488,6 +491,14 @@ async function desktopFlow() {
 
   await page.goto(`${baseURL}/library`);
   await expectVisible(page.getByRole("heading", { name: /Learn through designed investigations/ }), "library heading");
+  await expectVisible(page.getByText(/\d+ paths · \d+ lessons/), "real sidebar catalog totals");
+  const sidebarExtent = await page.getByRole("complementary", { name: "Application navigation" }).evaluate((element) => ({
+    documentHeight: document.documentElement.scrollHeight,
+    sidebarHeight: element.getBoundingClientRect().height,
+  }));
+  if (sidebarExtent.sidebarHeight + 1 < sidebarExtent.documentHeight) {
+    failures.push(`desktop /library sidebar ends early (${sidebarExtent.sidebarHeight}px < ${sidebarExtent.documentHeight}px)`);
+  }
   const firstAuthoredCourse = page
     .getByRole("region", { name: "Follow a designed reasoning path." })
     .getByRole("link", { name: /Algebra as Balance/ });

@@ -18,6 +18,7 @@ export interface SearchableCourse {
   title: string;
   subject: string;
   tagline: string;
+  lessonCount: number;
 }
 
 interface CommandItem {
@@ -66,7 +67,7 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
       id: `course:${course.id}`,
       href: `/courses/${course.id}`,
       label: course.title,
-      detail: `${course.subject} course · ${course.tagline}`,
+      detail: `${course.subject} course · ${course.lessonCount} ${course.lessonCount === 1 ? "lesson" : "lessons"} · ${course.tagline}`,
       group: "Courses" as const,
       icon: "library" as const,
       searchText: normalize(`${course.title} ${course.subject} ${course.tagline}`),

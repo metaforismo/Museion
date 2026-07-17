@@ -16,7 +16,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const searchableLessons = allLessons().map(({ id, title, track, description, concepts }) => ({ id, title, track, description, concepts }));
-  const searchableCourses = coursePaths.map(({ id, title, subject, tagline }) => ({ id, title, subject, tagline }));
+  const searchableCourses = coursePaths.map(({ id, title, subject, tagline, lessonIds }) => ({
+    id,
+    title,
+    subject,
+    tagline,
+    lessonCount: lessonIds.length,
+  }));
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
       <body>
