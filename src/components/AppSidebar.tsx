@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import AppIcon, { type AppIconName } from "./AppIcon";
+import BrandMark from "./BrandMark";
 
 const GROUPS: { label: string; items: { href: string; label: string; icon: AppIconName }[] }[] = [
   { label: "Learn", items: [
@@ -25,7 +26,7 @@ export default function AppSidebar({ collapsed = false, onNavigate, onToggle }: 
     <div className="flex h-full min-h-0 flex-col bg-surface">
       <div className={`flex h-18 shrink-0 items-center border-b border-ink/8 ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <Link href="/dashboard" aria-label="Museion home" onClick={onNavigate} className="flex min-w-0 items-center gap-3">
-          <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.65rem] bg-lapis text-sm font-semibold text-white">M</span>
+          <BrandMark className="h-10 w-10 shrink-0" />
           {!collapsed && <span className="min-w-0"><span className="block font-display text-lg font-semibold leading-none tracking-tight">Museion</span><span className="mt-1 block truncate text-[0.68rem] text-ink-soft">Learning workspace</span></span>}
         </Link>
       </div>

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import AppIcon from "./AppIcon";
 import AppSidebar from "./AppSidebar";
 import AppCommandPalette, { type SearchableLesson } from "./AppCommandPalette";
+import BrandMark from "./BrandMark";
 import SiteHeader from "./SiteHeader";
 
 const PUBLIC_ROUTES = new Set(["/", "/welcome", "/about", "/privacy", "/terms"]);
@@ -14,7 +15,7 @@ const FOCUS_PREFIXES = ["/lessons/", "/learn/"];
 const SIDEBAR_KEY = "museion-sidebar-collapsed";
 
 function PublicFooter() {
-  return <footer className="border-t border-ink/10 bg-surface py-7 text-sm text-ink-soft"><div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"><p>Museion — learning from sources with verifiable checks.</p><nav aria-label="Legal" className="flex gap-4 text-xs font-medium"><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></nav></div></footer>;
+  return <footer className="border-t border-ink/10 bg-surface py-7 text-sm text-ink-soft"><div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"><p className="flex items-center gap-2"><BrandMark className="h-7 w-7" /><span>Museion — a house for reasoning from sources.</span></p><nav aria-label="Legal" className="flex gap-4 text-xs font-medium"><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></nav></div></footer>;
 }
 
 function MobileBottomNav() {
@@ -73,7 +74,7 @@ export default function SiteShell({ children, lessons }: { children: ReactNode; 
   }, [sidebarOpen]);
 
   if (publicRoute) return <div className="flex min-h-[100dvh] flex-col"><SiteHeader /><main id="main-content" tabIndex={-1} className="flex-1">{children}</main><PublicFooter /></div>;
-  if (focusRoute) return <div className="min-h-[100dvh] bg-paper"><header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/10 bg-surface/95 px-4 backdrop-blur"><Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold"><span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-lg bg-lapis text-xs text-white">M</span>Museion</Link><Link href="/dashboard" className="rounded-lg px-3 py-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Leave lesson</Link></header><main id="main-content" tabIndex={-1}>{children}</main></div>;
+  if (focusRoute) return <div className="min-h-[100dvh] bg-paper"><header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/10 bg-surface/95 px-4 backdrop-blur"><Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold"><BrandMark className="h-8 w-8" />Museion</Link><Link href="/dashboard" className="rounded-lg px-3 py-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Leave lesson</Link></header><main id="main-content" tabIndex={-1}>{children}</main></div>;
 
   const toggle = () => setCollapsed((value) => { const next = !value; try { localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0"); } catch { /* storage is optional */ } return next; });
   return <div className={`min-h-[100dvh] bg-paper lg:grid ${collapsed ? "lg:grid-cols-[5rem_minmax(0,1fr)]" : "lg:grid-cols-[15.5rem_minmax(0,1fr)]"}`}>

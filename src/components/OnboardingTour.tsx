@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { markOnboarded } from "@/lib/client/storage";
+import BrandMark from "./BrandMark";
 
 interface Slide {
   kicker: string;
@@ -103,6 +104,7 @@ export default function OnboardingTour() {
         key={index}
         className="premium-surface rounded-[2rem] border border-white/80 p-8 sm:p-10 animate-fade-up"
       >
+        {index === 0 && <BrandMark className="mb-7 h-16 w-16" title="Museion" />}
         <p className="eyebrow">
           {slide.kicker}
         </p>

@@ -1,14 +1,34 @@
-# Museion
+<p align="center">
+  <img src="public/brand/museion-mark.svg" width="104" height="104" alt="Museion logo" />
+</p>
 
-**An interactive learning platform with deterministic ground truth and a leak-gated Socratic AI tutor.**
+<h1 align="center">Museion</h1>
+
+<p align="center"><strong>An interactive learning platform with deterministic ground truth and a leak-gated Socratic AI tutor.</strong></p>
+
+<p align="center">
+  <a href="#product-tour">Product tour</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#getting-started">Run locally</a> ·
+  <a href="docs/LEARNING_SCIENCE.md">Learning science</a>
+</p>
 
 Museion (the Mouseion of Alexandria, "seat of the Muses") pairs a millennia-old idea — the great house of knowledge — with a personal guide inside it: **Maia**, named after maieutics, the Socratic art of helping ideas be born rather than handing them over.
 
-> The deterministic engine owns truth. The LLM owns pedagogy. Neither can do the other's job.
+> The deterministic engine owns truth. The model proposes pedagogy. Neither can do the other&apos;s job.
 
 Built with Next.js (App Router), React, Tailwind, the official Codex runtime, and an optional explicitly configured OpenAI Responses API provider.
 
-The local Build Week release also includes a complete responsive presentation layer: a research-led source-to-learning homepage, a real learning workspace, a deterministic review queue, accessible desktop/mobile navigation, creator provenance review, a polished interactive demo, and explicit limitations for the current persistence model.
+Museion is not a chat wrapper. It turns authorized source material into a bounded learning experiment:
+
+1. normalize and hash the source without a model;
+2. extract claims and exact evidence spans;
+3. design predictions, explanations and practice around a course template;
+4. audit grounding, answer privacy and runtime compatibility before publication;
+5. tutor with Maia without revealing the answer;
+6. finish with one locked, immediate near-transfer observation—and describe it no more strongly than the evidence allows.
+
+The Build Week release includes a research-led source-to-learning homepage, responsive learning workspace, global lesson/concept search, deterministic review queue, creator provenance review, polished keyless replay, and explicit limitations for the current persistence model.
 
 ## Product tour
 
@@ -23,6 +43,10 @@ The public landing page shows one learning trace directly, then explains the obs
 The application uses a grouped, collapsible desktop sidebar, a focus-trapped mobile drawer, and a four-action mobile bottom bar. Its server-owned dashboard combines the next justified action, active courses, review signals, misconceptions, recent sources, runtime state, and the explicit evidence boundary. It deliberately avoids streaks, invented readiness scores, and presenting an adaptive estimate as durable mastery.
 
 ![Museion learning workspace with its sidebar, next action, review queue, and recent sources](docs/assets/screenshots/dashboard-desktop.png)
+
+The application-wide command palette searches real destinations, authored lessons and registered concepts. `Command/Ctrl-K`, arrow keys, Enter and Escape are covered by the browser gate; only public lesson metadata enters its index.
+
+![Museion command palette searching lessons and concepts](docs/assets/screenshots/search-desktop.png)
 
 ### Responsive by construction
 
@@ -127,7 +151,7 @@ npm test        # 163 offline tests; 17 explicit live cases skip without opt-in
 npm run build   # production build
 # With `npm run dev` running in another terminal:
 npm run verify:ui  # Chrome: legacy path + full judge path 20× desktop and once at 320 px
-npm run screenshots # regenerate the 8 README/product screenshots from real routes
+npm run screenshots # regenerate the 9 README/product screenshots from real routes
 ```
 
 ## Project layout
@@ -174,6 +198,10 @@ tests/                    # Vitest suite: engine, content validation, prompt, sa
 ## Roadmap
 
 See [`TODO.md`](TODO.md) — highlights: persistence and accounts, interactive lesson widgets (the drag-the-tangent moat), retention probes for measuring delayed transfer, Maia red-teaming, voice.
+
+## Brand
+
+The mark combines three ideas from the product thesis: an organic house of knowledge, an open book that is also a threshold, and a small gold point representing an idea brought into view through Maia's questions. The concept was explored with OpenAI image generation, then reconstructed as a three-shape SVG so it stays crisp, accessible and recognizable at favicon size. Source assets and usage notes live in [`docs/brand`](docs/brand/README.md).
 
 ## License
 

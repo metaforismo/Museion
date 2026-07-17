@@ -54,6 +54,6 @@ All work in this audit remains local and uncommitted. This map groups files into
 ## Future review unit 7 — Repository product tour
 
 - `README.md`
-- `docs/images/museion-landing.png`
-- `docs/images/museion-dashboard.png`
+- `docs/assets/screenshots/landing-desktop.png`
+- `docs/assets/screenshots/dashboard-desktop.png`
 - `scripts/verify-ui.mjs` screenshot generation and regression assertions

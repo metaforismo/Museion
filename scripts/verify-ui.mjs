@@ -6,10 +6,10 @@ import { chromium } from "playwright";
 
 const baseURL = process.env.MUSEION_BASE_URL ?? "http://localhost:3000";
 const outputDir = path.resolve("output/playwright/smoke");
-const readmeImageDir = path.resolve("docs/images");
+const verificationImageDir = path.join(outputDir, "captures");
 const pdfFixture = path.resolve("tests/fixtures/binary-search-golden-source.pdf");
 await mkdir(outputDir, { recursive: true });
-await mkdir(readmeImageDir, { recursive: true });
+await mkdir(verificationImageDir, { recursive: true });
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const failures = [];
@@ -480,7 +480,7 @@ async function desktopFlow() {
   await expectVisible(page.getByRole("link", { name: "Open Museion", exact: true }), "workspace entry");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(150);
-  await page.screenshot({ path: path.join(readmeImageDir, "museion-landing.png"), fullPage: false });
+  await page.screenshot({ path: path.join(verificationImageDir, "museion-landing.png"), fullPage: false });
 
   await page.goto(`${baseURL}/library`);
   await expectVisible(page.getByRole("heading", { name: /Build the foundations through active practice/ }), "library heading");
@@ -579,7 +579,7 @@ async function desktopFlow() {
   if (activeProgress !== "page") failures.push("dashboard: Home navigation is not marked current");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(150);
-  await page.screenshot({ path: path.join(readmeImageDir, "museion-dashboard.png"), fullPage: false });
+  await page.screenshot({ path: path.join(verificationImageDir, "museion-dashboard.png"), fullPage: false });
   await page.goto(`${baseURL}/progress`);
   await expectVisible(page.getByRole("heading", { name: /What Museion observed/ }), "evidence page");
   await expectVisible(page.getByText(/Observed in guided work|Hint-free practice completed/).first(), "recorded evidence state");

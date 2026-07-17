@@ -1,0 +1,18 @@
+import type { SVGProps } from "react";
+
+export default function BrandMark({ className, title, ...props }: { className?: string; title?: string } & SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      className={className}
+      role={title ? "img" : undefined}
+      aria-hidden={title ? undefined : true}
+      aria-label={title}
+      {...props}
+    >
+      <path fill="#2b4acb" d="M32 4c11 0 15 10 21 17 5 6 10 10 9 19-1 10-10 13-18 18-7 4-16 4-23-1-6-4-9-10-14-14-7-6-6-16 0-22C14 15 18 4 32 4Z" />
+      <path fill="#fff9ed" d="M17 26c6-2 11 0 15 5 4-5 9-7 15-5v18c-6-2-11 0-15 6-4-6-9-8-15-6V26Z" />
+      <circle cx="32" cy="40" r="3.5" fill="#d9a514" />
+    </svg>
+  );
+}
