@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import AppIcon, { type AppIconName } from "./AppIcon";
 
@@ -89,10 +89,13 @@ export default function AppCommandPalette({ lessons, open, onClose }: { lessons:
     else requestAnimationFrame(() => returnFocusRef.current?.focus());
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    inputRef.current?.focus();
+    const frame = requestAnimationFrame(() => {
+      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+    });
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {

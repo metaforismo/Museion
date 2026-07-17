@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { ChatMessage, MaiaResponse } from "@/lib/api-types";
+import MaiaCharacter from "./MaiaCharacter";
 
 /** A message another component asks the panel to send to Maia. */
 export interface MaiaOutbox {
@@ -14,6 +15,7 @@ export interface MaiaOutbox {
 }
 
 const MAX_MAIA_MESSAGE_LENGTH = 2_000;
+type UiMessage = ChatMessage & { id: string };
 
 export default function MaiaPanel({
   sessionId,
@@ -30,13 +32,14 @@ export default function MaiaPanel({
   outbox: MaiaOutbox | null;
   initialMessages?: ChatMessage[];
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<UiMessage[]>(() => initialMessages.map((message, index) => ({ ...message, id: `${sessionId}:initial:${index}` })));
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [deliverySource, setDeliverySource] = useState<MaiaResponse["source"] | null>(null);
   const [resolvedModel, setResolvedModel] = useState<string | null>(null);
   const [retryMessage, setRetryMessage] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [atLiveEdge, setAtLiveEdge] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastOutboxId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
@@ -61,14 +64,14 @@ export default function MaiaPanel({
       setRetryMessage(null);
       setMessages((m) => [
         ...m,
-        { role: "user", content: message },
-        { role: "assistant", content: "" },
+        { id: crypto.randomUUID(), role: "user", content: message },
+        { id: crypto.randomUUID(), role: "assistant", content: "" },
       ]);
 
       const setLastAssistantMessage = (content: string) =>
         setMessages((m) => {
           const next = [...m];
-          next[next.length - 1] = { role: "assistant", content };
+          next[next.length - 1] = { ...next[next.length - 1], role: "assistant", content };
           return next;
         });
 
@@ -144,8 +147,14 @@ export default function MaiaPanel({
   }, [outbox, send, stepId, streaming]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
+    if (atLiveEdge) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [atLiveEdge, messages]);
+
+  const updateLiveEdge = () => {
+    const element = scrollRef.current;
+    if (!element) return;
+    setAtLiveEdge(element.scrollHeight - element.scrollTop - element.clientHeight < 48);
+  };
 
   return (
     <aside
@@ -153,17 +162,10 @@ export default function MaiaPanel({
       className="min-w-0 rounded-xl border border-ink/10 bg-surface shadow-sm lg:sticky lg:top-6"
     >
       <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
-        <span
-          aria-hidden
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-lapis font-display text-sm font-semibold text-white"
-        >
-          M
-        </span>
+        <MaiaCharacter state={streaming ? "thinking" : "attentive"} className="h-10 w-9 shrink-0" />
         <div>
           <p className="text-sm font-semibold leading-tight">Maia</p>
-          <p className="text-xs text-ink-soft">
-            asks the right questions — never gives the answer
-          </p>
+          <p className="text-xs text-ink-soft">Socratic guidance for this step</p>
         </div>
         <button type="button" aria-expanded={mobileOpen} aria-controls="maia-conversation" onClick={() => setMobileOpen((open) => !open)} className="ml-auto min-h-11 rounded-lg px-3 text-sm font-semibold text-lapis-dark lg:hidden">{mobileOpen ? "Close" : "Ask Maia"}</button>
       </div>
@@ -174,6 +176,7 @@ export default function MaiaPanel({
         </details>
         <div
           ref={scrollRef}
+          onScroll={updateLiveEdge}
           role="log"
           aria-live="polite"
           aria-label="Conversation with Maia"
@@ -202,7 +205,7 @@ export default function MaiaPanel({
         )}
         {messages.map((message, i) => (
           <div
-            key={i}
+            key={message.id}
             className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-sm whitespace-pre-wrap ${
               message.role === "user"
                 ? "ml-auto bg-lapis text-white"
@@ -213,6 +216,7 @@ export default function MaiaPanel({
               (streaming && i === messages.length - 1 ? "…" : "")}
           </div>
         ))}
+        {!atLiveEdge && <button type="button" onClick={() => { setAtLiveEdge(true); scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }} className="sticky bottom-0 mx-auto block rounded-full border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-lapis-dark shadow-md">Jump to latest ↓</button>}
         </div>
 
         <form

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LandingCoursePreview from "@/components/LandingCoursePreview";
+import MaiaCharacter from "@/components/MaiaCharacter";
 import ScientificMethodDiagram from "@/components/ScientificMethodDiagram";
 
 const PRODUCT_RULES = [
@@ -88,6 +89,26 @@ export default function HomePage() {
           </Link>
         </div>
         <ScientificMethodDiagram />
+      </section>
+
+      <section className="overflow-hidden border-y border-lapis/20 bg-lapis text-white">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-center lg:gap-20 lg:px-8 lg:py-20">
+          <div className="relative min-h-72">
+            <div aria-hidden="true" className="absolute left-1/2 top-1/2 h-60 w-60 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15"/>
+            <div aria-hidden="true" className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/8 blur-2xl"/>
+            <MaiaCharacter state="curious" className="absolute left-1/2 top-1/2 h-72 w-60 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_20px_35px_rgba(10,20,70,.25)]" title="Maia, Museion's Socratic learning companion"/>
+            <span className="absolute left-3 top-7 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs">asks before telling</span>
+            <span className="absolute bottom-6 right-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs">leaves before transfer</span>
+          </div>
+          <div>
+            <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-white">Meet Maia</p>
+            <h2 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-tight tracking-[-0.035em] sm:text-5xl">A guide inside the work, not a shortcut around it.</h2>
+            <p className="mt-5 max-w-[58ch] leading-7 text-white/75">Named for maieutics—the Socratic practice of helping an idea emerge—Maia sees the current learning move, uses bounded hints, and cannot overrule the checker.</p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              {[["01","Sees","The current prompt, prior attempts, and registered misconception."],["02","Questions","A probing move before explanation or procedure."],["03","Withdraws","No tutor, hints, or solution inside the transfer check."]].map(([number,title,body]) => <div key={number} className="rounded-xl border border-white/20 bg-white/10 p-4"><p className="font-mono text-xs font-semibold text-white">{number}</p><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-xs leading-5 text-white/85">{body}</p></div>)}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="border-y border-ink/10 bg-surface">

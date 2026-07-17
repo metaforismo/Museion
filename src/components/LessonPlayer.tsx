@@ -488,7 +488,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
             <h1 className="min-w-0 font-display text-2xl font-semibold">
               {activeLesson.title}
             </h1>
-            <span className="whitespace-nowrap text-sm text-ink-soft">
+            <span className="whitespace-nowrap text-sm text-ink">
               Step {Math.min(stepIndex + 1, activeLesson.steps.length)} of{" "}
               {activeLesson.steps.length}
             </span>
@@ -515,7 +515,7 @@ export default function LessonPlayer({ lesson, mode }: PlayerProps) {
             ))}
           </div>
           {mode === "practice" && (
-            <p className="mt-2 text-xs text-ink-soft">
+            <p className="mt-2 text-xs text-ink">
               Practice mode removes the hint ladder. Maia can still ask a guiding question,
               so this is not the independent transfer checkpoint.
             </p>
