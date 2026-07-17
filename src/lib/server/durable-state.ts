@@ -22,6 +22,7 @@ export interface StateBackend {
   readonly kind: "memory" | "supabase";
   get<T>(namespace: StateNamespace, id: string, ownerId: string): Promise<StateRecord<T> | undefined>;
   put<T>(record: StateRecord<T>): Promise<void>;
+  compareAndPut<T>(record: StateRecord<T>, expectedUpdatedAt: string): Promise<boolean>;
   list<T>(namespace: StateNamespace, ownerId: string): Promise<StateRecord<T>[]>;
   delete(namespace: StateNamespace, id: string, ownerId: string): Promise<boolean>;
   prune(namespace: StateNamespace, now?: Date): Promise<void>;
@@ -54,6 +55,19 @@ class MemoryStateBackend implements StateBackend {
 
   async put<T>(record: StateRecord<T>): Promise<void> {
     memoryRecords.set(recordKey(record.namespace, record.id), clone(record) as StoredRecord);
+  }
+
+  async compareAndPut<T>(record: StateRecord<T>, expectedUpdatedAt: string): Promise<boolean> {
+    const key = recordKey(record.namespace, record.id);
+    const current = memoryRecords.get(key);
+    if (
+      !current ||
+      current.ownerId !== record.ownerId ||
+      current.updatedAt !== expectedUpdatedAt ||
+      Date.parse(current.expiresAt) <= Date.now()
+    ) return false;
+    memoryRecords.set(key, clone(record) as StoredRecord);
+    return true;
   }
 
   async list<T>(namespace: StateNamespace, ownerId: string): Promise<StateRecord<T>[]> {
@@ -145,6 +159,22 @@ class SupabaseStateBackend implements StateBackend {
         updated_at: record.updatedAt,
       }),
     });
+  }
+
+  async compareAndPut<T>(record: StateRecord<T>, expectedUpdatedAt: string): Promise<boolean> {
+    const response = await this.request(
+      `?${this.filters(record.namespace, record.ownerId)}&id=eq.${encodeURIComponent(record.id)}&updated_at=eq.${encodeURIComponent(expectedUpdatedAt)}`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          payload: record.payload,
+          expires_at: record.expiresAt,
+          updated_at: record.updatedAt,
+        }),
+      },
+    );
+    return ((await response.json()) as SupabaseRow[]).length === 1;
   }
 
   async list<T>(namespace: StateNamespace, ownerId: string): Promise<StateRecord<T>[]> {

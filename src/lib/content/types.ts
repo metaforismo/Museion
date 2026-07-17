@@ -62,7 +62,7 @@ export interface Step {
   hints: string[];
 }
 
-export type Track = "Algebra" | "Arithmetic" | "Computer Science";
+export type Track = "Algebra" | "Arithmetic" | "Computer Science" | "Research Methods";
 
 export interface Lesson {
   id: string;

@@ -268,6 +268,22 @@ export default async function CompilationRunReview({
             {run.mode} · {run.repaired ? "bounded repair used" : "no repair needed"}
           </p>
         </div>
+        <div className="mt-6 grid gap-3 rounded-xl border border-ink/10 bg-surface p-4 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <span className="font-semibold">Learning source</span>
+          <div className="min-w-0">
+            <p>{run.document.title} · {run.document.pages} canonical page{run.document.pages === 1 ? "" : "s"}</p>
+            {run.document.sourceReference ? (
+              <p className="mt-1 break-words text-ink-soft">
+                {run.document.sourceReference.kind.replaceAll("_", " ")} reference ·{" "}
+                <a href={run.document.sourceReference.url} target="_blank" rel="noreferrer" className="font-medium text-lapis-dark underline underline-offset-4">
+                  Open original reference
+                </a>
+              </p>
+            ) : (
+              <p className="mt-1 text-ink-soft">Direct text or file import; no external link was attached.</p>
+            )}
+          </div>
+        </div>
         <div className="mt-6 overflow-x-auto">
           <table className="w-full min-w-[42rem] border-collapse text-left text-sm">
             <thead>

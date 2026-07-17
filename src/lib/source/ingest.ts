@@ -1,4 +1,4 @@
-import type { SourceDocument, SourceMediaType } from "./contracts";
+import type { SourceDocument, SourceMediaType, SourceReference } from "./contracts";
 import { SourceMediaTypeSchema } from "./contracts";
 import { MAX_SOURCE_BYTES, SourceIngestionError } from "./limits";
 import { createSourceDocument } from "./normalize";
@@ -11,6 +11,7 @@ export async function ingestTextSource(input: {
   text: string;
   mediaType?: "text/plain" | "text/markdown";
   originalFileName?: string | null;
+  sourceReference?: SourceReference;
   createdAt?: string;
 }): Promise<SourceDocument> {
   const bytes = encoder.encode(input.text);
@@ -20,6 +21,7 @@ export async function ingestTextSource(input: {
     rawPages: [input.text],
     byteLength: bytes.byteLength,
     originalFileName: input.originalFileName,
+    sourceReference: input.sourceReference,
     createdAt: input.createdAt,
   });
 }
@@ -85,5 +87,50 @@ export async function ingestSourceFile(file: File): Promise<SourceDocument> {
     text: await file.text(),
     mediaType,
     originalFileName: file.name,
+  });
+}
+
+export async function ingestSourceFiles(input: {
+  title: string;
+  files: File[];
+}): Promise<SourceDocument> {
+  if (input.files.length === 0) {
+    throw new SourceIngestionError("empty_source", "Choose at least one source file.");
+  }
+  if (input.files.length > 8) {
+    throw new SourceIngestionError("too_many_files", "Choose no more than 8 files for one course source set.");
+  }
+  const byteLength = input.files.reduce((total, file) => total + file.size, 0);
+  if (byteLength > MAX_SOURCE_BYTES) {
+    throw new SourceIngestionError(
+      "source_too_large",
+      `Combined files exceed the ${MAX_SOURCE_BYTES}-byte limit`,
+      { byteLength, maxBytes: MAX_SOURCE_BYTES },
+    );
+  }
+  const documents = await Promise.all(input.files.map((file) => ingestSourceFile(file)));
+  if (documents.length === 1) {
+    return createSourceDocument({
+      title: input.title,
+      mediaType: documents[0].mediaType,
+      rawPages: documents[0].pages.map((page) => page.text),
+      byteLength,
+      originalFileName: input.files[0].name,
+    });
+  }
+  const rawPages = documents.flatMap((document, documentIndex) =>
+    document.pages.map((page, pageIndex) => {
+      const heading = pageIndex === 0
+        ? `Source ${documentIndex + 1}: ${input.files[documentIndex].name}\n\n`
+        : "";
+      return `${heading}${page.text}`;
+    }),
+  );
+  return createSourceDocument({
+    title: input.title,
+    mediaType: "text/markdown",
+    rawPages,
+    byteLength,
+    originalFileName: `${input.files.length} source files`,
   });
 }

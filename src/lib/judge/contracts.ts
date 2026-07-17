@@ -11,20 +11,29 @@ export const JudgeCreateRequestSchema = z.object({
 export const JudgeActionRequestSchema = z.object({
   blockId: z.string().regex(/^[a-z][a-z0-9_-]{0,159}$/),
   action: RuntimeActionSchema,
+  expectedRevision: z.number().int().nonnegative(),
+  commandId: z.string().regex(/^[a-zA-Z0-9_-]{1,120}$/),
 }).strict();
 
 export const JudgeTransferRequestSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("start") }).strict(),
+  z.object({
+    kind: z.literal("start"),
+    expectedRevision: z.number().int().nonnegative(),
+    commandId: z.string().regex(/^[a-zA-Z0-9_-]{1,120}$/),
+  }).strict(),
   z.object({
     kind: z.literal("submit"),
     attemptId: z.string().regex(/^[a-zA-Z0-9_-]{1,120}$/),
     answer: z.string().min(1).max(500),
+    expectedRevision: z.number().int().nonnegative(),
+    commandId: z.string().regex(/^[a-zA-Z0-9_-]{1,120}$/),
   }).strict(),
 ]);
 
 export const JudgeSessionViewSchema = z.object({
   schemaVersion: z.literal("1.0"),
   sessionId: z.string().uuid(),
+  revision: z.number().int().nonnegative(),
   mode: z.enum(["verified-replay", "generated-course"]),
   artifact: PublicCourseArtifactV2Schema,
   blockStates: z.record(z.string(), RuntimeStateSchema),

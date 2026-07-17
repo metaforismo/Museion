@@ -7,6 +7,7 @@ export type SourceErrorCode =
   | "empty_source"
   | "source_too_large"
   | "too_many_pages"
+  | "too_many_files"
   | "textless_pdf"
   | "unsupported_media_type"
   | "invalid_pdf"

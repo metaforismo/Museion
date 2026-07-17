@@ -22,7 +22,7 @@ import {
   type RuntimeState,
   type RuntimeTutorIntervention,
 } from "@/lib/runtime";
-import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-state";
+import { resetMemoryStateForTests, stateBackend, type StateRecord } from "@/lib/server/durable-state";
 
 import { JudgeSessionViewSchema, type JudgeSessionView } from "./contracts";
 
@@ -35,8 +35,17 @@ interface JudgeSessionRecord {
   states: Record<string, RuntimeState>;
   transfer: TransferState | null;
   observation: EvidenceObservation | null;
+  revision: number;
+  recentCommands: Record<string, JudgeCommandReceipt>;
+  commandOrder: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+interface JudgeCommandReceipt {
+  fingerprint: string;
+  outcome: RuntimeOutcome | null;
+  tutor: RuntimeTutorIntervention | null;
 }
 
 const goldenArtifact = CourseArtifactV2Schema.parse(goldenArtifactInput);
@@ -64,14 +73,23 @@ function isComplete(state: RuntimeState): boolean {
   return state.complete && state.correct === true;
 }
 
-async function requireOwnedSession(sessionId: string, ownerId: string): Promise<JudgeSessionRecord> {
-  const stored = await stateBackend().get<JudgeSessionRecord>("judge_session", sessionId, ownerId);
-  if (!stored) throw new Error("JUDGE_SESSION_NOT_FOUND");
-  return stored.payload;
+async function stableSessionId(ownerId: string, clientRunId: string, artifactId: string): Promise<string> {
+  const input = new TextEncoder().encode(`museion:judge:${ownerId}:${clientRunId}:${artifactId}`);
+  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", input)).slice(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-async function saveRecord(record: JudgeSessionRecord): Promise<void> {
-  await stateBackend().put({
+async function requireOwnedSession(sessionId: string, ownerId: string): Promise<StateRecord<JudgeSessionRecord>> {
+  const stored = await stateBackend().get<JudgeSessionRecord>("judge_session", sessionId, ownerId);
+  if (!stored) throw new Error("JUDGE_SESSION_NOT_FOUND");
+  return stored;
+}
+
+function persistedRecord(record: JudgeSessionRecord): StateRecord<JudgeSessionRecord> {
+  return {
     namespace: "judge_session",
     id: record.id,
     ownerId: record.ownerId,
@@ -79,7 +97,47 @@ async function saveRecord(record: JudgeSessionRecord): Promise<void> {
     expiresAt: new Date(Date.parse(record.updatedAt) + JUDGE_SESSION_TTL_MS).toISOString(),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
-  });
+  };
+}
+
+async function saveNewRecord(record: JudgeSessionRecord): Promise<void> {
+  await stateBackend().put(persistedRecord(record));
+}
+
+function monotonicTimestamp(previous: string): string {
+  return new Date(Math.max(Date.now(), Date.parse(previous) + 1)).toISOString();
+}
+
+async function commandFingerprint(value: unknown): Promise<string> {
+  const input = new TextEncoder().encode(JSON.stringify(value));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", input));
+  return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function receipt(record: JudgeSessionRecord, commandId: string, fingerprint: string): JudgeCommandReceipt | null {
+  const existing = record.recentCommands?.[commandId];
+  if (!existing) return null;
+  if (existing.fingerprint !== fingerprint) throw new Error("JUDGE_COMMAND_ID_REUSED");
+  return existing;
+}
+
+function rememberCommand(record: JudgeSessionRecord, commandId: string, value: JudgeCommandReceipt): void {
+  record.recentCommands ??= {};
+  record.commandOrder ??= [];
+  record.recentCommands[commandId] = value;
+  record.commandOrder.push(commandId);
+  while (record.commandOrder.length > 32) {
+    const expired = record.commandOrder.shift();
+    if (expired) delete record.recentCommands[expired];
+  }
+}
+
+async function saveMutation(record: JudgeSessionRecord, storedUpdatedAt: string): Promise<void> {
+  record.revision = (record.revision ?? 0) + 1;
+  record.updatedAt = monotonicTimestamp(storedUpdatedAt);
+  if (!await stateBackend().compareAndPut(persistedRecord(record), storedUpdatedAt)) {
+    throw new Error("JUDGE_VERSION_CONFLICT");
+  }
 }
 
 function view(record: JudgeSessionRecord): JudgeSessionView {
@@ -89,6 +147,7 @@ function view(record: JudgeSessionRecord): JudgeSessionView {
   return JudgeSessionViewSchema.parse({
     schemaVersion: "1.0",
     sessionId: record.id,
+    revision: record.revision ?? 0,
     mode: record.mode,
     artifact: toPublicCourseArtifact(record.artifact),
     blockStates: record.states,
@@ -121,7 +180,7 @@ export async function createJudgeSession(
     interactiveBlocks(artifact).map((block) => [block.id, initializeBlock(block)]),
   );
   const record: JudgeSessionRecord = {
-    id: crypto.randomUUID(),
+    id: await stableSessionId(ownerId, clientRunId, artifact.id),
     ownerId,
     clientRunId,
     artifact: structuredClone(artifact),
@@ -129,16 +188,19 @@ export async function createJudgeSession(
     states,
     transfer: null,
     observation: null,
+    revision: 0,
+    recentCommands: {},
+    commandOrder: [],
     createdAt: now,
     updatedAt: now,
   };
-  await saveRecord(record);
+  await saveNewRecord(record);
   return view(record);
 }
 
 export async function getJudgeSession(sessionId: string, ownerId: string): Promise<JudgeSessionView> {
   await pruneJudgeSessions();
-  return view(await requireOwnedSession(sessionId, ownerId));
+  return view((await requireOwnedSession(sessionId, ownerId)).payload);
 }
 
 /** Owner-scoped, public-safe generated learning history. */
@@ -156,9 +218,16 @@ export async function dispatchJudgeAction(input: {
   ownerId: string;
   blockId: string;
   action: RuntimeAction;
+  expectedRevision: number;
+  commandId: string;
 }): Promise<{ session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null }> {
   await pruneJudgeSessions();
-  const record = await requireOwnedSession(input.sessionId, input.ownerId);
+  const stored = await requireOwnedSession(input.sessionId, input.ownerId);
+  const record = stored.payload;
+  const fingerprint = await commandFingerprint({ blockId: input.blockId, action: input.action });
+  const replay = receipt(record, input.commandId, fingerprint);
+  if (replay?.outcome) return { session: view(record), outcome: replay.outcome, tutor: replay.tutor };
+  if ((record.revision ?? 0) !== input.expectedRevision) throw new Error("JUDGE_VERSION_CONFLICT");
   if (record.transfer) throw new Error("TRANSFER_ALREADY_STARTED");
   const block = record.artifact.blocks[input.blockId];
   const state = record.states[input.blockId];
@@ -175,8 +244,8 @@ export async function dispatchJudgeAction(input: {
     outcome,
   });
   record.states[input.blockId] = outcome.state;
-  record.updatedAt = new Date().toISOString();
-  await saveRecord(record);
+  rememberCommand(record, input.commandId, { fingerprint, outcome, tutor });
+  await saveMutation(record, stored.updatedAt);
   return { session: view(record), outcome, tutor };
 }
 
@@ -186,9 +255,15 @@ export async function updateJudgeTransfer(input: {
   kind: "start" | "submit";
   attemptId?: string;
   answer?: string;
+  expectedRevision: number;
+  commandId: string;
 }): Promise<JudgeSessionView> {
   await pruneJudgeSessions();
-  const record = await requireOwnedSession(input.sessionId, input.ownerId);
+  const stored = await requireOwnedSession(input.sessionId, input.ownerId);
+  const record = stored.payload;
+  const fingerprint = await commandFingerprint({ kind: input.kind, attemptId: input.attemptId, answer: input.answer });
+  if (receipt(record, input.commandId, fingerprint)) return view(record);
+  if ((record.revision ?? 0) !== input.expectedRevision) throw new Error("JUDGE_VERSION_CONFLICT");
   if (!interactiveBlocks(record.artifact).every((block) => isComplete(record.states[block.id]))) {
     throw new Error("TRANSFER_LOCKED");
   }
@@ -206,8 +281,8 @@ export async function updateJudgeTransfer(input: {
     });
     record.observation = await buildEvidenceObservation(record.transfer, record.artifact);
   }
-  record.updatedAt = new Date().toISOString();
-  await saveRecord(record);
+  rememberCommand(record, input.commandId, { fingerprint, outcome: null, tutor: null });
+  await saveMutation(record, stored.updatedAt);
   return view(record);
 }
 

@@ -16,7 +16,11 @@ export async function POST(
     return NextResponse.json(await dispatchJudgeAction({ sessionId, ownerId, ...parsed.data }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "RUNTIME_ACTION_FAILED";
-    const status = message === "JUDGE_SESSION_NOT_FOUND" ? 404 : message === "TRANSFER_ALREADY_STARTED" ? 409 : 400;
+    const status = message === "JUDGE_SESSION_NOT_FOUND"
+      ? 404
+      : ["TRANSFER_ALREADY_STARTED", "JUDGE_VERSION_CONFLICT", "JUDGE_COMMAND_ID_REUSED"].includes(message)
+        ? 409
+        : 400;
     return NextResponse.json({ error: message }, { status });
   }
 }

@@ -31,14 +31,18 @@ export function maiaAvailable(): boolean {
   return provider().available();
 }
 
-function safetyIssues(
+export function tutorSafetyIssues(
   step: Step,
   turn: TutorTurn,
   allowedUiTargetIds: readonly string[],
 ): string[] {
   const issues: string[] = [];
   if (!TutorTurnSchema.safeParse(turn).success) issues.push("invalid_schema");
-  if (revealsAnswer(step, turn.message)) issues.push("answer_leak_detected");
+  const learnerVisibleText = [
+    turn.message,
+    ...turn.uiActions.flatMap((action) => action.text ? [action.text] : []),
+  ].join("\n");
+  if (revealsAnswer(step, learnerVisibleText)) issues.push("answer_leak_detected");
   const allowed = new Set(allowedUiTargetIds);
   if (turn.uiActions.some((action) => !allowed.has(action.targetId))) {
     issues.push("invalid_ui_target");
@@ -120,7 +124,7 @@ export async function maiaRespond(
     };
     try {
       let result = await tutorProvider.generate(input, { signal });
-      let issues = safetyIssues(step, result.turn, allowedUiTargetIds);
+      let issues = tutorSafetyIssues(step, result.turn, allowedUiTargetIds);
       let repaired = false;
 
       if (issues.length > 0) {
@@ -130,7 +134,7 @@ export async function maiaRespond(
           signal,
           repairIssues: issues,
         });
-        issues = safetyIssues(step, result.turn, allowedUiTargetIds);
+        issues = tutorSafetyIssues(step, result.turn, allowedUiTargetIds);
       }
 
       const sameStep =

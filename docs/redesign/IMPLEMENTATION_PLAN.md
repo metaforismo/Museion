@@ -1,5 +1,22 @@
 # Implementation plan
 
+## V2 execution status — 2026-07-17
+
+- [x] Baseline lint, types, tests, build, bundle and UI gate
+- [x] Before screenshots, route audit and source review
+- [x] Fix unearned evidence and persistence language
+- [x] Harden Maia visible-output leak checks
+- [x] Fix runtime range, stale form, target and annotation paths
+- [x] Rebuild landing hero, dashboard mission and sidebar
+- [x] Create Maia concept sheet and manual SVG family
+- [x] Add minimal-data onboarding preferences
+- [x] Add typed acyclic authored curriculum graph
+- [ ] Close cross-tab judge compare-and-swap gap
+- [ ] Add supervised youth mode and product-level deletion
+- [x] Complete production browser matrix and canonical screenshots
+- [x] Final suite/build/audit and README
+- [x] Create reviewable commits, push the branch and open draft PR #7
+
 ## Completed locally in this redesign pass
 
 - [x] Baseline install, lint, typecheck, 159-test suite, and production build
@@ -27,9 +44,9 @@
 - [ ] Persist safe generated misconception events
 - [ ] Decompose Creator, LessonPlayer, Judge, Maia, and Settings controllers
 - [ ] Add section-level dashboard unavailable/expired states
-- [ ] Add keyboard command search over real available data
+- [x] Add keyboard command search over real available data
 - [ ] Add delayed retention only with a genuine scheduler and evidence schema
-- [ ] Capture and validate the full screenshot set
-- [ ] Complete 320/375/768/1440 and 200% zoom browser gates
+- [x] Capture and validate the full screenshot set
+- [x] Complete 320/375/768/1440 and 200% zoom browser gates
 
-No files in this redesign pass are staged, committed, pushed, deployed, or submitted.
+The remaining product work above is explicitly deferred from this V2 review unit. Deployment, public video publication and Devpost submission are not authorized by this plan.

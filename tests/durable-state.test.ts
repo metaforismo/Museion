@@ -58,6 +58,21 @@ describe("durable state backend", () => {
     expect(await backend.get("compiler_run", "run-1", "owner-a")).toBeUndefined();
   });
 
+  it("applies memory updates only against the expected record version", async () => {
+    const backend = stateBackend();
+    const original = fixture();
+    await backend.put(original);
+    const updated = {
+      ...original,
+      payload: { value: 2 },
+      updatedAt: new Date(Date.parse(original.updatedAt) + 1).toISOString(),
+    };
+
+    expect(await backend.compareAndPut(updated, original.updatedAt)).toBe(true);
+    expect(await backend.compareAndPut({ ...updated, payload: { value: 3 } }, original.updatedAt)).toBe(false);
+    expect((await backend.get<{ value: number }>("compiler_run", "run-1", "owner-a"))?.payload.value).toBe(2);
+  });
+
   it("fails closed when Supabase is only partially configured", () => {
     process.env.MUSEION_STATE_BACKEND = "supabase";
     process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -88,5 +103,19 @@ describe("durable state backend", () => {
 
     const [, init] = fetchMock.mock.calls[0];
     expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer legacy.jwt.value");
+  });
+
+  it("uses an owner-scoped conditional patch for Supabase updates", async () => {
+    process.env.MUSEION_STATE_BACKEND = "supabase";
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SECRET_KEY = "sb_secret_test";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("[]", { status: 200 }));
+    const record = fixture();
+
+    expect(await stateBackend().compareAndPut(record, "2026-01-01T00:00:00.000Z")).toBe(false);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("owner_id=eq.owner-a");
+    expect(String(url)).toContain("updated_at=eq.2026-01-01T00%3A00%3A00.000Z");
+    expect(init?.method).toBe("PATCH");
   });
 });

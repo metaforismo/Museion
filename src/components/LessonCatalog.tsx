@@ -126,6 +126,7 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
         )}
       </div>
 
+      <section aria-label="Lesson catalog results">
       {filteredLessons.length === 0 ? (
         <div className="mt-6 border-l-2 border-gold py-4 pl-6" role="status">
           <h3 className="font-display text-2xl font-semibold">No lesson matches yet</h3>
@@ -184,6 +185,7 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
           })}
         </div>
       )}
+      </section>
     </div>
   );
 }

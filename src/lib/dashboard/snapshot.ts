@@ -16,6 +16,22 @@ function assistanceLabel(value: "novice" | "developing" | "proficient") {
   return value === "novice" ? "more" as const : value === "developing" ? "some" as const : "light" as const;
 }
 
+function answeredConcepts(sessions: ReturnType<typeof listSessionsForLearner>) {
+  const guided = new Set<string>();
+  const practiced = new Set<string>();
+
+  for (const session of sessions) {
+    const destination = session.mode === "practice" ? practiced : guided;
+    for (const event of session.events) {
+      if (event.kind !== "answer_submitted" || typeof event.stepId !== "string") continue;
+      const step = session.lesson.steps.find(({ id }) => id === event.stepId);
+      if (step) destination.add(step.concept);
+    }
+  }
+
+  return { guided, practiced };
+}
+
 export async function buildDashboardSnapshot(learnerId: string): Promise<DashboardSnapshot> {
   const profile = getProfile(learnerId);
   const authoredSessions = listSessionsForLearner(learnerId);
@@ -97,10 +113,12 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
     }
   }
 
+  const observations = answeredConcepts(authoredSessions);
+  const observedConcepts = new Set([...observations.guided, ...observations.practiced]);
   const evidence: DashboardSnapshot["evidence"] = profile
-    ? [...new Set(authoredSessions.flatMap((session) => session.lesson.concepts))].slice(0, 12).map((concept) => {
+    ? [...observedConcepts].slice(0, 12).map((concept) => {
         const value = profile.mastery.mastery(concept);
-        const practiced = lessons.some((lesson) => lesson.concepts.includes(concept) && (profile.practiceRuns.get(lesson.id) ?? 0) > 0);
+        const practiced = observations.practiced.has(concept);
         return {
           concept: titleCase(concept),
           state: practiced ? "hint-free-practice" as const : "observed-guided" as const,
@@ -161,7 +179,9 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
     runtime: {
       provider: settings.provider,
       label: settings.provider === "codex" ? "ChatGPT via Codex" : settings.provider === "offline" ? "Offline demo" : "OpenAI API",
-      persistence: stateBackend().kind === "supabase" ? "supabase" : "process-local",
+      // Authored lesson state is process-local today even when generated jobs
+      // use Supabase. Never imply that the whole learning record is synced.
+      persistence: stateBackend().kind === "supabase" ? "hybrid" : "process-local",
     },
     limitations: [
       "Guided work and hint-free practice are session observations, not proof of retained mastery.",

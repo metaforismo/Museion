@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { markOnboarded } from "@/lib/client/storage";
+import { markOnboarded, saveLearningPreferences, type LearningPreferences } from "@/lib/client/storage";
 import BrandMark from "./BrandMark";
+import MaiaCharacter from "./MaiaCharacter";
 
 interface Slide {
   kicker: string;
@@ -85,17 +86,24 @@ const SLIDES: Slide[] = [
       </>
     ),
   },
+  {
+    kicker: "Make it yours",
+    title: "Choose a starting posture, not a permanent label.",
+    body: <p>These local preferences tune recommendations and language. Museion does not ask for a birth date, and you can change or clear them later.</p>,
+  },
 ];
 
 export default function OnboardingTour() {
   const router = useRouter();
   const [index, setIndex] = useState(0);
+  const [preferences, setPreferences] = useState<LearningPreferences>({ schemaVersion: "1.0", role: "independent", ageBand: "prefer-not-to-say", goal: "build-foundations" });
   const slide = SLIDES[index];
   const isLast = index === SLIDES.length - 1;
 
   const finish = () => {
+    saveLearningPreferences(preferences);
     markOnboarded();
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return (
@@ -105,6 +113,7 @@ export default function OnboardingTour() {
         className="premium-surface rounded-[2rem] border border-white/80 p-8 sm:p-10 animate-fade-up"
       >
         {index === 0 && <BrandMark className="mb-7 h-16 w-16" title="Museion" />}
+        {index === 2 && <MaiaCharacter state="curious" className="mb-2 h-28 w-24" title="Maia"/>}
         <p className="eyebrow">
           {slide.kicker}
         </p>
@@ -114,6 +123,12 @@ export default function OnboardingTour() {
         <div className="mt-4 space-y-3 leading-relaxed text-ink-soft">
           {slide.body}
         </div>
+        {isLast && <div className="mt-7 space-y-6">
+          <ChoiceGroup legend="I am learning as" value={preferences.role} options={[["student","Student"],["educator","Educator"],["independent","Independent learner"]]} onChange={(role) => setPreferences((current) => ({ ...current, role: role as LearningPreferences["role"] }))}/>
+          <ChoiceGroup legend="Age band" value={preferences.ageBand} options={[["13-15","13–15"],["16-18","16–18"],["adult","Adult"],["prefer-not-to-say","Prefer not to say"]]} onChange={(ageBand) => setPreferences((current) => ({ ...current, ageBand: ageBand as LearningPreferences["ageBand"] }))}/>
+          <ChoiceGroup legend="First goal" value={preferences.goal} options={[["build-foundations","Build foundations"],["prepare-exam","Prepare for an exam"],["teach-it-back","Explain it to someone"]]} onChange={(goal) => setPreferences((current) => ({ ...current, goal: goal as LearningPreferences["goal"] }))}/>
+          <p className="text-xs leading-5 text-ink-soft">Local to this browser. No birth date or school identifier is collected.</p>
+        </div>}
       </div>
 
       <div className="mt-6 flex items-center justify-between">
@@ -160,4 +175,8 @@ export default function OnboardingTour() {
       </div>
     </div>
   );
+}
+
+function ChoiceGroup({ legend, value, options, onChange }: { legend: string; value: string; options: readonly (readonly [string, string])[]; onChange(value: string): void }) {
+  return <fieldset><legend className="text-sm font-semibold text-ink">{legend}</legend><div className="mt-2 flex flex-wrap gap-2">{options.map(([option,label]) => <button type="button" key={option} aria-pressed={value === option} onClick={() => onChange(option)} className={`min-h-11 rounded-xl border px-3.5 text-sm font-medium transition ${value === option ? "border-lapis bg-lapis-soft text-lapis-dark" : "border-ink/15 bg-surface text-ink-soft hover:border-lapis/40"}`}>{label}</button>)}</div></fieldset>;
 }

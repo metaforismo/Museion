@@ -8,7 +8,10 @@ import {
   SourceIngestionError,
   createSourceDocument,
   ingestPdfSource,
+  ingestSourceFiles,
   ingestTextSource,
+  inferSourceReferenceKind,
+  normalizeSourceUrl,
   normalizeSourceText,
   resolveExactSourceSpan,
   validateSourceSpan,
@@ -40,6 +43,51 @@ describe("source normalization and provenance", () => {
     expect(first.sha256).toBe(second.sha256);
     expect(first.pages[0].sha256).toBe(second.pages[0].sha256);
     expect(first.id).toBe(second.id);
+  });
+
+  it("binds an HTTPS source reference to the canonical document identity", async () => {
+    const sourceReference = {
+      kind: "youtube_playlist" as const,
+      url: "https://www.youtube.com/playlist?list=PL123",
+      label: "Open lecture playlist",
+    };
+    const referenced = await ingestTextSource({
+      title: "Lecture notes",
+      text: "Authorized transcript notes.",
+      sourceReference,
+      createdAt: CREATED_AT,
+    });
+    const unreferenced = await ingestTextSource({
+      title: "Lecture notes",
+      text: "Authorized transcript notes.",
+      createdAt: CREATED_AT,
+    });
+    expect(referenced.sourceReference).toEqual(sourceReference);
+    expect(referenced.sha256).not.toBe(unreferenced.sha256);
+    await expect(verifySourceDocumentIntegrity(referenced)).resolves.toBeUndefined();
+    await expect(verifySourceDocumentIntegrity({ ...referenced, sourceReference: { ...sourceReference, url: "https://example.com/changed" } })).rejects.toMatchObject({ code: "invalid_source" });
+  });
+
+  it("normalizes link references and identifies common YouTube forms", () => {
+    expect(normalizeSourceUrl(" https://youtu.be/abc#chapter ")).toBe("https://youtu.be/abc");
+    expect(inferSourceReferenceKind("https://youtu.be/abc")).toBe("youtube_video");
+    expect(inferSourceReferenceKind("https://youtube.com/watch?v=abc&list=PL123")).toBe("youtube_playlist");
+    expect(() => normalizeSourceUrl("http://example.com/notes")).toThrow("HTTPS");
+    expect(() => normalizeSourceUrl("https://example.com/notes?access_token=secret")).toThrow("tokens");
+  });
+
+  it("combines a bounded multi-file source set while retaining file boundaries", async () => {
+    const source = await ingestSourceFiles({
+      title: "Playlist transcript set",
+      files: [
+        new File(["First transcript"], "01-intro.txt", { type: "text/plain" }),
+        new File(["# Second transcript"], "02-method.md", { type: "text/markdown" }),
+      ],
+    });
+    expect(source.pages).toHaveLength(2);
+    expect(source.pages[0].text).toContain("Source 1: 01-intro.txt");
+    expect(source.pages[1].text).toContain("Source 2: 02-method.md");
+    expect(source.originalFileName).toBe("2 source files");
   });
 
   it("rejects browser-forged document identity and page metadata", async () => {

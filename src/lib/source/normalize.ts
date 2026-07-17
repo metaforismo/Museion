@@ -3,6 +3,7 @@ import type {
   SourceMediaType,
   SourcePage,
   SourceWarning,
+  SourceReference,
 } from "./contracts";
 import {
   SOURCE_NORMALIZATION_VERSION,
@@ -96,6 +97,7 @@ export interface CreateSourceDocumentInput {
   rawPages: string[];
   byteLength: number;
   originalFileName?: string | null;
+  sourceReference?: SourceReference;
   language?: string;
   createdAt?: string;
 }
@@ -147,6 +149,7 @@ export async function createSourceDocument(
   const canonicalPayload = JSON.stringify({
     normalizationVersion: SOURCE_NORMALIZATION_VERSION,
     pages: pages.map(({ pageNumber, text }) => ({ pageNumber, text })),
+    ...(input.sourceReference ? { sourceReference: input.sourceReference } : {}),
   });
   const sha256 = await sha256Hex(canonicalPayload);
   const title = input.title.trim().slice(0, MAX_SOURCE_TITLE_CHARACTERS);
@@ -162,6 +165,7 @@ export async function createSourceDocument(
     title,
     mediaType: input.mediaType,
     originalFileName: input.originalFileName?.trim() || null,
+    ...(input.sourceReference ? { sourceReference: input.sourceReference } : {}),
     language: input.language ?? "und",
     sha256,
     byteLength: input.byteLength,
@@ -194,6 +198,7 @@ export async function verifySourceDocumentIntegrity(document: SourceDocument): P
   const canonicalPayload = JSON.stringify({
     normalizationVersion: SOURCE_NORMALIZATION_VERSION,
     pages: document.pages.map(({ pageNumber, text }) => ({ pageNumber, text })),
+    ...(document.sourceReference ? { sourceReference: document.sourceReference } : {}),
   });
   const sha256 = await sha256Hex(canonicalPayload);
   if (document.sha256 !== sha256 || document.id !== `src_${sha256.slice(0, 24)}`) {

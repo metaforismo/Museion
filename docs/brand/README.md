@@ -21,3 +21,7 @@ The production mark uses only `#2b4acb` lapis, `#fff9ed` ivory and `#d9a514` gol
 Use case: `logo-brand`. The final concept prompt asked for an original, softly asymmetrical learning-app symbol: an organic lapis form containing an ivory book/threshold and a small gold idea brought into view. It used Brilliant only as a reference for icon-scale simplicity, explicitly prohibited copying its contour, proportions, colors or composition, and excluded text, gradients, shadows and thin strokes. The generated concept was then manually reduced to three flat vector shapes for small-size legibility and deterministic reproduction.
 
 ![Image-generated Museion logo concept](museion-logo-concept-imagegen.png)
+
+## Maia companion
+
+Maia extends the mark’s lapis/ivory/gold language without replacing the logo. The manually reconstructed SVG family lives in `public/brand/maia/`; generation provenance and usage rules are in [MAIA_MASCOT.md](MAIA_MASCOT.md).

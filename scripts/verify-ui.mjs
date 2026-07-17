@@ -60,6 +60,8 @@ async function accessibilityFlow() {
     "/create",
     "/dashboard",
     "/library",
+    "/courses/algebra-as-balance",
+    "/courses/search-by-halving",
     "/review",
     "/settings",
     "/create/review",
@@ -87,7 +89,7 @@ async function accessibilityFlow() {
   await mobile.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
   const mobilePage = await mobile.newPage();
   watch(mobilePage, "accessibility-mobile");
-  for (const route of ["/", "/dashboard", "/library", "/review", "/progress", "/create", "/settings", "/judge"]) {
+  for (const route of ["/", "/dashboard", "/library", "/courses/algebra-as-balance", "/review", "/progress", "/create", "/settings", "/judge"]) {
     await mobilePage.goto(`${baseURL}${route}`);
     await mobilePage.locator("main").waitFor({ state: "visible" });
     await scanPage(mobilePage, `mobile ${route}`);
@@ -217,6 +219,11 @@ async function keyboardJudgeFlow() {
   await expectVisible(page.getByText("Prediction matches the deterministic answer."), "keyboard prediction");
   await keyboardActivate(page, page.getByRole("button", { name: /Continue/ }));
 
+  await keyboardFill(page, page.getByLabel("Next low"), "-1");
+  await keyboardFill(page, page.getByLabel("Next high"), "-2");
+  await page.getByLabel("Next high").blur();
+  await expectVisible(page.getByRole("alert").filter({ hasText: "Low must be non-negative" }), "keyboard range boundary validation");
+  if (await page.getByRole("button", { name: "Update interval" }).isEnabled()) failures.push("keyboard range: invalid negative boundaries can be submitted");
   await keyboardFill(page, page.getByLabel("Next low"), "4");
   await keyboardFill(page, page.getByLabel("Next high"), "6");
   await keyboardActivate(page, page.getByRole("button", { name: "Update interval" }));
@@ -474,7 +481,12 @@ async function desktopFlow() {
 
   await page.goto(`${baseURL}/welcome`);
   await page.getByRole("button", { name: "Skip" }).click();
-  await page.waitForURL((url) => url.pathname === "/");
+  await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
+  await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "onboarding dashboard destination");
+  await expectVisible(page.getByText("No evidence has been recorded", { exact: true }), "dashboard evidence empty state");
+  await expectVisible(page.getByText("Nothing needs correction yet", { exact: true }), "dashboard misconception empty state");
+  await expectVisible(page.getByText("No source has been compiled", { exact: true }), "dashboard source empty state");
+  await page.goto(`${baseURL}/`);
   await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "landing heading");
   await expectVisible(page.getByText("The model is useful. It is not the authority."), "product contract");
   await expectVisible(page.getByRole("link", { name: "Open Museion", exact: true }), "workspace entry");
@@ -483,30 +495,57 @@ async function desktopFlow() {
   await page.screenshot({ path: path.join(verificationImageDir, "museion-landing.png"), fullPage: false });
 
   await page.goto(`${baseURL}/library`);
-  await expectVisible(page.getByRole("heading", { name: /Build the foundations through active practice/ }), "library heading");
-  await page.keyboard.press("/");
+  await expectVisible(page.getByRole("heading", { name: /Learn through designed investigations/ }), "library heading");
+  await expectVisible(page.getByText(/\d+ paths · \d+ lessons/), "real sidebar catalog totals");
+  const sidebarExtent = await page.getByRole("complementary", { name: "Application navigation" }).evaluate((element) => ({
+    documentHeight: document.documentElement.scrollHeight,
+    sidebarHeight: element.getBoundingClientRect().height,
+  }));
+  if (sidebarExtent.sidebarHeight + 1 < sidebarExtent.documentHeight) {
+    failures.push(`desktop /library sidebar ends early (${sidebarExtent.sidebarHeight}px < ${sidebarExtent.documentHeight}px)`);
+  }
+  const firstAuthoredCourse = page
+    .getByRole("region", { name: "Follow a designed reasoning path." })
+    .getByRole("link", { name: /Algebra as Balance/ });
+  await expectVisible(firstAuthoredCourse, "authored course entry");
+  await firstAuthoredCourse.click();
+  await page.waitForURL((url) => url.pathname === "/courses/algebra-as-balance");
+  await expectVisible(page.getByRole("heading", { name: "Algebra as Balance" }), "authored course detail");
+  await expectVisible(page.getByText(/one immediate near-transfer observation/), "course evidence boundary");
+  await page.getByRole("link", { name: "Start the path", exact: true }).click();
+  await page.waitForURL((url) => url.pathname === "/lessons/algebra-balance-equality-as-invariant" && url.searchParams.get("course") === "algebra-as-balance");
+  await expectVisible(page.getByRole("link", { name: "Back to Algebra as Balance", exact: true }), "course-aware lesson return");
+  await expectVisible(page.getByText("Algebra as Balance · 1/3", { exact: true }), "course lesson position");
+  await page.goto(`${baseURL}/library`);
   const catalogSearch = page.getByLabel("Find a lesson or concept");
+  const catalogResults = page.getByRole("region", { name: "Lesson catalog results" });
+  await expectVisible(catalogSearch, "catalog search after route return");
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await page.keyboard.press("/");
+    if (await catalogSearch.evaluate((input) => input === document.activeElement)) break;
+    await page.waitForTimeout(50);
+  }
   if (!(await catalogSearch.evaluate((input) => input === document.activeElement))) {
     failures.push("catalog: slash shortcut did not focus search");
   }
   await catalogSearch.fill("binary");
-  await expectVisible(page.getByRole("link", { name: /Binary Numbers/ }), "catalog concept search");
-  if (await page.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
+  await expectVisible(catalogResults.getByRole("link", { name: /Binary Numbers/ }), "catalog concept search");
+  if (await catalogResults.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
     failures.push("catalog: search retained a non-matching lesson");
   }
   await catalogSearch.fill("concept-that-does-not-exist");
-  await expectVisible(page.getByRole("heading", { name: "No lesson matches yet" }), "catalog empty state");
+  await expectVisible(catalogResults.getByRole("heading", { name: "No lesson matches yet" }), "catalog empty state");
   await page.getByRole("button", { name: "Reset the catalog" }).click();
   await page.getByRole("button", { name: "Computer Science" }).click();
-  await expectVisible(page.getByRole("link", { name: /Binary Numbers/ }), "catalog subject filter");
-  if (await page.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
+  await expectVisible(catalogResults.getByRole("link", { name: /Binary Numbers/ }), "catalog subject filter");
+  if (await catalogResults.getByRole("link", { name: /Solving Linear Equations/ }).count()) {
     failures.push("catalog: subject filter retained an algebra lesson");
   }
   await page.getByRole("button", { name: "Clear search and filters" }).click();
-  await expectVisible(page.getByRole("link", { name: /Solving Linear Equations/ }), "catalog reset");
+  await expectVisible(catalogResults.getByRole("link", { name: /Solving Linear Equations/ }), "catalog reset");
   await page.screenshot({ path: path.join(outputDir, "desktop-catalog.png"), fullPage: true });
 
-  await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
+  await catalogResults.getByRole("link", { name: /Solving Linear Equations/ }).click();
   await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "first lesson step");
 
   let rapidAnswerRequests = 0;
@@ -585,8 +624,11 @@ async function desktopFlow() {
   await expectVisible(page.getByText(/Observed in guided work|Hint-free practice completed/).first(), "recorded evidence state");
   await expectVisible(page.getByText(/Retention is not measured/), "retention boundary");
 
-  await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Create from source", exact: true }).click();
+  await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
+  for (const method of ["Paste text", "Upload files", "Link + content"]) {
+    await expectVisible(page.getByRole("radio", { name: method }), `creator source method: ${method}`);
+  }
   await expectVisible(page.getByText("After source review", { exact: true }), "sequential creator progress");
   const currentCreatorStep = page.locator('[aria-label="Creator progress"] [aria-current="step"]');
   if ((await currentCreatorStep.textContent())?.includes("1. Source") !== true) {
@@ -604,6 +646,7 @@ async function desktopFlow() {
     failures.push("creator: cancelling draft deletion changed the source text");
   }
   await page.reload();
+  await page.waitForFunction(() => document.querySelector("#source-text")?.value.includes("Binary search invariant"));
   if (!(await page.getByLabel("Paste source text").inputValue()).includes("Binary search invariant")) {
     failures.push("creator: local text draft did not restore after refresh");
   }
@@ -615,6 +658,17 @@ async function desktopFlow() {
   await page.getByLabel("Source title").fill("Updated source title");
   await expectVisible(page.getByText(/Add a source to inspect its canonical pages/), "stale normalized source invalidation");
 
+  await page.getByRole("radio", { name: /Link \+ content/ }).click();
+  await page.getByLabel("Source link").fill("https://www.youtube.com/playlist?list=PL123");
+  if (await page.getByLabel("Reference type").inputValue() !== "youtube_playlist") {
+    failures.push("creator: YouTube playlist link was not classified as a playlist");
+  }
+  await page.getByLabel("Authorized transcript, excerpt or notes").fill("Authorized notes from the referenced source.");
+  await page.getByRole("button", { name: "Normalize linked source record" }).click();
+  await expectVisible(page.getByText("youtube playlist reference", { exact: true }), "hash-bound source reference");
+  await expectVisible(page.getByText(/Course claims still derive only from the normalized text/), "linked-source truth boundary");
+
+  await page.getByRole("radio", { name: /Upload files/ }).click();
   await page.locator('input[type="file"]').setInputFiles(pdfFixture);
   await expectVisible(
     page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }),
@@ -734,13 +788,15 @@ async function mobileFlow() {
   await page.screenshot({ path: path.join(outputDir, "mobile-onboarding.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Skip" }).click();
-  await page.waitForURL((url) => url.pathname === "/");
+  await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
+  await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "mobile onboarding dashboard destination");
+  await page.goto(`${baseURL}/`);
   await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "mobile redesigned home");
   const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   if (homeOverflow) failures.push("mobile homepage: horizontal overflow");
   await page.screenshot({ path: path.join(outputDir, "mobile-home.png"), fullPage: true });
   await page.goto(`${baseURL}/library`);
-  await page.getByRole("link", { name: /Solving Linear Equations/ }).click();
+  await page.getByRole("region", { name: "Lesson catalog results" }).getByRole("link", { name: /Solving Linear Equations/ }).click();
   await expectVisible(page.getByText(/what number should we subtract from BOTH sides/i), "mobile lesson");
   await expectVisible(page.getByRole("button", { name: "Ask Maia" }), "mobile collapsed Maia trigger");
   if (await page.getByRole("log", { name: "Conversation with Maia" }).count()) failures.push("mobile lesson: Maia conversation is expanded before the learner asks");
@@ -850,6 +906,59 @@ async function judgeRecoveryFlow() {
   await context.close();
 }
 
+async function judgeConcurrencyFlow() {
+  const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+  await context.addCookies([{
+    name: "museion_learner",
+    value: "00000000-0000-4000-8000-000000000007",
+    url: baseURL,
+    httpOnly: true,
+    sameSite: "Lax",
+  }]);
+  await context.addInitScript(() => localStorage.setItem("museion_judge_run_v1", "browser-concurrency-gate"));
+  const first = await context.newPage();
+  const second = await context.newPage();
+  first.on("pageerror", (error) => failures.push(`judge-concurrency-first page: ${error.message}`));
+  second.on("pageerror", (error) => failures.push(`judge-concurrency-second page: ${error.message}`));
+  await Promise.all([first.goto(`${baseURL}/judge`), second.goto(`${baseURL}/judge`)]);
+  await Promise.all([
+    expectVisible(first.getByText("Verified replay", { exact: true }), "judge concurrency first session"),
+    expectVisible(second.getByText("Verified replay", { exact: true }), "judge concurrency second session"),
+  ]);
+  const [firstId, secondId] = await Promise.all([
+    first.evaluate(() => localStorage.getItem("museion_judge_session_v1")),
+    second.evaluate(() => localStorage.getItem("museion_judge_session_v1")),
+  ]);
+  if (!firstId || firstId !== secondId) failures.push("judge concurrency: tabs did not converge on one stable session");
+
+  await Promise.all([
+    first.getByRole("button", { name: /Continue/ }).click(),
+    second.getByRole("button", { name: /Continue/ }).click(),
+  ]);
+  await Promise.all([first.getByRole("radio").first().check(), second.getByRole("radio").first().check()]);
+  await Promise.all([
+    first.getByRole("button", { name: "Check prediction" }).click(),
+    second.getByRole("button", { name: "Check prediction" }).click(),
+  ]);
+  await Promise.race([
+    first.getByText(/Updated in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
+    second.getByText(/Updated in another tab/).waitFor({ state: "visible", timeout: 10_000 }),
+  ]).catch(() => failures.push("judge concurrency: conflict recovery notice did not appear"));
+  const restoredNotices = await Promise.all([
+    first.getByText(/Updated in another tab/).count(),
+    second.getByText(/Updated in another tab/).count(),
+  ]);
+  if (restoredNotices[0] + restoredNotices[1] !== 1) failures.push("judge concurrency: expected exactly one visible conflict recovery");
+  const authoritative = await first.evaluate(async (sessionId) => {
+    const response = await fetch(`/api/judge/${sessionId}`, { cache: "no-store" });
+    return response.json();
+  }, firstId);
+  if (authoritative.revision !== 1 || !authoritative.completedBlockIds?.includes("prediction_discard")) {
+    failures.push("judge concurrency: authoritative session did not retain exactly one completed mutation");
+  }
+  await context.close();
+}
+
 async function judgeFlow(viewport, label, repeat = 1) {
   for (let run = 1; run <= repeat; run += 1) {
     const context = await browser.newContext({ viewport });
@@ -889,6 +998,7 @@ try {
     await mobileFlow();
     await performanceBudgetFlow();
     await keyboardJudgeFlow();
+    await judgeConcurrencyFlow();
     await judgeRecoveryFlow();
     await judgeFlow({ width: 1440, height: 1000 }, "judge-desktop", 20);
     await judgeFlow({ width: 320, height: 700 }, "judge-mobile", 1);

@@ -1,5 +1,7 @@
 # Improvement implementation plan
 
+> Historical snapshot from the pre-V2 audit. Use `docs/redesign/IMPLEMENTATION_PLAN.md` for the current execution state.
+
 Status legend: `[ ]` pending, `[-]` active, `[x]` verified, `[~]` deferred.
 
 ## P1-A — Learner-first visual system

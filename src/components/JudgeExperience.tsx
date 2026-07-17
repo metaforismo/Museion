@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
 import type { JudgeSessionView } from "@/lib/judge/contracts";
 import type { RuntimeAction, RuntimeOutcome, RuntimeTutorIntervention } from "@/lib/runtime";
 
-import InteractiveBlock from "./blocks/InteractiveBlock";
+const InteractiveBlock = dynamic(() => import("./blocks/InteractiveBlock"), {
+  loading: () => <div role="status" className="mt-7 h-64 animate-pulse rounded-xl bg-ink/5"><span className="sr-only">Loading interactive activity.</span></div>,
+});
 
 const SESSION_KEY = "museion_judge_session_v1";
 const RUN_KEY = "museion_judge_run_v1";
@@ -35,7 +38,8 @@ async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
     cache: "no-store",
   });
   const payload = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new JudgeRequestError(response.status, judgeErrorMessage(payload?.error, response.status));
+  const code = typeof payload?.error === "string" ? payload.error : "JUDGE_REQUEST_FAILED";
+  if (!response.ok) throw new JudgeRequestError(response.status, judgeErrorMessage(code, response.status));
   return payload as T;
 }
 
@@ -144,6 +148,27 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     setTutor(null);
   };
 
+  const handleMutationFailure = async (cause: unknown) => {
+    if (
+      session &&
+      cause instanceof JudgeRequestError && cause.status === 409
+    ) {
+      try {
+        const restored = await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}`);
+        setSession(restored);
+        setBlockIndex(safeResumeIndex(restored, localStorage.getItem(`${sessionKey}:${session.sessionId}:block`)));
+        setFeedback(null);
+        setTutor(null);
+        setError("Updated in another tab. Latest state restored.");
+        return;
+      } catch {
+        setError("Reload to restore state.");
+        return;
+      }
+    }
+    setError(cause instanceof Error ? cause.message : "Request failed.");
+  };
+
   const sendAction = async (blockId: string, action: RuntimeAction) => {
     if (!session) return;
     setBusy(true);
@@ -151,13 +176,13 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     try {
       const result = await jsonRequest<{ session: JudgeSessionView; outcome: RuntimeOutcome; tutor: RuntimeTutorIntervention | null }>(`/api/judge/${session.sessionId}/action`, {
         method: "POST",
-        body: JSON.stringify({ blockId, action }),
+        body: JSON.stringify({ blockId, action, expectedRevision: session.revision, commandId: crypto.randomUUID() }),
       });
       setSession(result.session);
       setFeedback(result.outcome.message);
       setTutor(result.tutor);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The action could not be checked.");
+      await handleMutationFailure(cause);
     } finally {
       setBusy(false);
     }
@@ -168,9 +193,12 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     setBusy(true);
     setError(null);
     try {
-      setSession(await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}/transfer`, { method: "POST", body: JSON.stringify({ kind: "start" }) }));
+      setSession(await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}/transfer`, {
+        method: "POST",
+        body: JSON.stringify({ kind: "start", expectedRevision: session.revision, commandId: crypto.randomUUID() }),
+      }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Transfer is still locked.");
+      await handleMutationFailure(cause);
     } finally {
       setBusy(false);
     }
@@ -187,11 +215,17 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
       localStorage.setItem(attemptKey, attemptId);
       setSession(await jsonRequest<JudgeSessionView>(`/api/judge/${session.sessionId}/transfer`, {
         method: "POST",
-        body: JSON.stringify({ kind: "submit", attemptId, answer: transferAnswer.trim() }),
+        body: JSON.stringify({
+          kind: "submit",
+          attemptId,
+          answer: transferAnswer.trim(),
+          expectedRevision: session.revision,
+          commandId: attemptId,
+        }),
       }));
       localStorage.removeItem(attemptKey);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The transfer answer could not be scored.");
+      await handleMutationFailure(cause);
     } finally {
       setBusy(false);
     }
@@ -240,7 +274,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
       {currentBlock?.kind === "explanation" && <section className="mt-7 rounded-xl border border-ink/10 bg-surface p-7 shadow-sm"><p className="text-sm font-semibold uppercase tracking-wide text-lapis">Grounded explanation</p><h2 className="mt-2 font-display text-2xl font-semibold">{currentBlock.title}</h2><p className="mt-4 whitespace-pre-line text-lg leading-relaxed">{currentBlock.body}</p><p className="mt-5 text-xs text-ink-soft">Citations: {currentBlock.citations.map((item) => item.spanId).join(", ")}</p></section>}
 
       {currentBlock && ["prediction-choice", "sequence-builder", "range-explorer", "state-trace"].includes(currentBlock.kind) && currentState && (
-        <div className="mt-7"><InteractiveBlock key={currentBlock.id} block={currentBlock as Extract<typeof currentBlock, { kind: "prediction-choice" | "sequence-builder" | "range-explorer" | "state-trace" }>} state={currentState} busy={busy} feedback={feedback} tutor={tutor} onAction={(action) => sendAction(currentBlock.id, action)} /></div>
+        <div className="mt-7"><InteractiveBlock key={currentState.kind === "state-trace" ? currentBlock.id : `${currentBlock.id}:${JSON.stringify(currentState)}`} block={currentBlock as Extract<typeof currentBlock, { kind: "prediction-choice" | "sequence-builder" | "range-explorer" | "state-trace" }>} state={currentState} busy={busy} feedback={feedback} tutor={tutor} onAction={(action) => sendAction(currentBlock.id, action)} /></div>
       )}
 
       {tutor && <aside aria-label="Maia runtime guidance" className="mt-4 rounded-xl border border-lapis/20 bg-lapis-soft p-5"><p className="text-xs font-semibold uppercase tracking-wide text-lapis-dark">Maia · bounded intervention</p><p className="mt-2 font-medium">{tutor.turn.message}</p>{tutor.counterexample && <p className="mt-2 text-sm text-ink-soft">Counterexample: [{tutor.counterexample.before.low}, {tutor.counterexample.before.high}] with midpoint {tutor.counterexample.before.mid}; the proposed [{tutor.counterexample.proposed.low}, {tutor.counterexample.proposed.high}] can repeat the same midpoint.</p>}<p className="mt-3 text-xs text-ink-soft">Maia may highlight or focus registered targets. The deterministic runtime still owns state and correctness.</p></aside>}

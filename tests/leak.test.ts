@@ -22,6 +22,9 @@ describe("revealsAnswer: numeric", () => {
     expect(revealsAnswer(step, "The answer is 4.")).toBe(true);
     expect(revealsAnswer(step, "you get 4.0 in the end")).toBe(true);
     expect(revealsAnswer(step, "it comes out to 8/2")).toBe(true);
+    expect(revealsAnswer(step, "The answer is four.")).toBe(true);
+    expect(revealsAnswer(step, "La risposta è quattro.")).toBe(true);
+    expect(revealsAnswer(step, "答案是四。")).toBe(true);
   });
 
   it("ignores other numbers and number-free coaching", () => {
@@ -42,6 +45,8 @@ describe("revealsAnswer: multiple choice", () => {
   it("catches assertive reveals only", () => {
     expect(revealsAnswer(step, "The answer is no.")).toBe(true);
     expect(revealsAnswer(step, 'The correct option is "no".')).toBe(true);
+    expect(revealsAnswer(step, "Choose B.")).toBe(true);
+    expect(revealsAnswer(step, "Scegli la seconda.")).toBe(true);
   });
 
   it("tolerates ordinary use of the option word", () => {
