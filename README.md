@@ -74,9 +74,9 @@ Maia is an original Museion companion—a “living idea” manually reconstruct
 |---|---|
 | ![Museion Creator Studio](docs/assets/screenshots/creator-desktop.png) | ![Museion source-grounded course review](docs/assets/screenshots/course-review-desktop.png) |
 
-| Focused lesson | Evidence boundary |
+| Course-aware lesson with Maia | Evidence boundary |
 |---|---|
-| ![Museion focused learning experience](docs/assets/screenshots/learning-desktop.png) | ![Museion learning evidence view](docs/assets/screenshots/evidence-desktop.png) |
+| ![Museion course-aware lesson with progress, navigation, and Maia reasoning rail](docs/assets/screenshots/learning-desktop.png) | ![Museion learning evidence view](docs/assets/screenshots/evidence-desktop.png) |
 
 ## Why
 

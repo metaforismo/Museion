@@ -48,7 +48,11 @@ try {
   await capture({ name: "course-review-desktop", route: "/create/review" });
   await capture({ name: "review-desktop", route: "/review" });
   await capture({ name: "misconception-lab-desktop", route: "/review", prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/review`, { waitUntil: "domcontentloaded" }); } });
-  await capture({ name: "learning-desktop", route: "/lessons/linear-equations-intro", waitFor: "main" });
+  await capture({
+    name: "learning-desktop",
+    route: "/lessons/algebra-balance-equality-as-invariant?course=algebra-as-balance",
+    waitFor: "main",
+  });
   await capture({ name: "maia-intervention-desktop", route: "/lessons/linear-equations-intro", prepare: async (page) => {
     await seedWrongAnswer(page);
     await page.getByRole("button", { name: "ask Maia why" }).click();
