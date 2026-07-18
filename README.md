@@ -72,7 +72,7 @@ Maia is an original Museion companion—a “living idea” manually reconstruct
 
 | Creator Studio | Source-grounded course review |
 |---|---|
-| ![Museion Creator Studio](docs/assets/screenshots/creator-desktop.png) | ![Museion source-grounded course review](docs/assets/screenshots/course-review-desktop.png) |
+| ![Museion Creator Studio with the Course Architect conversation rail](docs/assets/screenshots/creator-desktop.png) | ![Museion Source Pack review with per-material citation coverage](docs/assets/screenshots/course-review-desktop.png) |
 
 | Course-aware lesson with Maia | Evidence boundary |
 |---|---|
@@ -162,7 +162,7 @@ The balanced Build Week policy routes Source Graph extraction to `gpt-5.6-luna`,
 
 The secondary authoring path starts at `/create`: YouTube videos and playlists, books and course pages, transcripts, excerpts, notes, pasted text, and uploaded files are all material shapes inside one **Source Pack → Course Architect** capability—not separate products. The clickable Course Architect opens as a chat rail (a sheet on mobile), accepts source links, authorized material, files, and independent learner goals, then runs a visible Museion Method check before the Codex-backed compiler starts. It checks source substance, rights, normalization, goal specificity, misconception and interaction potential, transfer, accessibility, and answer-leak risk; insufficient material is narrowed or blocked instead of inflated into a meaningless course. A link is provenance, not content: Museion still requires the authorized transcript, excerpt, or notes and does not scrape videos, bypass paywalls, or pretend to compile from a URL alone. Normalized pages, warnings, source references, and SHA-256 hashes are inspectable. The checked six-page binary-search source resolves to `/create/review`, where concepts, claims, exact quotations, blueprint objectives, block citations, hashes, and blocking validators are visible. `/judge` runs the complete keyless replay. Arbitrary sources remain normalized but are not falsely presented as compiled until a live provider has produced and passed every validator.
 
-The same Course Architect is available through a bounded Streamable HTTP MCP endpoint for compatible clients such as ChatGPT, Codex, Claude Code, and Cursor. Source Pack preparation is deterministic; model-backed compilation requires an explicit server token and still passes through the existing typed compiler, critic, repair, citation, and publication gates. See [`docs/MCP_COURSE_ARCHITECT.md`](docs/MCP_COURSE_ARCHITECT.md).
+The same Course Architect is available through a bounded Streamable HTTP MCP endpoint for compatible clients such as ChatGPT, Codex, Claude Code, and Cursor. Source Pack preparation is deterministic; model-backed compilation requires an explicit server token and still passes through the existing typed compiler, critic, repair, citation, and publication gates. Every new run persists a raw-content-free manifest bound to the compiled document hash, and Creator review shows cited spans and learning blocks per supplied material. See [`docs/MCP_COURSE_ARCHITECT.md`](docs/MCP_COURSE_ARCHITECT.md).
 
 ```bash
 npm test        # offline suite; explicit live cases skip without opt-in

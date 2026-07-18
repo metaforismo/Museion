@@ -125,13 +125,13 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
 
   const activeItem = results[activeIndex];
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/35 px-3 pt-[max(4rem,10vh)] backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/30 px-3 pt-[max(1rem,8vh)] backdrop-blur-md sm:px-5" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="command-title"
-        className="w-full max-w-2xl overflow-hidden rounded-[1.35rem] border border-white/60 bg-surface shadow-[0_28px_90px_rgba(19,28,49,.24)]"
+        aria-label="Search Museion"
+        className="w-full max-w-[44rem] overflow-hidden rounded-[1.75rem] border border-white/80 bg-surface/95 shadow-[0_32px_100px_rgba(19,28,49,.24),inset_0_1px_0_rgba(255,255,255,.9)]"
         onKeyDown={(event) => {
           if (event.key === "Escape") { event.preventDefault(); close(); return; }
           if (event.key === "ArrowDown" && results.length) { event.preventDefault(); setActiveIndex((value) => (value + 1) % results.length); return; }
@@ -146,29 +146,41 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
           else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
         }}
       >
-        <div className="flex items-center gap-3 border-b border-ink/10 px-4 sm:px-5">
-          <AppIcon name="search" className="h-5 w-5 shrink-0 text-ink-soft" />
-          <h2 id="command-title" className="sr-only">Search Museion</h2>
-          <input
-            ref={inputRef}
-            id="global-search"
-            type="search"
-            aria-label="Search Museion"
-            value={query}
-            onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
-            placeholder="Search courses, lessons, or concepts"
-            autoComplete="off"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded="true"
-            aria-controls="global-search-results"
-            aria-activedescendant={activeItem ? `command-${activeItem.id}` : undefined}
-            className="min-h-16 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-ink-soft/70"
-          />
-          <button type="button" onClick={close} className="min-h-10 rounded-lg px-2 text-xs font-semibold text-ink-soft hover:bg-paper hover:text-ink">Esc</button>
+        <div className="border-b border-ink/8 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <div>
+              <p className="text-[0.67rem] font-bold uppercase tracking-[0.16em] text-lapis-dark">Museion search</p>
+              <h2 id="command-title" className="mt-1 text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Find your next learning move</h2>
+            </div>
+            <button type="button" onClick={close} className="group flex min-h-10 items-center gap-2 rounded-xl px-2.5 text-xs font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink active:bg-ink/8">
+              <span className="hidden sm:inline">Close</span>
+              <kbd className="rounded-md border border-ink/10 bg-paper px-1.5 py-1 font-sans text-[0.65rem] font-semibold shadow-[0_1px_0_rgba(19,28,49,.08)] group-hover:bg-surface">Esc</kbd>
+            </button>
+          </div>
+          <div className="flex min-h-14 items-center gap-3 rounded-2xl border border-ink/10 bg-paper/75 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,.8)] transition-[border-color,background-color,box-shadow] focus-within:border-ink/20 focus-within:bg-surface focus-within:shadow-[0_3px_14px_rgba(19,28,49,.07),inset_0_1px_0_rgba(255,255,255,.9)] sm:px-4">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-surface text-lapis-dark shadow-[0_1px_3px_rgba(19,28,49,.08)]"><AppIcon name="search" className="h-[1.05rem] w-[1.05rem]" /></span>
+            <input
+              ref={inputRef}
+              id="global-search"
+              type="text"
+              inputMode="search"
+              aria-label="Search Museion"
+              value={query}
+              onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
+              placeholder="Search courses, lessons, or concepts"
+              autoComplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="true"
+              aria-controls="global-search-results"
+              aria-activedescendant={activeItem ? `command-${activeItem.id}` : undefined}
+              className="min-h-14 min-w-0 flex-1 bg-transparent text-[0.95rem] text-ink !outline-none placeholder:text-ink-soft/65 focus-visible:!outline-none sm:text-base"
+            />
+            {query ? <button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink">Clear</button> : null}
+          </div>
         </div>
 
-        <div id="global-search-results" role="listbox" aria-label="Search results" className="max-h-[min(30rem,60vh)] overflow-y-auto p-2 sm:p-3">
+        <div id="global-search-results" role="listbox" aria-label="Search results" className="max-h-[min(30rem,58vh)] overflow-y-auto p-2.5 sm:p-3">
           {results.length ? results.map((item, index) => {
             const selected = index === activeIndex;
             return (
@@ -180,16 +192,17 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
                 aria-selected={selected}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => choose(item)}
-                className={`flex min-h-15 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${selected ? "bg-lapis-soft" : "hover:bg-paper"}`}
+                className={`relative flex min-h-16 w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition-[background-color,border-color,box-shadow,transform] active:scale-[.995] ${selected ? "border-ink/8 bg-surface shadow-[0_4px_16px_rgba(19,28,49,.07)]" : "border-transparent hover:bg-paper"}`}
               >
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${selected ? "bg-surface text-lapis-dark" : "bg-paper text-ink-soft"}`}><AppIcon name={item.icon} className="h-[1.1rem] w-[1.1rem]" /></span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{item.label}</span><span className="mt-0.5 block truncate text-xs text-ink-soft">{item.detail}</span></span>
-                <span className="hidden text-[0.65rem] font-medium text-ink-soft sm:block">{item.group}</span>
+                {selected ? <span className="absolute inset-y-3 left-0 w-0.5 rounded-r-full bg-lapis" aria-hidden="true" /> : null}
+                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors ${selected ? "bg-lapis-soft text-lapis-dark" : "bg-paper text-ink-soft"}`}><AppIcon name={item.icon} className="h-[1.1rem] w-[1.1rem]" /></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold tracking-[-0.005em]">{item.label}</span><span className="mt-0.5 block truncate text-xs text-ink-soft">{item.detail}</span></span>
+                <span className="hidden rounded-full bg-paper px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-ink-soft sm:block">{item.group}</span>
               </button>
             );
-          }) : <div className="px-5 py-10 text-center" role="status"><p className="font-semibold">No matching destination</p><p className="mt-2 text-sm leading-6 text-ink-soft">Try a subject such as algebra, arithmetic, or computer science.</p><button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="mt-4 min-h-10 text-sm font-semibold text-lapis-dark hover:underline">Clear search</button></div>}
+          }) : <div className="px-5 py-10 text-center" role="status"><span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-paper text-ink-soft"><AppIcon name="search" className="h-5 w-5" /></span><p className="mt-4 font-semibold">No matching destination</p><p className="mt-2 text-sm leading-6 text-ink-soft">Try a subject such as algebra, arithmetic, or computer science.</p><button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="mt-4 min-h-10 rounded-xl px-3 text-sm font-semibold text-lapis-dark hover:bg-lapis-soft">Clear search</button></div>}
         </div>
-        <div className="hidden items-center justify-between border-t border-ink/8 bg-paper/70 px-5 py-2.5 text-[0.68rem] text-ink-soft sm:flex"><span>↑↓ move · Enter open · Esc close</span><span>{results.length} {results.length === 1 ? "result" : "results"}</span></div>
+        <div className="hidden items-center justify-between border-t border-ink/8 bg-paper/55 px-5 py-3 text-[0.68rem] text-ink-soft sm:flex"><span className="flex items-center gap-2"><span><kbd className="rounded border border-ink/10 bg-surface px-1.5 py-0.5 font-sans shadow-[0_1px_0_rgba(19,28,49,.06)]">↑↓</kbd> move</span><span><kbd className="rounded border border-ink/10 bg-surface px-1.5 py-0.5 font-sans shadow-[0_1px_0_rgba(19,28,49,.06)]">Enter</kbd> open</span></span><span>{results.length} {results.length === 1 ? "result" : "results"}</span></div>
       </div>
     </div>
   );

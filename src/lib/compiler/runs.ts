@@ -1,6 +1,15 @@
 import { z } from "zod";
 
-import { SourceDocumentSchema, verifySourceDocumentIntegrity, type SourceDocument } from "@/lib/source";
+import {
+  SourceDocumentSchema,
+  SourcePackManifestSchema,
+  SourceRightsBasisSchema,
+  createSingleDocumentSourcePackManifest,
+  verifySourceDocumentIntegrity,
+  verifySourcePackManifestBinding,
+  type SourceDocument,
+  type SourcePackManifest,
+} from "@/lib/source";
 import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-state";
 
 import { CompilerFailure, compileCourse, type CompileAudience, type CompileResult } from "./orchestrator";
@@ -11,6 +20,7 @@ import { toPublicCourseArtifact } from "./public-artifact";
 import { CourseTemplateIdSchema, type CourseTemplateId } from "./templates";
 import { codexSelected, getAiSettings } from "@/lib/ai/settings";
 import type { CompilerStage } from "./contracts";
+import { computeMaterialCitationCoverage } from "./source-pack-coverage";
 
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 export const COMPILER_RUN_TTL_MS = 60 * 60 * 1_000;
@@ -26,6 +36,11 @@ export const CompileAudienceSchema = z.object({
 export const CompilerRunRequestSchema = z.object({
   requestId: z.string().uuid().optional(),
   document: SourceDocumentSchema,
+  rights: z.object({
+    confirmed: z.literal(true),
+    basis: SourceRightsBasisSchema,
+    notes: z.string().trim().max(600).default(""),
+  }).strict(),
   audience: CompileAudienceSchema,
   templateId: CourseTemplateIdSchema.default("socratic-foundations"),
 }).strict();
@@ -36,6 +51,7 @@ interface CompilerRunRecord {
   document: SourceDocument;
   audience: CompileAudience;
   templateId: CourseTemplateId;
+  sourcePackManifest?: SourcePackManifest;
   result: CompileResult;
   createdAt: string;
 }
@@ -43,6 +59,10 @@ interface CompilerRunRecord {
 export type CompilerRunView = ReturnType<typeof compilerRunView>;
 
 function compilerRunView(record: CompilerRunRecord) {
+  const sourcePack = record.sourcePackManifest ? SourcePackManifestSchema.parse(record.sourcePackManifest) : null;
+  const materialCoverage = sourcePack
+    ? computeMaterialCitationCoverage(sourcePack, record.result.sourceGraph.spans, record.result.artifact.blocks)
+    : null;
   return {
     status: "succeeded" as const,
     runId: record.id,
@@ -56,6 +76,8 @@ function compilerRunView(record: CompilerRunRecord) {
     },
     audience: record.audience,
     templateId: record.templateId ?? record.result.templateId ?? "socratic-foundations",
+    sourcePack,
+    materialCoverage,
     sourceGraph: record.result.sourceGraph,
     blueprint: record.result.blueprint,
     artifact: toPublicCourseArtifact(record.result.artifact),
@@ -75,9 +97,16 @@ export async function createCompilerRun(
     runId?: string;
     signal?: AbortSignal;
     onStage?: (stage: CompilerStage | "critic_after_repair") => void;
+    sourcePackManifest?: SourcePackManifest;
   } = {},
 ): Promise<CompilerRunView> {
   await verifySourceDocumentIntegrity(document);
+  const sourcePackManifest = execution.sourcePackManifest ?? await createSingleDocumentSourcePackManifest(document, {
+    confirmed: true,
+    basis: "personal-notes",
+    notes: "Internal compiler invocation.",
+  });
+  verifySourcePackManifestBinding(sourcePackManifest, document);
   const backend = stateBackend();
   await backend.prune("compiler_run");
   if ((await backend.list<CompilerRunRecord>("compiler_run", ownerId)).length >= MAX_COMPILER_RUNS_PER_OWNER) {
@@ -108,6 +137,7 @@ export async function createCompilerRun(
     document,
     audience,
     templateId,
+    sourcePackManifest,
     result,
     createdAt: new Date().toISOString(),
   };
@@ -166,6 +196,7 @@ export async function enqueueCompilerRun(
   audience: CompileAudience,
   templateId: CourseTemplateId,
   requestId?: string,
+  sourcePackManifest?: SourcePackManifest,
 ): Promise<CompilerJobView> {
   if (requestId) {
     const existing = compilerJobs.get(requestId);
@@ -203,6 +234,7 @@ export async function enqueueCompilerRun(
       job.stage = stage;
       job.updatedAt = new Date().toISOString();
     },
+    sourcePackManifest,
   }).then(() => {
     if (job.status === "cancelled") return;
     job.status = "succeeded";
@@ -269,6 +301,7 @@ export async function pruneCompilerRuns(now = Date.now()): Promise<void> {
 }
 
 export function resetCompilerRunsForTests(): void {
+  for (const job of compilerJobs.values()) job.controller.abort();
   resetMemoryStateForTests();
   compilerJobs.clear();
 }

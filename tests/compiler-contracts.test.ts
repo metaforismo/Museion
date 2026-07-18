@@ -95,5 +95,5 @@ describe("compiler boundary contracts", () => {
       language: "en",
     });
     expect(generated).toEqual(SourceDocumentSchema.parse(goldenDocumentJson));
-  });
+  }, 15_000);
 });

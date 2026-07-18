@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { compilerFailurePayload, enqueueCompilerRun, CompilerRunRequestSchema } from "@/lib/compiler";
+import { createSingleDocumentSourcePackManifest } from "@/lib/source";
 import { resolveLearnerId, setLearnerCookie } from "@/lib/server/learner";
 
 export async function POST(request: Request) {
@@ -8,6 +9,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "INVALID_COMPILER_REQUEST" }, { status: 400 });
   const { learnerId, isNew } = await resolveLearnerId();
   try {
+    const sourcePackManifest = await createSingleDocumentSourcePackManifest(parsed.data.document, parsed.data.rights);
     const response = NextResponse.json(
       await enqueueCompilerRun(
         learnerId,
@@ -15,6 +17,7 @@ export async function POST(request: Request) {
         parsed.data.audience,
         parsed.data.templateId,
         parsed.data.requestId,
+        sourcePackManifest,
       ),
       { status: 202 },
     );

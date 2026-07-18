@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { enqueueCompilerRun, CompileAudienceSchema, CourseTemplateIdSchema } from "@/lib/compiler";
 import { coursePaths } from "@/lib/curriculum";
-import { createSourcePack, publicSourcePackSummary, sourcePackToDocument, SourcePackInputSchema } from "@/lib/source";
+import { createSourcePack, createSourcePackManifest, publicSourcePackSummary, sourcePackToDocument, SourcePackInputSchema } from "@/lib/source";
 
 const JsonRpcRequestSchema = z.object({
   jsonrpc: z.literal("2.0"),
@@ -160,7 +160,8 @@ export async function handleMcpRequest(request: Request, payload: unknown) {
       const { audience, templateId, requestId, ...packInput } = input;
       const pack = await createSourcePack(packInput);
       const document = await sourcePackToDocument(pack);
-      const job = await enqueueCompilerRun(`mcp_${pack.sha256.slice(0, 24)}`, document, audience, templateId, requestId);
+      const manifest = createSourcePackManifest(pack, document);
+      const job = await enqueueCompilerRun(`mcp_${pack.sha256.slice(0, 24)}`, document, audience, templateId, requestId, manifest);
       return { status: 200, body: rpcResult(id, toolText(`Course Architect accepted Source Pack ${pack.id}. Compilation ${job.runId} is ${job.status}.`, { sourcePack: publicSourcePackSummary(pack), job })) };
     }
     return { status: 200, body: rpcResult(id, toolText(`Unknown tool: ${call.data.name}`, undefined, true)) };

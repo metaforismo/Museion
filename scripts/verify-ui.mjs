@@ -682,6 +682,8 @@ async function desktopFlow() {
     "six-page PDF record",
   );
   await page.getByLabel("I am allowed to use this source.").check();
+  await page.getByLabel("Rights basis").selectOption("creator-owned");
+  await page.waitForFunction(() => localStorage.getItem("museion:creator-draft:v1")?.includes('"rightsBasis":"creator-owned"'));
   await page.getByLabel("Language").fill("");
   await expectVisible(page.getByText("Enter a language.", { exact: true }), "creator language validation");
   const compileReplay = page.getByRole("button", { name: "Create verified replay run" });
@@ -691,6 +693,10 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Create verified replay run" }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
   await expectVisible(page.getByText("Accepted for learning"), "accepted compiler validation");
+  await expectVisible(page.getByRole("heading", { name: "Coverage by supplied material" }), "persisted Source Pack evidence ledger");
+  await expectVisible(page.getByText("creator owned", { exact: true }), "persisted rights basis");
+  await expectVisible(page.getByRole("progressbar", { name: /citation coverage/ }), "per-material citation coverage");
+  await expectVisible(page.getByText(/^material [a-f0-9]{64}$/), "raw-content-free material hash");
   await expectVisible(page.getByRole("heading", { name: "Source quotations" }), "run grounding review");
   await expectVisible(page.getByRole("link", { name: "Back to Creator Studio" }), "review return path");
   await expectVisible(page.getByRole("link", { name: "Validation", exact: true }), "review validation navigation");

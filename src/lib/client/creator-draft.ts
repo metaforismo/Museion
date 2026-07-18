@@ -1,4 +1,5 @@
 import type { CourseTemplateId } from "@/lib/compiler/templates";
+import type { SourceRightsBasis } from "@/lib/source/source-pack";
 
 const MAX_NORMALIZED_CHARACTERS = 140_000;
 
@@ -10,6 +11,7 @@ export type CreatorDraft = {
   sourceMode?: "paste" | "files" | "reference";
   sourceUrl?: string;
   sourceKind?: "webpage" | "youtube_video" | "youtube_playlist" | "book";
+  rightsBasis?: SourceRightsBasis;
   templateId: CourseTemplateId;
   learnerGoal: string;
   level: "novice" | "intermediate" | "advanced";
@@ -33,6 +35,7 @@ export function parseCreatorDraft(value: string | null): CreatorDraft | null {
     if (input.sourceMode !== undefined && !oneOf(input.sourceMode, ["paste", "files", "reference"] as const)) return null;
     if (input.sourceUrl !== undefined && (typeof input.sourceUrl !== "string" || input.sourceUrl.length > 2_048)) return null;
     if (input.sourceKind !== undefined && !oneOf(input.sourceKind, ["webpage", "youtube_video", "youtube_playlist", "book"] as const)) return null;
+    if (input.rightsBasis !== undefined && !oneOf(input.rightsBasis, ["creator-owned", "licensed", "open-licensed", "public-domain", "authorized-excerpt", "personal-notes"] as const)) return null;
     if (!oneOf(input.templateId, ["socratic-foundations", "exam-practice", "teach-it-back"] as const)) return null;
     if (typeof input.learnerGoal !== "string" || input.learnerGoal.length > 600) return null;
     if (!oneOf(input.level, ["novice", "intermediate", "advanced"] as const)) return null;
@@ -53,6 +56,7 @@ export function parseCreatorDraft(value: string | null): CreatorDraft | null {
       ...(input.sourceMode === undefined ? {} : { sourceMode: input.sourceMode }),
       ...(input.sourceUrl === undefined ? {} : { sourceUrl: input.sourceUrl as string }),
       ...(input.sourceKind === undefined ? {} : { sourceKind: input.sourceKind }),
+      ...(input.rightsBasis === undefined ? {} : { rightsBasis: input.rightsBasis }),
       ...(input.savedAt === undefined ? {} : { savedAt: input.savedAt as string }),
     };
   } catch {
