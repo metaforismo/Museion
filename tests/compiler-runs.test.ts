@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   createCompilerRun,
+  CompilerRunRequestSchema,
   enqueueCompilerRun,
   getCompilerRun,
   getCompilerRunStatus,
   resetCompilerRunsForTests,
 } from "@/lib/compiler";
 import { resetAiSettingsForTests, updateAiSettings } from "@/lib/ai/settings";
-import { ingestTextSource, SourceDocumentSchema } from "@/lib/source";
+import { createSingleDocumentSourcePackManifest, ingestTextSource, SourceDocumentSchema } from "@/lib/source";
 import goldenDocumentJson from "./fixtures/binary-search-source-document.json";
 
 const audience = {
@@ -17,6 +18,16 @@ const audience = {
   targetMinutes: 12,
   learnerGoal: "Trace inclusive binary search and justify every boundary update.",
 };
+
+async function waitForCompletedRun(runId: string, ownerId: string) {
+  const deadline = Date.now() + 2_000;
+  let view = await getCompilerRunStatus(runId, ownerId);
+  while ("status" in view && ["queued", "running"].includes(view.status) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    view = await getCompilerRunStatus(runId, ownerId);
+  }
+  return view;
+}
 
 describe("compiler run lifecycle", () => {
   const originalKey = process.env.OPENAI_API_KEY;
@@ -40,12 +51,38 @@ describe("compiler run lifecycle", () => {
     );
     expect(view.mode).toBe("replay");
     expect(view.validation.status).toBe("accepted");
+    expect(view.sourcePack).toMatchObject({ compilerDocumentSha256: goldenDocumentJson.sha256, rights: { confirmed: true } });
+    expect(view.materialCoverage?.unmappedSpanCount).toBe(0);
+    expect(view.materialCoverage?.materials[0].status).toBe("cited");
     expect((await getCompilerRun(view.runId, "creator-a")).runId).toBe(view.runId);
     await expect(getCompilerRun(view.runId, "creator-b")).rejects.toThrow("COMPILER_RUN_NOT_FOUND");
     const serialized = JSON.stringify(view);
     expect(serialized).not.toContain("answerSpecs");
     expect(serialized).not.toContain("correctOrder");
     expect(serialized).not.toContain("expectedStates");
+  });
+
+  it("requires a rights attestation at the public compiler request boundary", () => {
+    const base = {
+      document: SourceDocumentSchema.parse(goldenDocumentJson),
+      audience,
+      templateId: "socratic-foundations",
+    };
+    expect(CompilerRunRequestSchema.safeParse(base).success).toBe(false);
+    expect(CompilerRunRequestSchema.safeParse({ ...base, rights: { confirmed: true, basis: "licensed" } }).success).toBe(true);
+    expect(CompilerRunRequestSchema.safeParse({ ...base, rights: { confirmed: false, basis: "licensed" } }).success).toBe(false);
+  });
+
+  it("rejects a Source Pack manifest bound to a different compiler document", async () => {
+    const other = await ingestTextSource({ title: "Other", text: "A different authorized source document." });
+    const manifest = await createSingleDocumentSourcePackManifest(other, { confirmed: true, basis: "creator-owned" });
+    await expect(createCompilerRun(
+      "creator-a",
+      SourceDocumentSchema.parse(goldenDocumentJson),
+      audience,
+      "socratic-foundations",
+      { sourcePackManifest: manifest },
+    )).rejects.toThrow("SOURCE_PACK_DOCUMENT_MISMATCH");
   });
 
   it("fails closed for arbitrary sources when the live provider is absent", async () => {
@@ -75,11 +112,7 @@ describe("compiler run lifecycle", () => {
     const queued = await enqueueCompilerRun("creator-a", document, audience, "exam-practice");
     expect(queued.status).toBe("queued");
     await expect(enqueueCompilerRun("creator-a", document, audience, "exam-practice")).rejects.toThrow("COMPILER_JOB_ALREADY_RUNNING");
-    let view = await getCompilerRunStatus(queued.runId, "creator-a");
-    for (let attempt = 0; attempt < 20 && "status" in view && view.status !== "succeeded"; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      view = await getCompilerRunStatus(queued.runId, "creator-a");
-    }
+    const view = await waitForCompletedRun(queued.runId, "creator-a");
     expect(view.status).toBe("succeeded");
     expect("templateId" in view && view.templateId).toBe("exam-practice");
   });
@@ -93,11 +126,7 @@ describe("compiler run lifecycle", () => {
     expect(retried).toEqual(queued);
     expect(retried.runId).toBe(requestId);
 
-    let view = await getCompilerRunStatus(requestId, "creator-a");
-    for (let attempt = 0; attempt < 20 && "status" in view && view.status !== "succeeded"; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      view = await getCompilerRunStatus(requestId, "creator-a");
-    }
+    const view = await waitForCompletedRun(requestId, "creator-a");
     expect(view.status).toBe("succeeded");
   });
 

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { createSourcePack, publicSourcePackSummary, sourcePackToDocument } from "@/lib/source";
+import {
+  createSingleDocumentSourcePackManifest,
+  createSourcePack,
+  createSourcePackManifest,
+  ingestTextSource,
+  publicSourcePackSummary,
+  sourcePackToDocument,
+  verifySourcePackManifestBinding,
+} from "@/lib/source";
 
 const CREATED_AT = "2026-07-18T00:00:00.000Z";
 
@@ -38,6 +46,39 @@ describe("Source Packs", () => {
     expect(document.pages[1].text).toContain("Material 2: Chapter notes (notes)");
     expect(document.sourceReference).toBeUndefined();
     expect(publicSourcePackSummary(first).materials[0]).not.toHaveProperty("content");
+    const manifest = createSourcePackManifest(first, document);
+    expect(manifest.materials.map((material) => [material.compiledPageStart, material.compiledPageEnd])).toEqual([[1, 1], [2, 2]]);
+    expect(manifest.compilerDocumentSha256).toBe(document.sha256);
+    expect(JSON.stringify(manifest)).not.toContain("A base case stops recursion");
+    expect(() => verifySourcePackManifestBinding(manifest, document)).not.toThrow();
+  });
+
+  it("creates a sanitized single-document manifest and rejects document or page-range substitution", async () => {
+    const document = await ingestTextSource({ title: "My notes", text: "A bounded source record with enough substance." });
+    const manifest = await createSingleDocumentSourcePackManifest(document, { confirmed: true, basis: "personal-notes", notes: "Mine" });
+    expect(manifest.materials).toHaveLength(1);
+    expect(manifest.materials[0]).toMatchObject({ compiledPageStart: 1, compiledPageEnd: 1, documentSha256: document.sha256 });
+    expect(JSON.stringify(manifest)).not.toContain("enough substance");
+
+    const other = await ingestTextSource({ title: "Other", text: "Different authorized material." });
+    expect(() => verifySourcePackManifestBinding(manifest, other)).toThrow("SOURCE_PACK_DOCUMENT_MISMATCH");
+    expect(() => verifySourcePackManifestBinding({
+      ...manifest,
+      materials: [{ ...manifest.materials[0], compiledPageStart: 2, compiledPageEnd: 2 }],
+    }, document)).toThrow("SOURCE_PACK_PAGE_RANGE_INVALID");
+  });
+
+  it("keeps eight-material page ranges contiguous under the maximum pack size", async () => {
+    const pack = await createSourcePack({
+      title: "Stress pack",
+      materials: Array.from({ length: 8 }, (_, index) => ({ title: `Material ${index + 1}`, content: `Authorized material ${index + 1}.`, role: "notes" as const })),
+      rights: { confirmed: true, basis: "personal-notes" },
+    }, CREATED_AT);
+    const document = await sourcePackToDocument(pack);
+    const manifest = createSourcePackManifest(pack, document);
+    expect(manifest.materials).toHaveLength(8);
+    expect(manifest.materials.map((material) => material.compiledPageStart)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(() => verifySourcePackManifestBinding(manifest, document)).not.toThrow();
   });
 
   it("requires an explicit rights basis and rejects oversized packs", async () => {

@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 
 const baseURL = process.env.MUSEION_BASE_URL ?? "http://localhost:3000";
 const outputDir = path.resolve("docs/assets/screenshots");
+const pdfFixture = path.resolve("tests/fixtures/binary-search-golden-source.pdf");
 await mkdir(outputDir, { recursive: true });
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -45,12 +46,25 @@ try {
   await capture({ name: "dashboard-mobile", route: "/dashboard", width: 375, height: 812, prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" }); } });
   await capture({ name: "library-desktop", route: "/library" });
   await capture({ name: "course-algebra-desktop", route: "/courses/algebra-as-balance" });
-  await capture({ name: "creator-desktop", route: "/create" });
-  await capture({ name: "creator-linked-source-desktop", route: "/create", prepare: async (page) => {
-    await page.getByRole("radio", { name: /Link \+ content/ }).click();
-    await page.getByLabel("Source link").fill("https://www.youtube.com/playlist?list=OPEN-COURSE");
+  await capture({ name: "creator-desktop", route: "/create", prepare: async (page) => {
+    await page.getByRole("button", { name: /Course Architect Build from my material/ }).click();
+    await page.getByRole("dialog", { name: "Course Architect" }).waitFor({ state: "visible" });
   } });
-  await capture({ name: "course-review-desktop", route: "/create/review" });
+  await capture({ name: "creator-linked-source-desktop", route: "/create", prepare: async (page) => {
+    await page.getByLabel("Reference link (optional)").fill("https://www.youtube.com/playlist?list=OPEN-COURSE");
+    await page.getByLabel("Authorized text material").fill("Authorized creator notes explaining the central ideas and the learner decisions supported by this playlist.");
+    await page.getByRole("button", { name: "Normalize text Source Pack" }).click();
+    await page.getByText("youtube playlist reference", { exact: true }).waitFor({ state: "visible" });
+  } });
+  await capture({ name: "course-review-desktop", route: "/create", prepare: async (page) => {
+    await page.locator("#source-file").setInputFiles(pdfFixture);
+    await page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }).waitFor({ state: "visible" });
+    await page.getByLabel("I am allowed to use this source.").check();
+    await page.getByLabel("Rights basis").selectOption("creator-owned");
+    await page.getByRole("button", { name: "Create verified replay run" }).click();
+    await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
+    await page.getByRole("heading", { name: "Coverage by supplied material" }).waitFor({ state: "visible" });
+  } });
   await capture({ name: "review-desktop", route: "/review" });
   await capture({ name: "misconception-lab-desktop", route: "/review", prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/review`, { waitUntil: "domcontentloaded" }); } });
   await capture({

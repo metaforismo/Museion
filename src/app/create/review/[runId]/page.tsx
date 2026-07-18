@@ -83,6 +83,7 @@ export default async function CompilationRunReview({
       >
         {[
           ["Overview", "#overview"],
+          ["Source Pack", "#source-pack"],
           ["Learning sequence", "#sequence"],
           ["Citations", "#citations"],
           ["Validation", "#validation"],
@@ -129,6 +130,46 @@ export default async function CompilationRunReview({
           <p className="mt-5 font-display text-4xl font-semibold">{Object.keys(run.sourceGraph.spans).length}</p>
           <p className="text-sm text-white/60">exact verified quotations</p>
         </div>
+      </section>
+
+      <section id="source-pack" className="mt-6 scroll-mt-32 rounded-[1.6rem] border border-ink/10 bg-surface/65 p-6 sm:p-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">Source Pack ledger</p>
+            <h2 className="mt-3 font-display text-3xl font-semibold">Coverage by supplied material</h2>
+          </div>
+          {run.sourcePack && <p className="font-mono text-xs text-ink-soft">pack {run.sourcePack.packSha256.slice(0, 12)}…</p>}
+        </div>
+        {!run.sourcePack || !run.materialCoverage ? (
+          <p className="mt-5 rounded-xl bg-paper p-5 text-sm leading-6 text-ink-soft">This older run predates persisted Source Pack manifests. Its document and exact citations remain available below.</p>
+        ) : (
+          <>
+            <div className="mt-5 grid gap-3 rounded-xl border border-ink/10 bg-paper p-4 text-sm sm:grid-cols-3">
+              <div><p className="text-ink-soft">Materials</p><p className="mt-1 font-semibold">{run.sourcePack.materials.length}</p></div>
+              <div><p className="text-ink-soft">Rights basis</p><p className="mt-1 font-semibold capitalize">{run.sourcePack.rights.basis.replaceAll("-", " ")}</p></div>
+              <div><p className="text-ink-soft">Unmapped spans</p><p className={`mt-1 font-semibold ${run.materialCoverage.unmappedSpanCount === 0 ? "text-correct" : "text-wrong"}`}>{run.materialCoverage.unmappedSpanCount}</p></div>
+            </div>
+            <ul className="mt-5 grid gap-4 md:grid-cols-2">
+              {run.sourcePack.materials.map((material) => {
+                const coverage = run.materialCoverage?.materials.find((item) => item.materialId === material.id);
+                return <li key={material.id} className="rounded-xl border border-ink/10 bg-paper p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div><p className="font-semibold">{material.title}</p><p className="mt-1 text-xs capitalize text-ink-soft">{material.role.replaceAll("-", " ")} · compiled pages {material.compiledPageStart}–{material.compiledPageEnd}</p></div>
+                    <span className={`rounded-md px-2 py-1 text-xs font-semibold ${coverage?.status === "cited" ? "bg-correct-soft text-correct" : "bg-gold-soft text-ink"}`}>{coverage?.status.replaceAll("-", " ") ?? "not measured"}</span>
+                  </div>
+                  <dl className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                    <div><dt className="text-ink-soft">Cited spans</dt><dd className="mt-1 font-semibold">{coverage ? `${coverage.citedSpanCount}/${coverage.spanCount}` : "—"}</dd></div>
+                    <div><dt className="text-ink-soft">Learning blocks</dt><dd className="mt-1 font-semibold">{coverage?.citedBlockCount ?? 0}</dd></div>
+                    <div><dt className="text-ink-soft">Coverage</dt><dd className="mt-1 font-semibold">{coverage?.coveragePercent ?? 0}%</dd></div>
+                  </dl>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/10" aria-label={`${material.title} citation coverage`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={coverage?.coveragePercent ?? 0}><div className="h-full rounded-full bg-lapis" style={{ width: `${coverage?.coveragePercent ?? 0}%` }} /></div>
+                  {material.reference && <a href={material.reference.url} target="_blank" rel="noreferrer" className="mt-4 inline-block break-all text-xs font-semibold text-lapis-dark underline underline-offset-4">Open {material.reference.kind.replaceAll("_", " ")} reference</a>}
+                  <p className="mt-3 break-all font-mono text-[0.68rem] text-ink-soft">material {material.documentSha256}</p>
+                </li>;
+              })}
+            </ul>
+          </>
+        )}
       </section>
 
       <section id="sequence" className="premium-surface mt-6 scroll-mt-32 rounded-[1.6rem] p-6 sm:p-8">

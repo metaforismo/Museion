@@ -35,11 +35,16 @@ describe("creator draft storage", () => {
       sourceMode: "reference" as const,
       sourceUrl: "https://www.youtube.com/playlist?list=PL123",
       sourceKind: "youtube_playlist" as const,
+      rightsBasis: "licensed" as const,
     };
     const serialized = serializeCreatorDraft(linked);
     expect(parseCreatorDraft(serialized)).toMatchObject(linked);
     expect(serialized).not.toContain("cookie");
     expect(serialized).not.toContain("token");
+  });
+
+  it("rejects an unknown rights basis instead of restoring an untrusted attestation", () => {
+    expect(parseCreatorDraft(JSON.stringify({ ...draft, rightsBasis: "probably-fine" }))).toBeNull();
   });
 
   it.each([null, "not-json", "{}", JSON.stringify({ ...draft, targetMinutes: 999 })])(

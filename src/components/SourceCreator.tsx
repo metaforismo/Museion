@@ -8,6 +8,7 @@ import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-t
 import type { SourceDocument, SourceReferenceKind } from "@/lib/source/contracts";
 import { MAX_NORMALIZED_CHARACTERS, MAX_SOURCE_BYTES, MAX_SOURCE_PAGES } from "@/lib/source/limits";
 import { inferSourceReferenceKind, normalizeSourceUrl } from "@/lib/source/reference";
+import type { SourceRightsBasis } from "@/lib/source/source-pack";
 import type { CourseTemplateId } from "@/lib/compiler/templates";
 const CourseArchitectPanel = lazy(() => import("./CourseArchitectPanel"));
 const SourceLearningDesign = lazy(() => import("./SourceLearningDesign"));
@@ -88,6 +89,7 @@ export default function SourceCreator() {
   const [templateId, setTemplateId] = useState<CourseTemplateId>("socratic-foundations");
   const [warningsAccepted, setWarningsAccepted] = useState(false);
   const [sourceAuthorized, setSourceAuthorized] = useState(false);
+  const [rightsBasis, setRightsBasis] = useState<SourceRightsBasis>("personal-notes");
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [clearConfirmation, setClearConfirmation] = useState(false);
@@ -108,6 +110,7 @@ export default function SourceCreator() {
       setSourceMode(saved.sourceMode ?? "paste");
       setSourceUrl(saved.sourceUrl ?? "");
       setSourceKind(saved.sourceKind ?? inferSourceReferenceKind(saved.sourceUrl ?? ""));
+      setRightsBasis(saved.rightsBasis ?? "personal-notes");
       setTemplateId(saved.templateId);
       setLearnerGoal(saved.learnerGoal);
       setLevel(saved.level);
@@ -139,6 +142,7 @@ export default function SourceCreator() {
     setDocument(null);
     setJob(null);
     setSourceAuthorized(false);
+    setRightsBasis("personal-notes");
     setWarningsAccepted(false);
     setClearConfirmation(false);
     if (fileInput.current) fileInput.current.value = "";
@@ -165,7 +169,7 @@ export default function SourceCreator() {
     const statusTimer = window.setTimeout(() => setDraftStatus("saving"), 0);
     const timer = window.setTimeout(() => {
       try {
-        localStorage.setItem(DRAFT_KEY, serializeCreatorDraft({ title, text, mediaType, sourceMode, sourceUrl, sourceKind, templateId, learnerGoal, level, language, targetMinutes }));
+        localStorage.setItem(DRAFT_KEY, serializeCreatorDraft({ title, text, mediaType, sourceMode, sourceUrl, sourceKind, rightsBasis, templateId, learnerGoal, level, language, targetMinutes }));
         setDraftStatus("saved");
       } catch {
         setDraftStatus("error");
@@ -175,7 +179,7 @@ export default function SourceCreator() {
       window.clearTimeout(statusTimer);
       window.clearTimeout(timer);
     };
-  }, [draftReady, language, learnerGoal, level, mediaType, sourceKind, sourceMode, sourceUrl, targetMinutes, templateId, text, title]);
+  }, [draftReady, language, learnerGoal, level, mediaType, rightsBasis, sourceKind, sourceMode, sourceUrl, targetMinutes, templateId, text, title]);
 
   useEffect(() => {
     const runId = sessionStorage.getItem(ACTIVE_RUN_KEY);
@@ -342,6 +346,7 @@ export default function SourceCreator() {
         body: JSON.stringify({
           requestId: compileRequestId.current,
           document,
+          rights: { confirmed: true, basis: rightsBasis, notes: "Confirmed in Creator Studio." },
           audience: { level, language, targetMinutes, learnerGoal },
           templateId,
         }),
@@ -712,6 +717,18 @@ export default function SourceCreator() {
               <label className="mt-4 flex items-start gap-3 rounded-xl border border-ink/10 bg-surface px-4 py-3 text-sm font-medium">
                 <input type="checkbox" checked={sourceAuthorized} onChange={(event) => setSourceAuthorized(event.target.checked)} className="mt-1" />
                 <span><span className="block">I am allowed to use this source.</span><span className="mt-1 block font-normal leading-5 text-ink-soft">Museion keeps provenance, but authorization and copyright remain the creator’s responsibility.</span></span>
+              </label>
+              <label className="mt-3 block text-sm font-medium" htmlFor="source-rights-basis">
+                Rights basis
+                <select id="source-rights-basis" value={rightsBasis} onChange={(event) => setRightsBasis(event.target.value as SourceRightsBasis)} className="mt-2 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5">
+                  <option value="personal-notes">My own notes</option>
+                  <option value="creator-owned">Creator-owned material</option>
+                  <option value="licensed">Licensed material</option>
+                  <option value="open-licensed">Open-licensed material</option>
+                  <option value="public-domain">Public domain</option>
+                  <option value="authorized-excerpt">Authorized bounded excerpt</option>
+                </select>
+                <span className="mt-1 block font-normal leading-5 text-ink-soft">Recorded in the Source Pack manifest; it does not replace your responsibility to verify permission.</span>
               </label>
 
               <div className="mt-5 flex flex-wrap gap-2" aria-label="Source pages">

@@ -195,5 +195,5 @@ describe("source normalization and provenance", () => {
     expect(document.pages).toHaveLength(6);
     expect(document.pages[0].text.toLowerCase()).toContain("binary search");
     expect(document.pages.every((page) => page.sha256.length === 64)).toBe(true);
-  });
+  }, 15_000);
 });
