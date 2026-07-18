@@ -4,14 +4,25 @@ import Link from "next/link";
 
 import type { JudgeSessionView } from "@/lib/judge/contracts";
 
-export function ResetConfirmation({ busy, onCancel, onConfirm }: { busy: boolean; onCancel(): void; onConfirm(): Promise<void> }) {
+type DeferredPanelProps =
+  | { kind: "reset"; busy: boolean; onCancel(): void; onConfirm(): Promise<void> }
+  | { kind: "transfer"; prompt: string; responseKind: "numeric" | "multiple-choice" | "expression"; options: string[]; answer: string; valid: boolean; touched: boolean; busy: boolean; onAnswer(value: string): void; onTouched(): void; onSubmit(): Promise<void> }
+  | { kind: "evidence"; session: JudgeSessionView; reviewHref: string; onReset(): void };
+
+export default function JudgeDeferredPanel(props: DeferredPanelProps) {
+  if (props.kind === "reset") return <ResetConfirmation {...props} />;
+  if (props.kind === "transfer") return <TransferChallenge {...props} />;
+  return <EvidenceResult {...props} />;
+}
+
+function ResetConfirmation({ busy, onCancel, onConfirm }: { busy: boolean; onCancel(): void; onConfirm(): Promise<void> }) {
   return <section role="group" aria-label="Confirm reset run" className="mt-5 flex flex-col gap-4 rounded-xl border border-wrong/20 bg-wrong-soft p-4 sm:flex-row sm:items-center sm:justify-between">
     <div><p className="font-semibold text-wrong">Start this experience again from the first block?</p><p className="mt-1 text-sm text-ink-soft">This removes the current server session and its local recovery state.</p></div>
     <div className="flex shrink-0 gap-2"><button type="button" disabled={busy} onClick={onCancel} className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-sm font-semibold">Keep run</button><button type="button" disabled={busy} onClick={() => void onConfirm()} className="rounded-lg bg-wrong px-4 py-2 text-sm font-semibold text-white disabled:opacity-45">{busy ? "Resetting…" : "Confirm reset"}</button></div>
   </section>;
 }
 
-export function TransferChallenge({ prompt, responseKind, options, answer, valid, touched, busy, onAnswer, onTouched, onSubmit }: { prompt: string; responseKind: "numeric" | "multiple-choice" | "expression"; options: string[]; answer: string; valid: boolean; touched: boolean; busy: boolean; onAnswer(value: string): void; onTouched(): void; onSubmit(): Promise<void> }) {
+function TransferChallenge({ prompt, responseKind, options, answer, valid, touched, busy, onAnswer, onTouched, onSubmit }: { prompt: string; responseKind: "numeric" | "multiple-choice" | "expression"; options: string[]; answer: string; valid: boolean; touched: boolean; busy: boolean; onAnswer(value: string): void; onTouched(): void; onSubmit(): Promise<void> }) {
   const invalid = touched && !valid;
   return <section className="mt-7 rounded-[1.4rem] border-2 border-gold bg-surface p-6 shadow-[0_18px_60px_rgba(35,53,91,0.08)] sm:p-7">
     <div className="flex flex-wrap gap-2"><span className="rounded-md bg-gold-soft px-3 py-1 text-xs font-semibold uppercase">Locked · one attempt</span><span className="rounded-md bg-paper px-3 py-1 text-xs">Maia 0 · hints 0 · solutions 0</span></div>
@@ -22,7 +33,7 @@ export function TransferChallenge({ prompt, responseKind, options, answer, valid
   </section>;
 }
 
-export function EvidenceResult({ session, reviewHref, onReset }: { session: JudgeSessionView; reviewHref: string; onReset(): void }) {
+function EvidenceResult({ session, reviewHref, onReset }: { session: JudgeSessionView; reviewHref: string; onReset(): void }) {
   const observation = session.transfer.observation;
   if (!observation) return null;
   return <section className="mt-7 space-y-5">

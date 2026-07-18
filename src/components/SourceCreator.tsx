@@ -1,32 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { parseCreatorDraft, serializeCreatorDraft } from "@/lib/client/creator-draft";
 import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
-import type { SourceDocument, SourceReferenceKind } from "@/lib/source";
-import {
-  MAX_NORMALIZED_CHARACTERS,
-  MAX_SOURCE_BYTES,
-  MAX_SOURCE_PAGES,
-  SourceIngestionError,
-  inferSourceReferenceKind,
-  ingestSourceFiles,
-  ingestTextSource,
-  normalizeSourceUrl,
-} from "@/lib/source";
-import { COURSE_TEMPLATES, type CourseTemplateId } from "@/lib/compiler/templates";
-import BrandMark from "./BrandMark";
-
-const CourseArchitectPanel = dynamic(() => import("./CourseArchitectPanel"), { ssr: false });
+import type { SourceDocument, SourceReferenceKind } from "@/lib/source/contracts";
+import { MAX_NORMALIZED_CHARACTERS, MAX_SOURCE_BYTES, MAX_SOURCE_PAGES } from "@/lib/source/limits";
+import { inferSourceReferenceKind, normalizeSourceUrl } from "@/lib/source/reference";
+import type { CourseTemplateId } from "@/lib/compiler/templates";
+const CourseArchitectPanel = lazy(() => import("./CourseArchitectPanel"));
+const SourceLearningDesign = lazy(() => import("./SourceLearningDesign"));
 
 type TextMediaType = "text/plain" | "text/markdown";
 type SourceMode = "paste" | "files" | "reference";
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 const DRAFT_KEY = "museion:creator-draft:v1";
 const ACTIVE_RUN_KEY = "museion:active-compiler-run:v1";
+const TEMPLATE_NAMES: Record<CourseTemplateId, string> = {
+  "socratic-foundations": "Socratic Foundations",
+  "exam-practice": "Exam Practice",
+  "teach-it-back": "Teach It Back",
+};
 
 type CompilerJob = {
   runId: string;
@@ -49,7 +44,6 @@ const COMPILE_STAGES = [
 ] as const;
 
 function errorMessage(error: unknown): string {
-  if (error instanceof SourceIngestionError) return error.message;
   if (error instanceof Error && error.message) return error.message;
   return "The source could not be normalized. Check the file and try again.";
 }
@@ -280,6 +274,7 @@ export default function SourceCreator() {
     setBusy(true);
     setError(null);
     try {
+      const { ingestTextSource } = await import("@/lib/source/ingest");
       const normalizedUrl = sourceUrl.trim() ? normalizeSourceUrl(sourceUrl) : null;
       const next = await ingestTextSource({
         title,
@@ -307,6 +302,7 @@ export default function SourceCreator() {
     setBusy(true);
     setError(null);
     try {
+      const { ingestSourceFiles } = await import("@/lib/source/ingest");
       const normalizedUrl = sourceUrl.trim() ? normalizeSourceUrl(sourceUrl) : null;
       const filesWithPastedMaterial = text.trim()
         ? [new File([text], mediaType === "text/markdown" ? "pasted-material.md" : "pasted-material.txt", { type: mediaType }), ...files]
@@ -462,7 +458,7 @@ export default function SourceCreator() {
       <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-2xl border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
         {[
           { label: "1. Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", ready: Boolean(document), current: !document },
-          { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? COURSE_TEMPLATES[templateId].name : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
+          { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
           { label: "3. Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : "Needs review", ready: activeJob || readyToCompile, current: Boolean(document && learningBriefReady && !sourceReady) },
         ].map((step) => (
           <li
@@ -744,25 +740,9 @@ export default function SourceCreator() {
                   {page.text}
                 </pre>
               </div>
-              <div className="mt-5 rounded-xl border border-ink/10 p-4">
-                <div className="flex items-baseline justify-between gap-3"><h3 className="font-semibold">2. Learning design</h3><span className="text-xs text-ink-soft">Choose a pedagogy</span></div>
-                <div className="mt-4 grid gap-3">
-                  {(Object.entries(COURSE_TEMPLATES) as Array<[CourseTemplateId, (typeof COURSE_TEMPLATES)[CourseTemplateId]]>).map(([id, template]) => (
-                    <button key={id} type="button" aria-pressed={templateId === id} onClick={() => setTemplateId(id)} className={`rounded-xl border p-4 text-left transition ${templateId === id ? "border-lapis bg-lapis-soft shadow-[0_8px_28px_rgba(43,74,203,0.10)]" : "border-ink/10 bg-surface hover:border-lapis/40"}`}>
-                      <span className="flex items-center justify-between gap-3"><span className="font-semibold">{template.name}</span>{templateId === id && <span className="rounded-md bg-surface px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wide text-lapis-dark">Selected</span>}</span>
-                      <span className="mt-1 block text-sm leading-6 text-ink-soft">{template.description}</span>
-                      <span className="mt-2 block text-xs text-ink-soft">Required mix: {template.requiredKinds.join(" · ")}</span>
-                    </button>
-                  ))}
-                </div>
-                <h3 className="mt-5 border-t border-ink/10 pt-4 font-semibold">Learning brief</h3>
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  <label className="text-sm">Level<select value={level} onChange={(event) => setLevel(event.target.value as typeof level)} className="mt-1 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2"><option value="novice">Novice</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
-                  <label className="text-sm">Language<input value={language} maxLength={35} aria-invalid={!language.trim()} aria-describedby={!language.trim() ? "language-error" : undefined} onChange={(event) => setLanguage(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" />{!language.trim() && <span id="language-error" className="mt-1 block text-xs text-wrong">Enter a language.</span>}</label>
-                  <label className="text-sm">Minutes<input type="number" min={3} max={60} value={targetMinutes} aria-invalid={targetMinutes < 3 || targetMinutes > 60} aria-describedby={targetMinutes < 3 || targetMinutes > 60 ? "duration-error" : undefined} onChange={(event) => setTargetMinutes(Number(event.target.value))} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" />{(targetMinutes < 3 || targetMinutes > 60) && <span id="duration-error" className="mt-1 block text-xs text-wrong">Choose 3 to 60 minutes.</span>}</label>
-                </div>
-                <label className="mt-3 block text-sm">Learner goal<textarea value={learnerGoal} maxLength={600} rows={3} aria-invalid={!learnerGoal.trim()} aria-describedby="learner-goal-help" onChange={(event) => setLearnerGoal(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /><span id="learner-goal-help" className={`mt-1 flex justify-between gap-3 text-xs ${learnerGoal.trim() ? "text-ink-soft" : "text-wrong"}`}><span>{learnerGoal.trim() ? "Describe what the learner should do without assistance." : "Enter a learner goal."}</span><span className="shrink-0 font-mono tabular-nums">{learnerGoal.length}/600</span></span></label>
-              </div>
+              <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading learning design…</div>}>
+                <SourceLearningDesign templateId={templateId} level={level} language={language} targetMinutes={targetMinutes} learnerGoal={learnerGoal} onTemplate={setTemplateId} onLevel={setLevel} onLanguage={setLanguage} onMinutes={setTargetMinutes} onGoal={setLearnerGoal} />
+              </Suspense>
               {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-lg border border-lapis px-5 py-2.5 text-center font-medium text-lapis">Open checked golden review</Link>}
               {activeJob && job && <div className="mt-5 rounded-2xl bg-ink p-5 text-white" aria-live="polite">
                 <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">3. Compile</p><p className="mt-1 font-semibold">Building a grounded course</p><p className="mt-1 text-xs text-white/55">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-sm">{job.completedStages}/{job.totalStages}</span></div>
@@ -789,10 +769,10 @@ export default function SourceCreator() {
         onClick={() => setArchitectOpen(true)}
         className="fixed bottom-20 right-4 z-40 flex items-center gap-3 rounded-2xl border border-lapis/15 bg-surface px-3 py-2.5 shadow-[0_18px_50px_rgba(19,28,49,0.18)] transition hover:-translate-y-0.5 hover:border-lapis/35 sm:bottom-5 sm:right-6"
       >
-        <span className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft"><BrandMark className="h-9 w-9" /></span>
+        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft font-display text-sm font-semibold tracking-[-0.04em] text-lapis-dark">CA</span>
         <span className="text-left"><span className="block font-display font-semibold">Course Architect</span><span className="block text-xs text-ink-soft">Build from my material</span></span>
       </button>
-      {architectOpen && <CourseArchitectPanel
+      {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 shadow-xl">Opening Course Architect…</div>}><CourseArchitectPanel
         document={document}
         textLength={text.length}
         sourceUrl={sourceUrl}
@@ -816,7 +796,7 @@ export default function SourceCreator() {
           setArchitectOpen(false);
           architectTrigger.current?.focus();
         }}
-      />}
+      /></Suspense>}
     </div>
   );
 }

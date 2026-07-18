@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import type { JudgeSessionView } from "@/lib/judge/contracts";
 import type { RuntimeAction, RuntimeOutcome, RuntimeTutorIntervention } from "@/lib/runtime";
@@ -9,9 +9,7 @@ import type { RuntimeAction, RuntimeOutcome, RuntimeTutorIntervention } from "@/
 const InteractiveBlock = dynamic(() => import("./blocks/InteractiveBlock"), {
   loading: () => <div role="status" className="mt-7 h-64 animate-pulse rounded-xl bg-ink/5"><span className="sr-only">Loading interactive activity.</span></div>,
 });
-const ResetConfirmation = dynamic(() => import("./JudgeDeferredPanels").then((module) => module.ResetConfirmation), { ssr: false });
-const TransferChallenge = dynamic(() => import("./JudgeDeferredPanels").then((module) => module.TransferChallenge), { ssr: false });
-const EvidenceResult = dynamic(() => import("./JudgeDeferredPanels").then((module) => module.EvidenceResult), { ssr: false });
+const JudgeDeferredPanel = lazy(() => import("./JudgeDeferredPanels"));
 
 const SESSION_KEY = "museion_judge_session_v1";
 const RUN_KEY = "museion_judge_run_v1";
@@ -267,7 +265,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
         <button type="button" disabled={busy} onClick={() => setConfirmReset(true)} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium transition hover:border-lapis disabled:opacity-45">Reset run</button>
       </header>
 
-      {confirmReset && <ResetConfirmation busy={busy} onCancel={() => setConfirmReset(false)} onConfirm={reset} />}
+      {confirmReset && <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-4 text-sm text-ink-soft">Loading reset controls…</div>}><JudgeDeferredPanel kind="reset" busy={busy} onCancel={() => setConfirmReset(false)} onConfirm={reset} /></Suspense>}
 
       <div className="mt-7" role="progressbar" aria-label="Lesson progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="flex justify-between text-xs font-medium text-ink-soft"><span>{blockIndex < lessonBlocks.length ? `Lesson block ${blockIndex + 1} of ${lessonBlocks.length}` : "Lesson complete"}</span><span className="font-mono tabular-nums">{progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-ink/10"><div className="h-full origin-left rounded-full bg-lapis transition-transform duration-300" style={{ transform: `scaleX(${progress / 100})` }} /></div></div>
 
@@ -285,9 +283,9 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
 
       {!currentBlock && session.transfer.status === "locked" && <section className="mt-7 rounded-xl border border-gold/30 bg-gold-soft p-7 text-center"><p className="text-sm font-semibold uppercase tracking-wide">Independent checkpoint</p><h2 className="mt-2 font-display text-2xl font-semibold">The lesson is complete. Your final challenge is ready.</h2><p className="mx-auto mt-3 max-w-xl text-ink-soft">Starting removes Maia, hints, solution reveal, and answer elimination. Exactly one scored answer is accepted.</p><button type="button" disabled={busy} onClick={() => void startLockedTransfer()} className="mt-5 rounded-lg bg-ink px-6 py-3 font-semibold text-white disabled:opacity-50">Start independent challenge</button></section>}
 
-      {!currentBlock && transferBlock?.kind === "transfer-challenge" && session.transfer.status === "active" && <TransferChallenge prompt={transferBlock.prompt} responseKind={transferBlock.responseKind} options={transferBlock.options} answer={transferAnswer} valid={transferAnswerValid} touched={transferTouched} busy={busy} onAnswer={setTransferAnswer} onTouched={() => setTransferTouched(true)} onSubmit={submitTransfer} />}
+      {!currentBlock && transferBlock?.kind === "transfer-challenge" && session.transfer.status === "active" && <Suspense fallback={<div role="status" className="mt-7 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading transfer challenge…</div>}><JudgeDeferredPanel kind="transfer" prompt={transferBlock.prompt} responseKind={transferBlock.responseKind} options={transferBlock.options} answer={transferAnswer} valid={transferAnswerValid} touched={transferTouched} busy={busy} onAnswer={setTransferAnswer} onTouched={() => setTransferTouched(true)} onSubmit={submitTransfer} /></Suspense>}
 
-      {!currentBlock && session.transfer.status === "scored" && session.transfer.observation && <EvidenceResult session={session} reviewHref={reviewHref} onReset={() => setConfirmReset(true)} />}
+      {!currentBlock && session.transfer.status === "scored" && session.transfer.observation && <Suspense fallback={<div role="status" className="mt-7 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading evidence ledger…</div>}><JudgeDeferredPanel kind="evidence" session={session} reviewHref={reviewHref} onReset={() => setConfirmReset(true)} /></Suspense>}
     </div>
   );
 }
