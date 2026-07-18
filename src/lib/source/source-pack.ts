@@ -4,7 +4,7 @@ import { canonicalSha256 } from "@/lib/compiler/canonical";
 
 import { SourceDocumentSchema, SourceReferenceSchema, type SourceDocument } from "./contracts";
 import { ingestTextSource } from "./ingest";
-import { createSourceDocument } from "./normalize";
+import { createSourceDocument, verifySourceDocumentIntegrity } from "./normalize";
 
 export const SourceRightsBasisSchema = z.enum([
   "creator-owned",
@@ -54,10 +54,15 @@ export const SourcePackSchema = z.object({
   }).strict(),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   createdAt: z.string().datetime(),
-}).strict();
+}).strict().superRefine((pack, context) => {
+  if (new Set(pack.materials.map((material) => material.id)).size !== pack.materials.length) {
+    context.addIssue({ code: "custom", path: ["materials"], message: "Source Pack material ids must be unique" });
+  }
+});
 
 export type SourcePackInput = z.input<typeof SourcePackInputSchema>;
 export type SourcePack = z.infer<typeof SourcePackSchema>;
+export type SourcePackMaterialRole = z.infer<typeof SourcePackMaterialSchema>["role"];
 
 export const SourcePackManifestMaterialSchema = z.object({
   id: z.string().regex(/^material_[a-f0-9]{24}$/),
@@ -87,7 +92,11 @@ export const SourcePackManifestSchema = z.object({
     notes: z.string().max(600),
   }).strict(),
   materials: z.array(SourcePackManifestMaterialSchema).min(1).max(8),
-}).strict();
+}).strict().superRefine((manifest, context) => {
+  if (new Set(manifest.materials.map((material) => material.id)).size !== manifest.materials.length) {
+    context.addIssue({ code: "custom", path: ["materials"], message: "Source Pack manifest material ids must be unique" });
+  }
+});
 
 export type SourcePackManifest = z.infer<typeof SourcePackManifestSchema>;
 export type SourceRightsBasis = z.infer<typeof SourceRightsBasisSchema>;
@@ -101,20 +110,72 @@ export async function createSourcePack(input: SourcePackInput, createdAt = new D
     sourceReference: material.reference,
     createdAt,
   })));
-  const materialRecords = await Promise.all(documents.map(async (document, index) => {
-    const hash = await canonicalSha256({ documentSha256: document.sha256, role: parsed.materials[index].role });
-    return {
-      id: `material_${hash.slice(0, 24)}`,
+  return createSourcePackFromDocuments({
+    title: parsed.title,
+    description: parsed.description,
+    materials: documents.map((document, index) => ({
       title: parsed.materials[index].title,
       role: parsed.materials[index].role,
       document,
-    };
+    })),
+    rights: parsed.rights,
+  }, createdAt);
+}
+
+export async function createSourcePackFromDocuments(input: {
+  title: string;
+  description?: string;
+  materials: Array<{ title: string; role: SourcePackMaterialRole; document: SourceDocument }>;
+  rights: { confirmed: true; basis: SourceRightsBasis; notes?: string };
+}, createdAt = new Date().toISOString()): Promise<SourcePack> {
+  const title = z.string().trim().min(1).max(200).parse(input.title);
+  const description = z.string().trim().max(600).parse(input.description ?? "");
+  const rights = z.object({ confirmed: z.literal(true), basis: SourceRightsBasisSchema, notes: z.string().trim().max(600).default("") }).strict().parse(input.rights);
+  const sourceMaterials = z.array(z.object({
+    title: z.string().trim().min(1).max(200),
+    role: SourcePackMaterialSchema.shape.role,
+    document: SourceDocumentSchema,
+  }).strict()).min(1).max(8).parse(input.materials);
+  const materialRecords = await Promise.all(sourceMaterials.map(async (material, position) => {
+    const hash = await canonicalSha256({ documentSha256: material.document.sha256, role: material.role, position });
+    return { id: `material_${hash.slice(0, 24)}`, ...material };
   }));
+  const sha256 = await canonicalSha256({
+    schemaVersion: "1.0",
+    title,
+    description,
+    materials: materialRecords.map((material) => ({
+      id: material.id,
+      role: material.role,
+      documentSha256: material.document.sha256,
+      reference: material.document.sourceReference ?? null,
+    })),
+    rights,
+  });
+  return SourcePackSchema.parse({
+    schemaVersion: "1.0",
+    id: `pack_${sha256.slice(0, 24)}`,
+    title,
+    description,
+    materials: materialRecords,
+    rights,
+    sha256,
+    createdAt,
+  });
+}
+
+export async function verifySourcePackIntegrity(pack: SourcePack): Promise<void> {
+  const parsed = SourcePackSchema.parse(pack);
+  for (const [position, material] of parsed.materials.entries()) {
+    await verifySourceDocumentIntegrity(material.document);
+    const materialSha256 = await canonicalSha256({ documentSha256: material.document.sha256, role: material.role, position });
+    if (material.id !== `material_${materialSha256.slice(0, 24)}`) throw new Error("SOURCE_PACK_MATERIAL_HASH_MISMATCH");
+  }
   const sha256 = await canonicalSha256({
     schemaVersion: "1.0",
     title: parsed.title,
     description: parsed.description,
-    materials: materialRecords.map((material) => ({
+    materials: parsed.materials.map((material) => ({
       id: material.id,
       role: material.role,
       documentSha256: material.document.sha256,
@@ -122,21 +183,15 @@ export async function createSourcePack(input: SourcePackInput, createdAt = new D
     })),
     rights: parsed.rights,
   });
-  return SourcePackSchema.parse({
-    schemaVersion: "1.0",
-    id: `pack_${sha256.slice(0, 24)}`,
-    title: parsed.title,
-    description: parsed.description,
-    materials: materialRecords,
-    rights: parsed.rights,
-    sha256,
-    createdAt,
-  });
+  if (parsed.sha256 !== sha256 || parsed.id !== `pack_${sha256.slice(0, 24)}`) throw new Error("SOURCE_PACK_HASH_MISMATCH");
 }
 
 /** Flattens an inspected pack into the compiler's canonical document boundary. */
 export async function sourcePackToDocument(pack: SourcePack): Promise<SourceDocument> {
   const parsed = SourcePackSchema.parse(pack);
+  if (parsed.materials.length === 1) {
+    return SourceDocumentSchema.parse({ ...parsed.materials[0].document, title: parsed.title });
+  }
   const rawPages = parsed.materials.flatMap((material, materialIndex) =>
     material.document.pages.map((page, pageIndex) => {
       const heading = pageIndex === 0

@@ -14,7 +14,7 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Add protocol, malformed-input, mixed-material, privacy, limit, and burst stress tests.
 - [x] Replace separate paste/upload/link product modes with one visible Source Pack intake for text, files, and optional provenance.
 - [x] Add a clickable Course Architect companion with a desktop chat rail, mobile sheet, source/goal/file intake, focus return, and a deterministic Museion Method readiness check.
-- [ ] Support multiple independently editable references in the Creator Studio Source Pack UI (the MCP contract already supports one reference per material).
+- [x] Support up to eight independently editable Creator Studio materials with per-material roles, references, ordering, removal, file reattachment, and server-verified pack integrity.
 - [ ] Add an optional live Codex conversational turn before compilation; keep deterministic intake and method gates available offline.
 - [x] Persist a raw-content-free Source Pack manifest with every new compiler run and show per-material span/block citation coverage in Creator review.
 - [ ] Add per-client MCP identities, revocable tokens, rate limits, and audit events before public multi-user hosting.
@@ -29,7 +29,10 @@ Status legend: `[x]` done · `[ ]` planned
 - [x] Compute cited spans, cited learning blocks, extracted-span coverage, uncited materials, and unmapped spans deterministically.
 - [x] Show the Source Pack ledger in Creator review with accessible coverage progress and a legacy-run fallback.
 - [x] Cover single, mixed, maximum-eight-material, tampered-manifest, privacy, duplicate-citation, uncited, unmapped, draft, API-rights, and owner-bound run cases.
-- [ ] Support multiple independently editable references and material roles directly in Creator Studio before normalization.
+- [x] Support multiple independently editable references and material roles directly in Creator Studio before normalization.
+- [x] Preserve file privacy in local draft recovery by storing metadata only and requiring explicit reattachment after refresh.
+- [x] Recompute material, document, and pack hashes server-side before accepting a visible multi-material compilation.
+- [ ] Add contradiction review, authority labels, and objective-level citation diversity once the compiler Source Graph exposes cross-material claim alignment.
 - [ ] Add per-client MCP identities, revocation, rate limiting, and audit events; then run deployed interoperability checks from each named client.
 
 ## v0.2 — Web platform foundation ✅

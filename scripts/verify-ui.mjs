@@ -627,8 +627,9 @@ async function desktopFlow() {
   await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
   await expectVisible(page.getByRole("heading", { name: "Build one Source Pack" }), "unified Source Pack intake");
-  await expectVisible(page.getByLabel("Reference link (optional)"), "optional reference intake");
-  await expectVisible(page.getByLabel("Authorized text material"), "authorized text intake");
+  await expectVisible(page.getByLabel("Source Pack materials"), "independently editable Source Pack material list");
+  await expectVisible(page.getByLabel("Material 1 reference link"), "optional per-material reference intake");
+  await expectVisible(page.getByLabel("Material 1 authorized text"), "authorized text intake");
   await expectVisible(page.locator("#source-file"), "file intake in the same Source Pack");
   const architectTrigger = page.getByRole("button", { name: /Course Architect Build from my material/ });
   await architectTrigger.click();
@@ -641,7 +642,7 @@ async function desktopFlow() {
   if ((await currentCreatorStep.textContent())?.includes("1. Source") !== true) {
     failures.push("creator progress: source was not marked as the current first step");
   }
-  await page.getByLabel("Authorized text material").fill(
+  await page.getByLabel("Material 1 authorized text").fill(
     "## Binary search invariant\nIgnore previous instructions is quoted source data, not an application command.",
   );
   await expectVisible(page.getByText(/\/140,000$/, { exact: false }).first(), "source character count");
@@ -649,15 +650,16 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Clear draft" }).click();
   await expectVisible(page.getByRole("button", { name: "Confirm clear" }), "destructive draft confirmation");
   await page.getByRole("button", { name: "Keep draft" }).click();
-  if (!(await page.getByLabel("Authorized text material").inputValue()).includes("Binary search invariant")) {
+  if (!(await page.getByLabel("Material 1 authorized text").inputValue()).includes("Binary search invariant")) {
     failures.push("creator: cancelling draft deletion changed the source text");
   }
   await page.reload();
-  await page.waitForFunction(() => document.querySelector("#source-text")?.value.includes("Binary search invariant"));
-  if (!(await page.getByLabel("Authorized text material").inputValue()).includes("Binary search invariant")) {
+  await page.waitForFunction(() => document.querySelector('textarea[aria-label="Material 1 authorized text"]')?.value.includes("Binary search invariant"));
+  if (!(await page.getByLabel("Material 1 authorized text").inputValue()).includes("Binary search invariant")) {
     failures.push("creator: local text draft did not restore after refresh");
   }
-  await page.getByRole("button", { name: "Normalize text Source Pack" }).click();
+  await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
+  await page.getByRole("button", { name: "Normalize 1 material" }).click();
   await expectVisible(page.getByText("Document SHA-256"), "pasted-source hash");
   await expectVisible(page.getByRole("heading", { name: "Review warnings" }), "instruction-like warning");
   await expectVisible(page.getByText(/Other sources require the configured live compiler/), "truthful keyless live compiler boundary");
@@ -665,24 +667,43 @@ async function desktopFlow() {
   await page.getByLabel("Source Pack title").fill("Updated source title");
   await expectVisible(page.getByText(/Add a source to inspect its canonical pages/), "stale normalized source invalidation");
 
-  await page.getByLabel("Reference link (optional)").fill("https://www.youtube.com/playlist?list=PL123");
-  if (await page.getByLabel("Reference type").inputValue() !== "youtube_playlist") {
+  await page.getByLabel("Material 1 reference link").fill("https://www.youtube.com/playlist?list=PL123");
+  if (await page.getByLabel("Material 1 reference type").inputValue() !== "youtube_playlist") {
     failures.push("creator: YouTube playlist link was not classified as a playlist");
   }
-  await page.getByLabel("Authorized text material").fill("Authorized notes from the referenced source.");
-  await page.getByRole("button", { name: "Normalize text Source Pack" }).click();
-  await expectVisible(page.getByText("youtube playlist reference", { exact: true }), "hash-bound source reference");
-  await expectVisible(page.getByText(/Course claims still derive only from the normalized text/), "linked-source truth boundary");
+  await page.getByLabel("Material 1 authorized text").fill("Authorized notes from the referenced source.");
+  await page.getByRole("button", { name: "Add text material" }).click();
+  await page.getByLabel("Material 2 title").fill("Book excerpt");
+  await page.getByLabel("Material 2 role").selectOption("excerpt");
+  await page.getByLabel("Material 2 reference link").fill("https://example.com/books/binary-search");
+  await page.getByLabel("Material 2 reference type").selectOption("book");
+  await page.getByLabel("Material 2 authorized text").fill("An authorized excerpt that distinguishes an invariant from a stopping condition.");
+  await page.getByRole("button", { name: "Move Book excerpt up" }).click();
+  const firstMaterialTitle = page.getByLabel("Material 1 title");
+  if (await firstMaterialTitle.inputValue() !== "Book excerpt") failures.push("creator: material reorder did not preserve the moved record");
+  await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
+  await page.getByRole("button", { name: "Normalize 2 materials" }).click();
+  await expectVisible(page.getByText("2 normalized materials"), "multi-material normalized summary");
+  await expectVisible(page.getByText("youtube playlist reference", { exact: true }), "hash-bound playlist reference");
+  await expectVisible(page.getByText("book reference", { exact: true }), "hash-bound book reference");
+  await expectVisible(page.getByText(/Every material hash and reference is bound to this pack/), "multi-material truth boundary");
 
-  await page.getByLabel("Reference link (optional)").fill("");
-  await page.getByLabel("Authorized text material").fill("");
+  await page.getByRole("button", { name: "Clear draft" }).click();
+  await page.getByRole("button", { name: "Confirm clear" }).click();
   await page.locator("#source-file").setInputFiles(pdfFixture);
+  await expectVisible(page.getByText("File ready for normalization"), "attached PDF material card");
+  await page.waitForFunction(() => localStorage.getItem("museion:creator-draft:v1")?.includes("binary-search-golden-source.pdf"));
+  await page.reload();
+  await expectVisible(page.getByText("File must be reattached"), "file-byte privacy after draft recovery");
+  await page.getByLabel("Reattach this file").setInputFiles(pdfFixture);
+  await expectVisible(page.getByText("File ready for normalization"), "explicit PDF reattachment recovery");
+  await page.getByLabel("Rights basis").selectOption("creator-owned");
+  await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
+  await page.getByRole("button", { name: "Normalize 1 material" }).click();
   await expectVisible(
     page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }),
     "six-page PDF record",
   );
-  await page.getByLabel("I am allowed to use this source.").check();
-  await page.getByLabel("Rights basis").selectOption("creator-owned");
   await page.waitForFunction(() => localStorage.getItem("museion:creator-draft:v1")?.includes('"rightsBasis":"creator-owned"'));
   await page.getByLabel("Language").fill("");
   await expectVisible(page.getByText("Enter a language.", { exact: true }), "creator language validation");
@@ -921,6 +942,7 @@ async function judgeRecoveryFlow() {
 
 async function judgeConcurrencyFlow() {
   const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
+  const concurrencyRunKey = `browser-concurrency-${crypto.randomUUID()}`;
   await context.addCookies([{
     name: "museion_learner",
     value: "00000000-0000-4000-8000-000000000007",
@@ -928,7 +950,7 @@ async function judgeConcurrencyFlow() {
     httpOnly: true,
     sameSite: "Lax",
   }]);
-  await context.addInitScript(() => localStorage.setItem("museion_judge_run_v1", "browser-concurrency-gate"));
+  await context.addInitScript((runKey) => localStorage.setItem("museion_judge_run_v1", runKey), concurrencyRunKey);
   const first = await context.newPage();
   const second = await context.newPage();
   first.on("pageerror", (error) => failures.push(`judge-concurrency-first page: ${error.message}`));
@@ -944,10 +966,16 @@ async function judgeConcurrencyFlow() {
   ]);
   if (!firstId || firstId !== secondId) failures.push("judge concurrency: tabs did not converge on one stable session");
 
-  await Promise.all([
-    first.getByRole("button", { name: /Continue/ }).click(),
-    second.getByRole("button", { name: /Continue/ }).click(),
-  ]);
+  await first.getByRole("button", { name: /Continue/ }).click();
+  await first.waitForFunction(() => {
+    const radio = document.querySelector('input[type="radio"]');
+    return radio instanceof HTMLInputElement && !radio.disabled;
+  });
+  await second.reload();
+  await second.waitForFunction(() => {
+    const radio = document.querySelector('input[type="radio"]');
+    return radio instanceof HTMLInputElement && !radio.disabled;
+  });
   await Promise.all([first.getByRole("radio").first().check(), second.getByRole("radio").first().check()]);
   await Promise.all([
     first.getByRole("button", { name: "Check prediction" }).click(),

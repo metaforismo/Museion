@@ -9,7 +9,7 @@ import {
   resetCompilerRunsForTests,
 } from "@/lib/compiler";
 import { resetAiSettingsForTests, updateAiSettings } from "@/lib/ai/settings";
-import { createSingleDocumentSourcePackManifest, ingestTextSource, SourceDocumentSchema } from "@/lib/source";
+import { createSingleDocumentSourcePackManifest, createSourcePack, ingestTextSource, sourcePackToDocument, SourceDocumentSchema } from "@/lib/source";
 import goldenDocumentJson from "./fixtures/binary-search-source-document.json";
 
 const audience = {
@@ -71,6 +71,18 @@ describe("compiler run lifecycle", () => {
     expect(CompilerRunRequestSchema.safeParse(base).success).toBe(false);
     expect(CompilerRunRequestSchema.safeParse({ ...base, rights: { confirmed: true, basis: "licensed" } }).success).toBe(true);
     expect(CompilerRunRequestSchema.safeParse({ ...base, rights: { confirmed: false, basis: "licensed" } }).success).toBe(false);
+  });
+
+  it("accepts a verified multi-material Source Pack only when its rights declaration matches", async () => {
+    const sourcePack = await createSourcePack({
+      title: "Two sources",
+      materials: [{ title: "Transcript", content: "A base case ends recursion.", role: "transcript" }, { title: "Notes", content: "Each recursive call reduces the problem.", role: "notes" }],
+      rights: { confirmed: true, basis: "creator-owned", notes: "Confirmed in Creator Studio." },
+    });
+    const document = await sourcePackToDocument(sourcePack);
+    const base = { document, sourcePack, rights: sourcePack.rights, audience, templateId: "socratic-foundations" };
+    expect(CompilerRunRequestSchema.safeParse(base).success).toBe(true);
+    expect(CompilerRunRequestSchema.safeParse({ ...base, rights: { confirmed: true, basis: "licensed", notes: "Confirmed in Creator Studio." } }).success).toBe(false);
   });
 
   it("rejects a Source Pack manifest bound to a different compiler document", async () => {
