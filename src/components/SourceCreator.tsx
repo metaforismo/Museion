@@ -1,28 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { parseCreatorDraft, serializeCreatorDraft } from "@/lib/client/creator-draft";
 import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
-import type { SourceDocument, SourceReferenceKind } from "@/lib/source";
-import {
-  MAX_NORMALIZED_CHARACTERS,
-  MAX_SOURCE_BYTES,
-  MAX_SOURCE_PAGES,
-  SourceIngestionError,
-  inferSourceReferenceKind,
-  ingestSourceFiles,
-  ingestTextSource,
-  normalizeSourceUrl,
-} from "@/lib/source";
-import { COURSE_TEMPLATES, type CourseTemplateId } from "@/lib/compiler/templates";
+import type { SourceDocument, SourceReferenceKind } from "@/lib/source/contracts";
+import { MAX_NORMALIZED_CHARACTERS, MAX_SOURCE_BYTES, MAX_SOURCE_PAGES } from "@/lib/source/limits";
+import { inferSourceReferenceKind, normalizeSourceUrl } from "@/lib/source/reference";
+import type { CourseTemplateId } from "@/lib/compiler/templates";
+const CourseArchitectPanel = lazy(() => import("./CourseArchitectPanel"));
+const SourceLearningDesign = lazy(() => import("./SourceLearningDesign"));
 
 type TextMediaType = "text/plain" | "text/markdown";
 type SourceMode = "paste" | "files" | "reference";
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 const DRAFT_KEY = "museion:creator-draft:v1";
 const ACTIVE_RUN_KEY = "museion:active-compiler-run:v1";
+const TEMPLATE_NAMES: Record<CourseTemplateId, string> = {
+  "socratic-foundations": "Socratic Foundations",
+  "exam-practice": "Exam Practice",
+  "teach-it-back": "Teach It Back",
+};
 
 type CompilerJob = {
   runId: string;
@@ -45,7 +44,6 @@ const COMPILE_STAGES = [
 ] as const;
 
 function errorMessage(error: unknown): string {
-  if (error instanceof SourceIngestionError) return error.message;
   if (error instanceof Error && error.message) return error.message;
   return "The source could not be normalized. Check the file and try again.";
 }
@@ -69,6 +67,7 @@ export default function SourceCreator() {
   const compileLock = useRef(false);
   const compileRequestId = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const architectTrigger = useRef<HTMLButtonElement>(null);
   const normalizationSeq = useRef(0);
   const suppressNextDraftSave = useRef(false);
   const [title, setTitle] = useState("Binary Search Notes");
@@ -96,6 +95,7 @@ export default function SourceCreator() {
   const [job, setJob] = useState<CompilerJob | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"loading" | "empty" | "saved" | "saving" | "error">("loading");
+  const [architectOpen, setArchitectOpen] = useState(false);
   const activeJob = Boolean(job && ["queued", "running"].includes(job.status));
 
   const restoreDraft = (): boolean => {
@@ -274,7 +274,8 @@ export default function SourceCreator() {
     setBusy(true);
     setError(null);
     try {
-      const normalizedUrl = sourceMode === "reference" ? normalizeSourceUrl(sourceUrl) : null;
+      const { ingestTextSource } = await import("@/lib/source/ingest");
+      const normalizedUrl = sourceUrl.trim() ? normalizeSourceUrl(sourceUrl) : null;
       const next = await ingestTextSource({
         title,
         text,
@@ -301,9 +302,19 @@ export default function SourceCreator() {
     setBusy(true);
     setError(null);
     try {
-      const next = await ingestSourceFiles({ title, files });
+      const { ingestSourceFiles } = await import("@/lib/source/ingest");
+      const normalizedUrl = sourceUrl.trim() ? normalizeSourceUrl(sourceUrl) : null;
+      const filesWithPastedMaterial = text.trim()
+        ? [new File([text], mediaType === "text/markdown" ? "pasted-material.md" : "pasted-material.txt", { type: mediaType }), ...files]
+        : files;
+      const next = await ingestSourceFiles({
+        title,
+        files: filesWithPastedMaterial,
+        ...(normalizedUrl ? { sourceReference: { kind: sourceKind, url: normalizedUrl, label: title.trim() } } : {}),
+      });
       if (requestId !== normalizationSeq.current) return;
       acceptDocument(next);
+      setSourceMode(filesWithPastedMaterial.length > 1 ? "files" : normalizedUrl ? "reference" : "files");
       setText("");
     } catch (cause) {
       if (requestId !== normalizationSeq.current) return;
@@ -447,7 +458,7 @@ export default function SourceCreator() {
       <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-2xl border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
         {[
           { label: "1. Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", ready: Boolean(document), current: !document },
-          { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? COURSE_TEMPLATES[templateId].name : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
+          { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
           { label: "3. Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : "Needs review", ready: activeJob || readyToCompile, current: Boolean(document && learningBriefReady && !sourceReady) },
         ].map((step) => (
           <li
@@ -472,9 +483,13 @@ export default function SourceCreator() {
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section className="premium-surface rounded-[1.6rem] border border-white/80 p-6 sm:p-7">
-          <h2 className="font-display text-xl font-semibold">Add source</h2>
+          <p className="eyebrow">Your material</p>
+          <h2 className="mt-2 font-display text-xl font-semibold">Build one Source Pack</h2>
+          <p className="mt-2 text-sm leading-6 text-ink-soft">
+            Add notes, transcripts, excerpts, files, and an optional video, playlist, book, or course-page reference here. Course Architect treats them as one course input—not separate products.
+          </p>
           <label className="mt-5 block text-sm font-medium" htmlFor="source-title">
-            Source title
+            Source Pack title
           </label>
           <input
             id="source-title"
@@ -488,36 +503,8 @@ export default function SourceCreator() {
             className="mt-2 w-full rounded-lg border border-ink/15 px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
           />
 
-          <div className="mt-6" role="radiogroup" aria-label="Source method">
-            <p className="text-sm font-medium">How are you bringing the source?</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {([
-                ["paste", "Paste text", "Notes or transcript"],
-                ["files", "Upload files", "PDF, TXT or Markdown"],
-                ["reference", "Link + content", "Video, playlist or book"],
-              ] as const).map(([id, label, detail]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="radio"
-                  aria-checked={sourceMode === id}
-                  disabled={activeJob}
-                  onClick={() => {
-                    invalidateNormalizedSource();
-                    setSourceMode(id);
-                  }}
-                  className={`min-h-20 rounded-xl border p-3 text-left transition ${sourceMode === id ? "border-lapis bg-lapis-soft" : "border-ink/10 bg-surface hover:border-lapis/35"}`}
-                >
-                  <span className="block text-sm font-semibold">{label}</span>
-                  <span className="mt-1 block text-xs leading-5 text-ink-soft">{detail}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {sourceMode === "reference" && (
-            <div className="mt-5 rounded-xl border border-lapis/15 bg-lapis-soft/60 p-4">
-              <label className="block text-sm font-medium" htmlFor="source-url">Source link</label>
+          <div className="mt-6 rounded-xl border border-lapis/15 bg-lapis-soft/60 p-4">
+              <label className="block text-sm font-medium" htmlFor="source-url">Reference link <span className="font-normal text-ink-soft">(optional)</span></label>
               <input
                 id="source-url"
                 type="url"
@@ -529,10 +516,11 @@ export default function SourceCreator() {
                   invalidateNormalizedSource();
                   setSourceUrl(event.target.value);
                   setSourceKind(inferSourceReferenceKind(event.target.value));
+                  setSourceMode(event.target.value.trim() ? "reference" : "paste");
                 }}
                 className="mt-2 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"
               />
-              <label className="mt-3 block text-sm font-medium" htmlFor="source-kind">Reference type</label>
+              {sourceUrl.trim() && <><label className="mt-3 block text-sm font-medium" htmlFor="source-kind">Reference type</label>
               <select
                 id="source-kind"
                 value={sourceKind}
@@ -548,16 +536,15 @@ export default function SourceCreator() {
                 <option value="book">Book or chapter</option>
                 <option value="webpage">Web page</option>
               </select>
+              </>}
               <p className="mt-3 text-xs leading-5 text-ink-soft">
-                The link records provenance; Museion compiles only the authorized transcript, excerpt or notes you provide below. It does not scrape playlists, bypass paywalls or copy a book from its URL.
+                A link records provenance only. Add the authorized transcript, excerpt, or your own notes below; Museion never scrapes protected captions, downloads video, or copies a book from its URL.
               </p>
-            </div>
-          )}
+          </div>
 
-          {sourceMode !== "files" && <>
-          {sourceMode === "paste" && <div className="mt-5 flex flex-wrap items-end gap-3">
+          <div className="mt-5 flex flex-wrap items-end gap-3">
             <label className="min-w-44 flex-1 text-sm font-medium" htmlFor="source-format">
-              Pasted text format
+              Notes, transcript, or excerpt format
               <select
                 id="source-format"
                 value={mediaType}
@@ -572,10 +559,10 @@ export default function SourceCreator() {
                 <option value="text/plain">Plain text</option>
               </select>
             </label>
-          </div>}
+          </div>
 
           <label className="mt-5 block text-sm font-medium" htmlFor="source-text">
-            {sourceMode === "reference" ? "Authorized transcript, excerpt or notes" : "Paste source text"}
+            Authorized text material
           </label>
           <textarea
             id="source-text"
@@ -585,9 +572,10 @@ export default function SourceCreator() {
             onChange={(event) => {
               invalidateNormalizedSource();
               setText(event.target.value);
+              setSourceMode(sourceUrl.trim() ? "reference" : "paste");
             }}
             rows={10}
-            placeholder={sourceMode === "reference" ? "Paste an authorized transcript, exported captions, chapter excerpt, or your own source notes…" : "Paste an authorized source here…"}
+            placeholder="Paste an authorized transcript, exported captions, bounded excerpt, course notes, or your own material…"
             className="mt-2 w-full resize-y rounded-lg border border-ink/15 px-3 py-3 leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
           />
           <p className="mt-2 text-right font-mono text-xs tabular-nums text-ink-soft">
@@ -595,15 +583,15 @@ export default function SourceCreator() {
           </p>
           <button
             type="button"
-            disabled={busy || activeJob || !title.trim() || !text.trim() || (sourceMode === "reference" && !sourceUrl.trim())}
+            disabled={busy || activeJob || !title.trim() || !text.trim()}
             onClick={() => void normalizePastedText()}
             className="mt-3 w-full rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50"
           >
-            {busy ? "Normalizing…" : sourceMode === "reference" ? "Normalize linked source record" : "Normalize pasted source"}
+            {busy ? "Normalizing Source Pack…" : "Normalize text Source Pack"}
           </button>
-          </>}
 
-          {sourceMode === "files" && <div className="mt-5">
+          <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-soft"><span className="h-px flex-1 bg-ink/10" /><span>and / or add files</span><span className="h-px flex-1 bg-ink/10" /></div>
+          <div className="mt-5">
           <label
             htmlFor="source-file"
             aria-disabled={busy || activeJob}
@@ -629,10 +617,10 @@ export default function SourceCreator() {
             }`}
           >
             <span className="font-medium text-lapis-dark">
-              {busy ? "Normalizing source set…" : dragActive ? "Drop the source set here" : "Choose or drop up to 8 source files"}
+              {busy ? "Normalizing Source Pack…" : dragActive ? "Drop material into this Source Pack" : "Choose or drop files into this Source Pack"}
             </span>
             <span className="mt-1 text-sm text-ink-soft">
-              TXT, Markdown and selectable-text PDF. Use a chapter or bounded excerpt for long books.
+              TXT, Markdown and selectable-text PDF. Pasted text above is included automatically when present.
             </span>
           </label>
           <input
@@ -654,7 +642,7 @@ export default function SourceCreator() {
             Combined limits: 8 files, {(MAX_SOURCE_BYTES / 1024 / 1024).toFixed(0)} MB, {MAX_SOURCE_PAGES}{" "}
             pages and {MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")} normalized characters. File bytes are never kept in the browser draft.
           </p>
-          </div>}
+          </div>
 
         </section>
 
@@ -752,25 +740,9 @@ export default function SourceCreator() {
                   {page.text}
                 </pre>
               </div>
-              <div className="mt-5 rounded-xl border border-ink/10 p-4">
-                <div className="flex items-baseline justify-between gap-3"><h3 className="font-semibold">2. Learning design</h3><span className="text-xs text-ink-soft">Choose a pedagogy</span></div>
-                <div className="mt-4 grid gap-3">
-                  {(Object.entries(COURSE_TEMPLATES) as Array<[CourseTemplateId, (typeof COURSE_TEMPLATES)[CourseTemplateId]]>).map(([id, template]) => (
-                    <button key={id} type="button" aria-pressed={templateId === id} onClick={() => setTemplateId(id)} className={`rounded-xl border p-4 text-left transition ${templateId === id ? "border-lapis bg-lapis-soft shadow-[0_8px_28px_rgba(43,74,203,0.10)]" : "border-ink/10 bg-surface hover:border-lapis/40"}`}>
-                      <span className="flex items-center justify-between gap-3"><span className="font-semibold">{template.name}</span>{templateId === id && <span className="rounded-md bg-surface px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wide text-lapis-dark">Selected</span>}</span>
-                      <span className="mt-1 block text-sm leading-6 text-ink-soft">{template.description}</span>
-                      <span className="mt-2 block text-xs text-ink-soft">Required mix: {template.requiredKinds.join(" · ")}</span>
-                    </button>
-                  ))}
-                </div>
-                <h3 className="mt-5 border-t border-ink/10 pt-4 font-semibold">Learning brief</h3>
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  <label className="text-sm">Level<select value={level} onChange={(event) => setLevel(event.target.value as typeof level)} className="mt-1 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2"><option value="novice">Novice</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
-                  <label className="text-sm">Language<input value={language} maxLength={35} aria-invalid={!language.trim()} aria-describedby={!language.trim() ? "language-error" : undefined} onChange={(event) => setLanguage(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" />{!language.trim() && <span id="language-error" className="mt-1 block text-xs text-wrong">Enter a language.</span>}</label>
-                  <label className="text-sm">Minutes<input type="number" min={3} max={60} value={targetMinutes} aria-invalid={targetMinutes < 3 || targetMinutes > 60} aria-describedby={targetMinutes < 3 || targetMinutes > 60 ? "duration-error" : undefined} onChange={(event) => setTargetMinutes(Number(event.target.value))} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" />{(targetMinutes < 3 || targetMinutes > 60) && <span id="duration-error" className="mt-1 block text-xs text-wrong">Choose 3 to 60 minutes.</span>}</label>
-                </div>
-                <label className="mt-3 block text-sm">Learner goal<textarea value={learnerGoal} maxLength={600} rows={3} aria-invalid={!learnerGoal.trim()} aria-describedby="learner-goal-help" onChange={(event) => setLearnerGoal(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2" /><span id="learner-goal-help" className={`mt-1 flex justify-between gap-3 text-xs ${learnerGoal.trim() ? "text-ink-soft" : "text-wrong"}`}><span>{learnerGoal.trim() ? "Describe what the learner should do without assistance." : "Enter a learner goal."}</span><span className="shrink-0 font-mono tabular-nums">{learnerGoal.length}/600</span></span></label>
-              </div>
+              <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading learning design…</div>}>
+                <SourceLearningDesign templateId={templateId} level={level} language={language} targetMinutes={targetMinutes} learnerGoal={learnerGoal} onTemplate={setTemplateId} onLevel={setLevel} onLanguage={setLanguage} onMinutes={setTargetMinutes} onGoal={setLearnerGoal} />
+              </Suspense>
               {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-lg border border-lapis px-5 py-2.5 text-center font-medium text-lapis">Open checked golden review</Link>}
               {activeJob && job && <div className="mt-5 rounded-2xl bg-ink p-5 text-white" aria-live="polite">
                 <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">3. Compile</p><p className="mt-1 font-semibold">Building a grounded course</p><p className="mt-1 text-xs text-white/55">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-sm">{job.completedStages}/{job.totalStages}</span></div>
@@ -789,6 +761,42 @@ export default function SourceCreator() {
           )}
         </section>
       </div>
+      <button
+        ref={architectTrigger}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={architectOpen}
+        onClick={() => setArchitectOpen(true)}
+        className="fixed bottom-20 right-4 z-40 flex items-center gap-3 rounded-2xl border border-lapis/15 bg-surface px-3 py-2.5 shadow-[0_18px_50px_rgba(19,28,49,0.18)] transition hover:-translate-y-0.5 hover:border-lapis/35 sm:bottom-5 sm:right-6"
+      >
+        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft font-display text-sm font-semibold tracking-[-0.04em] text-lapis-dark">CA</span>
+        <span className="text-left"><span className="block font-display font-semibold">Course Architect</span><span className="block text-xs text-ink-soft">Build from my material</span></span>
+      </button>
+      {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 shadow-xl">Opening Course Architect…</div>}><CourseArchitectPanel
+        document={document}
+        textLength={text.length}
+        sourceUrl={sourceUrl}
+        sourceAuthorized={sourceAuthorized}
+        warningsAccepted={warningsAccepted}
+        learnerGoal={learnerGoal}
+        onAddMaterial={(value) => {
+          invalidateNormalizedSource();
+          setText((current) => current.trim() ? `${current.trim()}\n\n${value}` : value);
+          setSourceMode(sourceUrl.trim() ? "reference" : "paste");
+        }}
+        onSetGoal={setLearnerGoal}
+        onSetReference={(value, kind) => {
+          invalidateNormalizedSource();
+          setSourceUrl(value);
+          setSourceKind(kind);
+          setSourceMode("reference");
+        }}
+        onFiles={(files) => void normalizeFiles(files)}
+        onClose={() => {
+          setArchitectOpen(false);
+          architectTrigger.current?.focus();
+        }}
+      /></Suspense>}
     </div>
   );
 }

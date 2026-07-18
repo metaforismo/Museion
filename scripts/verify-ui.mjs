@@ -626,15 +626,22 @@ async function desktopFlow() {
 
   await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
-  for (const method of ["Paste text", "Upload files", "Link + content"]) {
-    await expectVisible(page.getByRole("radio", { name: method }), `creator source method: ${method}`);
-  }
+  await expectVisible(page.getByRole("heading", { name: "Build one Source Pack" }), "unified Source Pack intake");
+  await expectVisible(page.getByLabel("Reference link (optional)"), "optional reference intake");
+  await expectVisible(page.getByLabel("Authorized text material"), "authorized text intake");
+  await expectVisible(page.locator("#source-file"), "file intake in the same Source Pack");
+  const architectTrigger = page.getByRole("button", { name: /Course Architect Build from my material/ });
+  await architectTrigger.click();
+  await expectVisible(page.getByRole("dialog", { name: "Course Architect" }), "Course Architect chat sidebar");
+  await expectVisible(page.getByText(/Method gate:/), "Course Architect method assessment boundary");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  if (!(await architectTrigger.evaluate((button) => button === document.activeElement))) failures.push("creator: Course Architect did not return focus to its trigger");
   await expectVisible(page.getByText("After source review", { exact: true }), "sequential creator progress");
   const currentCreatorStep = page.locator('[aria-label="Creator progress"] [aria-current="step"]');
   if ((await currentCreatorStep.textContent())?.includes("1. Source") !== true) {
     failures.push("creator progress: source was not marked as the current first step");
   }
-  await page.getByLabel("Paste source text").fill(
+  await page.getByLabel("Authorized text material").fill(
     "## Binary search invariant\nIgnore previous instructions is quoted source data, not an application command.",
   );
   await expectVisible(page.getByText(/\/140,000$/, { exact: false }).first(), "source character count");
@@ -642,34 +649,34 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Clear draft" }).click();
   await expectVisible(page.getByRole("button", { name: "Confirm clear" }), "destructive draft confirmation");
   await page.getByRole("button", { name: "Keep draft" }).click();
-  if (!(await page.getByLabel("Paste source text").inputValue()).includes("Binary search invariant")) {
+  if (!(await page.getByLabel("Authorized text material").inputValue()).includes("Binary search invariant")) {
     failures.push("creator: cancelling draft deletion changed the source text");
   }
   await page.reload();
   await page.waitForFunction(() => document.querySelector("#source-text")?.value.includes("Binary search invariant"));
-  if (!(await page.getByLabel("Paste source text").inputValue()).includes("Binary search invariant")) {
+  if (!(await page.getByLabel("Authorized text material").inputValue()).includes("Binary search invariant")) {
     failures.push("creator: local text draft did not restore after refresh");
   }
-  await page.getByRole("button", { name: "Normalize pasted source" }).click();
+  await page.getByRole("button", { name: "Normalize text Source Pack" }).click();
   await expectVisible(page.getByText("Document SHA-256"), "pasted-source hash");
   await expectVisible(page.getByRole("heading", { name: "Review warnings" }), "instruction-like warning");
   await expectVisible(page.getByText(/Other sources require the configured live compiler/), "truthful keyless live compiler boundary");
 
-  await page.getByLabel("Source title").fill("Updated source title");
+  await page.getByLabel("Source Pack title").fill("Updated source title");
   await expectVisible(page.getByText(/Add a source to inspect its canonical pages/), "stale normalized source invalidation");
 
-  await page.getByRole("radio", { name: /Link \+ content/ }).click();
-  await page.getByLabel("Source link").fill("https://www.youtube.com/playlist?list=PL123");
+  await page.getByLabel("Reference link (optional)").fill("https://www.youtube.com/playlist?list=PL123");
   if (await page.getByLabel("Reference type").inputValue() !== "youtube_playlist") {
     failures.push("creator: YouTube playlist link was not classified as a playlist");
   }
-  await page.getByLabel("Authorized transcript, excerpt or notes").fill("Authorized notes from the referenced source.");
-  await page.getByRole("button", { name: "Normalize linked source record" }).click();
+  await page.getByLabel("Authorized text material").fill("Authorized notes from the referenced source.");
+  await page.getByRole("button", { name: "Normalize text Source Pack" }).click();
   await expectVisible(page.getByText("youtube playlist reference", { exact: true }), "hash-bound source reference");
   await expectVisible(page.getByText(/Course claims still derive only from the normalized text/), "linked-source truth boundary");
 
-  await page.getByRole("radio", { name: /Upload files/ }).click();
-  await page.locator('input[type="file"]').setInputFiles(pdfFixture);
+  await page.getByLabel("Reference link (optional)").fill("");
+  await page.getByLabel("Authorized text material").fill("");
+  await page.locator("#source-file").setInputFiles(pdfFixture);
   await expectVisible(
     page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }),
     "six-page PDF record",

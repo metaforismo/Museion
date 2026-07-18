@@ -6,3 +6,4 @@ export * from "./normalize";
 export * from "./pdf";
 export * from "./reference";
 export * from "./spans";
+export * from "./source-pack";
