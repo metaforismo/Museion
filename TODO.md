@@ -2,6 +2,25 @@
 
 Status legend: `[x]` done · `[ ]` planned
 
+## Current iteration — one Course Architect, one Source Pack, one MCP
+
+- [x] Preserve Museion Originals as the primary learning experience.
+- [x] Model YouTube, playlists, books, course pages, transcripts, excerpts, notes, and text as material shapes inside one Source Pack capability.
+- [x] Require explicit rights confirmation and a rights basis before a Source Pack is accepted.
+- [x] Hash every material and the complete pack; return a raw-content-free public summary.
+- [x] Add a stateless Streamable HTTP MCP endpoint for ChatGPT, Codex, Claude Code, Cursor, and other compatible clients.
+- [x] Expose Source Pack preparation, Course Architect compilation, and Museion Originals discovery as typed MCP tools.
+- [x] Lock model-backed MCP compilation behind an explicit server Bearer token.
+- [x] Add protocol, malformed-input, mixed-material, privacy, limit, and burst stress tests.
+- [x] Replace separate paste/upload/link product modes with one visible Source Pack intake for text, files, and optional provenance.
+- [x] Add a clickable Course Architect companion with a desktop chat rail, mobile sheet, source/goal/file intake, focus return, and a deterministic Museion Method readiness check.
+- [ ] Support multiple independently editable references in the Creator Studio Source Pack UI (the MCP contract already supports one reference per material).
+- [ ] Add an optional live Codex conversational turn before compilation; keep deterministic intake and method gates available offline.
+- [ ] Persist the Source Pack manifest with each compiler run and show per-material citation coverage in Creator review.
+- [ ] Add per-client MCP identities, revocable tokens, rate limits, and audit events before public multi-user hosting.
+- [ ] Verify the deployed HTTPS MCP endpoint from each target client; do not claim compatibility from local protocol tests alone.
+- [ ] Connect the live runtime-specific Maia snapshot to GPT-5.6 and complete the graph/coding flagship vertical slice from the attached submission brief.
+
 ## v0.2 — Web platform foundation ✅
 
 - [x] Next.js (App Router) + React + Tailwind platform

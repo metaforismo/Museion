@@ -93,6 +93,7 @@ export async function ingestSourceFile(file: File): Promise<SourceDocument> {
 export async function ingestSourceFiles(input: {
   title: string;
   files: File[];
+  sourceReference?: SourceReference;
 }): Promise<SourceDocument> {
   if (input.files.length === 0) {
     throw new SourceIngestionError("empty_source", "Choose at least one source file.");
@@ -116,6 +117,7 @@ export async function ingestSourceFiles(input: {
       rawPages: documents[0].pages.map((page) => page.text),
       byteLength,
       originalFileName: input.files[0].name,
+      sourceReference: input.sourceReference,
     });
   }
   const rawPages = documents.flatMap((document, documentIndex) =>
@@ -132,5 +134,6 @@ export async function ingestSourceFiles(input: {
     rawPages,
     byteLength,
     originalFileName: `${input.files.length} source files`,
+    sourceReference: input.sourceReference,
   });
 }

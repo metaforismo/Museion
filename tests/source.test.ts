@@ -90,6 +90,19 @@ describe("source normalization and provenance", () => {
     expect(source.originalFileName).toBe("2 source files");
   });
 
+  it("binds one pack-level reference to a combined authorized file set", async () => {
+    const source = await ingestSourceFiles({
+      title: "Course material",
+      files: [
+        new File(["Transcript"], "transcript.txt", { type: "text/plain" }),
+        new File(["Notes"], "notes.md", { type: "text/markdown" }),
+      ],
+      sourceReference: { kind: "youtube_playlist", url: "https://youtube.com/playlist?list=PL123", label: "Course playlist" },
+    });
+    expect(source.sourceReference?.kind).toBe("youtube_playlist");
+    await expect(verifySourceDocumentIntegrity(source)).resolves.toBeUndefined();
+  });
+
   it("rejects browser-forged document identity and page metadata", async () => {
     const document = await ingestTextSource({ title: "Trusted", text: "A source-bound claim.", createdAt: CREATED_AT });
     await expect(verifySourceDocumentIntegrity(document)).resolves.toBeUndefined();
