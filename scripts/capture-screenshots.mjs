@@ -51,16 +51,28 @@ try {
     await page.getByRole("dialog", { name: "Course Architect" }).waitFor({ state: "visible" });
   } });
   await capture({ name: "creator-linked-source-desktop", route: "/create", prepare: async (page) => {
-    await page.getByLabel("Reference link (optional)").fill("https://www.youtube.com/playlist?list=OPEN-COURSE");
-    await page.getByLabel("Authorized text material").fill("Authorized creator notes explaining the central ideas and the learner decisions supported by this playlist.");
-    await page.getByRole("button", { name: "Normalize text Source Pack" }).click();
+    await page.getByLabel("Material 1 title").fill("Playlist transcript");
+    await page.getByLabel("Material 1 reference link").fill("https://www.youtube.com/playlist?list=OPEN-COURSE");
+    await page.getByLabel("Material 1 authorized text").fill("Authorized creator notes explaining the central ideas and the learner decisions supported by this playlist.");
+    await page.getByLabel("Material 1 role").selectOption("transcript");
+    await page.getByRole("button", { name: "Add text material" }).click();
+    await page.getByLabel("Material 2 title").fill("Book excerpt");
+    await page.getByLabel("Material 2 role").selectOption("excerpt");
+    await page.getByLabel("Material 2 reference link").fill("https://example.com/books/reasoning");
+    await page.getByLabel("Material 2 reference type").selectOption("book");
+    await page.getByLabel("Material 2 authorized text").fill("An authorized excerpt that supplies a second bounded explanation and a contrasting example.");
+    await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
+    await page.getByRole("button", { name: "Normalize 2 materials" }).click();
+    await page.getByText("2 normalized materials").waitFor({ state: "visible" });
     await page.getByText("youtube playlist reference", { exact: true }).waitFor({ state: "visible" });
   } });
   await capture({ name: "course-review-desktop", route: "/create", prepare: async (page) => {
     await page.locator("#source-file").setInputFiles(pdfFixture);
-    await page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }).waitFor({ state: "visible" });
-    await page.getByLabel("I am allowed to use this source.").check();
+    await page.getByText("File ready for normalization").waitFor({ state: "visible" });
     await page.getByLabel("Rights basis").selectOption("creator-owned");
+    await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
+    await page.getByRole("button", { name: "Normalize 1 material" }).click();
+    await page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }).waitFor({ state: "visible" });
     await page.getByRole("button", { name: "Create verified replay run" }).click();
     await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
     await page.getByRole("heading", { name: "Coverage by supplied material" }).waitFor({ state: "visible" });

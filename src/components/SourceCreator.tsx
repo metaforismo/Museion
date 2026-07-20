@@ -3,18 +3,17 @@
 import Link from "next/link";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
-import { parseCreatorDraft, serializeCreatorDraft } from "@/lib/client/creator-draft";
+import { parseCreatorDraft, serializeCreatorDraft, type CreatorMaterialDraft } from "@/lib/client/creator-draft";
 import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
-import type { SourceDocument, SourceReferenceKind } from "@/lib/source/contracts";
-import { MAX_NORMALIZED_CHARACTERS, MAX_SOURCE_BYTES, MAX_SOURCE_PAGES } from "@/lib/source/limits";
+import type { SourceDocument } from "@/lib/source/contracts";
+import { MAX_SOURCE_BYTES } from "@/lib/source/limits";
 import { inferSourceReferenceKind, normalizeSourceUrl } from "@/lib/source/reference";
-import type { SourceRightsBasis } from "@/lib/source/source-pack";
+import type { SourcePack, SourceRightsBasis } from "@/lib/source/source-pack";
 import type { CourseTemplateId } from "@/lib/compiler/templates";
 const CourseArchitectPanel = lazy(() => import("./CourseArchitectPanel"));
 const SourceLearningDesign = lazy(() => import("./SourceLearningDesign"));
+const SourcePackEditor = lazy(() => import("./source-creator/SourcePackEditor"));
 
-type TextMediaType = "text/plain" | "text/markdown";
-type SourceMode = "paste" | "files" | "reference";
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 const DRAFT_KEY = "museion:creator-draft:v1";
 const ACTIVE_RUN_KEY = "museion:active-compiler-run:v1";
@@ -44,6 +43,14 @@ const COMPILE_STAGES = [
   { id: "repair", label: "Repair if needed", model: "Sol" },
 ] as const;
 
+function emptyTextMaterial(id = "draft_primary", title = "Primary material"): CreatorMaterialDraft {
+  return { id, title, origin: "text", content: "", mediaType: "text/markdown", role: "primary-source", sourceUrl: "", sourceKind: "webpage" };
+}
+
+function newDraftId(): string {
+  return `draft_${crypto.randomUUID()}`;
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
   return "The source could not be normalized. Check the file and try again.";
@@ -67,16 +74,13 @@ function elapsedLabel(createdAt: string): string {
 export default function SourceCreator() {
   const compileLock = useRef(false);
   const compileRequestId = useRef<string | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const materialFiles = useRef(new Map<string, File>());
   const architectTrigger = useRef<HTMLButtonElement>(null);
   const normalizationSeq = useRef(0);
   const suppressNextDraftSave = useRef(false);
   const [title, setTitle] = useState("Binary Search Notes");
-  const [text, setText] = useState("");
-  const [mediaType, setMediaType] = useState<TextMediaType>("text/markdown");
-  const [sourceMode, setSourceMode] = useState<SourceMode>("paste");
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [sourceKind, setSourceKind] = useState<SourceReferenceKind>("webpage");
+  const [materials, setMaterials] = useState<CreatorMaterialDraft[]>([emptyTextMaterial()]);
+  const [sourcePack, setSourcePack] = useState<SourcePack | null>(null);
   const [document, setDocument] = useState<SourceDocument | null>(null);
   const [selectedPage, setSelectedPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +97,6 @@ export default function SourceCreator() {
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [clearConfirmation, setClearConfirmation] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [job, setJob] = useState<CompilerJob | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"loading" | "empty" | "saved" | "saving" | "error">("loading");
@@ -105,11 +108,17 @@ export default function SourceCreator() {
       const saved = parseCreatorDraft(localStorage.getItem(DRAFT_KEY));
       if (!saved) return false;
       setTitle(saved.title);
-      setText(saved.text);
-      setMediaType(saved.mediaType);
-      setSourceMode(saved.sourceMode ?? "paste");
-      setSourceUrl(saved.sourceUrl ?? "");
-      setSourceKind(saved.sourceKind ?? inferSourceReferenceKind(saved.sourceUrl ?? ""));
+      setMaterials(saved.materials ?? [{
+        id: "draft_primary",
+        title: saved.title,
+        origin: "text",
+        content: saved.text,
+        mediaType: saved.mediaType,
+        role: "primary-source",
+        sourceUrl: saved.sourceUrl ?? "",
+        sourceKind: saved.sourceKind ?? inferSourceReferenceKind(saved.sourceUrl ?? ""),
+      }]);
+      materialFiles.current.clear();
       setRightsBasis(saved.rightsBasis ?? "personal-notes");
       setTemplateId(saved.templateId);
       setLearnerGoal(saved.learnerGoal);
@@ -117,6 +126,7 @@ export default function SourceCreator() {
       setLanguage(saved.language);
       setTargetMinutes(saved.targetMinutes);
       setDocument(null);
+      setSourcePack(null);
       setSourceAuthorized(false);
       setError(null);
       return true;
@@ -134,18 +144,16 @@ export default function SourceCreator() {
     } catch {
       storageAvailable = false;
     }
-    setText("");
-    setSourceMode("paste");
-    setSourceUrl("");
-    setSourceKind("webpage");
+    setMaterials([emptyTextMaterial()]);
+    materialFiles.current.clear();
     setTitle("Untitled source");
     setDocument(null);
+    setSourcePack(null);
     setJob(null);
     setSourceAuthorized(false);
     setRightsBasis("personal-notes");
     setWarningsAccepted(false);
     setClearConfirmation(false);
-    if (fileInput.current) fileInput.current.value = "";
     setDraftStatus(storageAvailable ? "empty" : "error");
     setError(null);
   };
@@ -169,7 +177,23 @@ export default function SourceCreator() {
     const statusTimer = window.setTimeout(() => setDraftStatus("saving"), 0);
     const timer = window.setTimeout(() => {
       try {
-        localStorage.setItem(DRAFT_KEY, serializeCreatorDraft({ title, text, mediaType, sourceMode, sourceUrl, sourceKind, rightsBasis, templateId, learnerGoal, level, language, targetMinutes }));
+        const first = materials[0] ?? emptyTextMaterial();
+        const firstReference = materials.find((material) => material.sourceUrl.trim());
+        localStorage.setItem(DRAFT_KEY, serializeCreatorDraft({
+          title,
+          text: first.origin === "text" ? first.content : "",
+          mediaType: first.mediaType,
+          sourceMode: materials.some((material) => material.origin === "file") ? "files" : firstReference ? "reference" : "paste",
+          sourceUrl: firstReference?.sourceUrl ?? "",
+          sourceKind: firstReference?.sourceKind ?? "webpage",
+          materials,
+          rightsBasis,
+          templateId,
+          learnerGoal,
+          level,
+          language,
+          targetMinutes,
+        }));
         setDraftStatus("saved");
       } catch {
         setDraftStatus("error");
@@ -179,7 +203,7 @@ export default function SourceCreator() {
       window.clearTimeout(statusTimer);
       window.clearTimeout(timer);
     };
-  }, [draftReady, language, learnerGoal, level, mediaType, rightsBasis, sourceKind, sourceMode, sourceUrl, targetMinutes, templateId, text, title]);
+  }, [draftReady, language, learnerGoal, level, materials, rightsBasis, targetMinutes, templateId, title]);
 
   useEffect(() => {
     const runId = sessionStorage.getItem(ACTIVE_RUN_KEY);
@@ -242,13 +266,13 @@ export default function SourceCreator() {
     };
   }, [activeRunId, activeRunStatus]);
 
-  const acceptDocument = (next: SourceDocument) => {
+  const acceptPack = (pack: SourcePack, next: SourceDocument) => {
+    setSourcePack(pack);
     setDocument(next);
     setSelectedPage(next.pages[0].pageNumber);
     setTitle(next.title);
     setError(null);
     setWarningsAccepted(next.warnings.length === 0);
-    setSourceAuthorized(false);
     setCopyNotice(null);
     if (next.sha256 === GOLDEN_SOURCE_SHA256) {
       setLevel("novice");
@@ -264,32 +288,45 @@ export default function SourceCreator() {
       setBusy(false);
       setError("The source changed during normalization, so Museion discarded the outdated result. Normalize it again when ready.");
     }
+    setSourceAuthorized(false);
     if (!document) return;
     setDocument(null);
-    setSourceAuthorized(false);
+    setSourcePack(null);
     setWarningsAccepted(false);
     setCopyNotice(null);
     if (!activeJob) setJob(null);
   };
 
-  const normalizePastedText = async () => {
+  const normalizeSourcePack = async () => {
     const requestId = normalizationSeq.current + 1;
     normalizationSeq.current = requestId;
     setBusy(true);
     setError(null);
     try {
-      const { ingestTextSource } = await import("@/lib/source/ingest");
-      const normalizedUrl = sourceUrl.trim() ? normalizeSourceUrl(sourceUrl) : null;
-      const next = await ingestTextSource({
+      const { createSourcePackFromDocuments, ingestPdfSource, ingestTextSource, mediaTypeForFile, sourcePackToDocument } = await import("@/lib/source");
+      const documents = await Promise.all(materials.map(async (material) => {
+        const normalizedUrl = material.sourceUrl.trim() ? normalizeSourceUrl(material.sourceUrl) : null;
+        const reference = normalizedUrl ? { kind: material.sourceKind, url: normalizedUrl, label: material.title.trim() } : undefined;
+        if (material.origin === "text") {
+          return ingestTextSource({ title: material.title, text: material.content, mediaType: material.mediaType, sourceReference: reference });
+        }
+        const file = materialFiles.current.get(material.id);
+        if (!file) throw new Error(`Reattach ${material.fileName ?? material.title} before normalization.`);
+        const mediaType = mediaTypeForFile(file);
+        if (mediaType === "application/pdf") {
+          return ingestPdfSource({ title: material.title, bytes: new Uint8Array(await file.arrayBuffer()), originalFileName: file.name, sourceReference: reference });
+        }
+        return ingestTextSource({ title: material.title, text: await file.text(), mediaType, originalFileName: file.name, sourceReference: reference });
+      }));
+      const pack = await createSourcePackFromDocuments({
         title,
-        text,
-        mediaType,
-        ...(normalizedUrl
-          ? { sourceReference: { kind: sourceKind, url: normalizedUrl, label: title.trim() } }
-          : {}),
+        description: "Creator Studio Source Pack",
+        materials: materials.map((material, index) => ({ title: material.title, role: material.role, document: documents[index] })),
+        rights: { confirmed: true, basis: rightsBasis, notes: "Confirmed in Creator Studio." },
       });
+      const next = await sourcePackToDocument(pack);
       if (requestId !== normalizationSeq.current) return;
-      acceptDocument(next);
+      acceptPack(pack, next);
     } catch (cause) {
       if (requestId !== normalizationSeq.current) return;
       setDocument(null);
@@ -299,34 +336,68 @@ export default function SourceCreator() {
     }
   };
 
-  const normalizeFiles = async (files: File[]) => {
+  const addFiles = (files: File[], replaceId?: string) => {
     if (!files.length) return;
-    const requestId = normalizationSeq.current + 1;
-    normalizationSeq.current = requestId;
-    setBusy(true);
     setError(null);
-    try {
-      const { ingestSourceFiles } = await import("@/lib/source/ingest");
-      const normalizedUrl = sourceUrl.trim() ? normalizeSourceUrl(sourceUrl) : null;
-      const filesWithPastedMaterial = text.trim()
-        ? [new File([text], mediaType === "text/markdown" ? "pasted-material.md" : "pasted-material.txt", { type: mediaType }), ...files]
-        : files;
-      const next = await ingestSourceFiles({
-        title,
-        files: filesWithPastedMaterial,
-        ...(normalizedUrl ? { sourceReference: { kind: sourceKind, url: normalizedUrl, label: title.trim() } } : {}),
-      });
-      if (requestId !== normalizationSeq.current) return;
-      acceptDocument(next);
-      setSourceMode(filesWithPastedMaterial.length > 1 ? "files" : normalizedUrl ? "reference" : "files");
-      setText("");
-    } catch (cause) {
-      if (requestId !== normalizationSeq.current) return;
-      setDocument(null);
-      setError(errorMessage(cause));
-    } finally {
-      if (requestId === normalizationSeq.current) setBusy(false);
+    invalidateNormalizedSource();
+    const existingBytes = [...materialFiles.current.entries()].reduce((total, [id, file]) => id === replaceId ? total : total + file.size, 0);
+    const addedBytes = files.reduce((total, file) => total + file.size, 0);
+    if (existingBytes + addedBytes > MAX_SOURCE_BYTES) {
+      setError(`Combined attached files exceed the ${(MAX_SOURCE_BYTES / 1024 / 1024).toFixed(0)} MB Source Pack limit.`);
+      return;
     }
+    if (replaceId) {
+      const file = files[0];
+      materialFiles.current.set(replaceId, file);
+      setMaterials((current) => current.map((material) => material.id === replaceId ? { ...material, title: material.title.trim() ? material.title : file.name.replace(/\.(md|markdown|txt|pdf)$/i, ""), fileName: file.name, fileSize: file.size, needsReattach: false } : material));
+      return;
+    }
+    const replaceEmptyInitial = materials.length === 1 && materials[0].origin === "text" && !materials[0].content.trim() && !materials[0].sourceUrl.trim();
+    const remaining = Math.max(0, 8 - (replaceEmptyInitial ? 0 : materials.length));
+    if (files.length > remaining) setError(`Only ${remaining} more ${remaining === 1 ? "material" : "materials"} can be added to this pack.`);
+    const accepted = files.slice(0, remaining).filter((file) => {
+      const duplicate = [...materialFiles.current.values()].some((existing) => existing.name === file.name && existing.size === file.size);
+      if (duplicate) setError(`${file.name} is already attached to this Source Pack.`);
+      return !duplicate;
+    });
+    const additions = accepted.map((file, index): CreatorMaterialDraft => {
+      const id = newDraftId();
+      materialFiles.current.set(id, file);
+      return { id, title: file.name.replace(/\.(md|markdown|txt|pdf)$/i, ""), origin: "file", content: "", mediaType: file.name.toLowerCase().endsWith(".md") ? "text/markdown" : "text/plain", role: materials.length + index === 0 ? "primary-source" : "notes", sourceUrl: "", sourceKind: "webpage", fileName: file.name, fileSize: file.size, needsReattach: false };
+    });
+    setMaterials((current) => {
+      return replaceEmptyInitial ? additions : [...current, ...additions];
+    });
+  };
+
+  const updateMaterial = (id: string, patch: Partial<CreatorMaterialDraft>) => {
+    invalidateNormalizedSource();
+    setMaterials((current) => current.map((material) => material.id === id ? { ...material, ...patch } : material));
+  };
+
+  const addTextMaterial = () => {
+    if (materials.length >= 8) return;
+    invalidateNormalizedSource();
+    setMaterials((current) => [...current, emptyTextMaterial(newDraftId(), `Material ${current.length + 1}`)]);
+  };
+
+  const removeMaterial = (id: string) => {
+    if (materials.length === 1) return;
+    invalidateNormalizedSource();
+    materialFiles.current.delete(id);
+    setMaterials((current) => current.filter((material) => material.id !== id));
+  };
+
+  const moveMaterial = (id: string, direction: -1 | 1) => {
+    invalidateNormalizedSource();
+    setMaterials((current) => {
+      const index = current.findIndex((material) => material.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      const reordered = [...current];
+      [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+      return reordered;
+    });
   };
 
   const page = document?.pages.find(
@@ -334,7 +405,7 @@ export default function SourceCreator() {
   );
 
   const compile = async () => {
-    if (compileLock.current || !document || !sourceAuthorized || !warningsAccepted || (job && ["queued", "running"].includes(job.status))) return;
+    if (compileLock.current || !document || !sourcePack || !sourceAuthorized || !warningsAccepted || (job && ["queued", "running"].includes(job.status))) return;
     compileLock.current = true;
     setCompiling(true);
     setError(null);
@@ -346,6 +417,7 @@ export default function SourceCreator() {
         body: JSON.stringify({
           requestId: compileRequestId.current,
           document,
+          sourcePack,
           rights: { confirmed: true, basis: rightsBasis, notes: "Confirmed in Creator Studio." },
           audience: { level, language, targetMinutes, learnerGoal },
           templateId,
@@ -406,7 +478,13 @@ export default function SourceCreator() {
   };
 
   const learningBriefReady = Boolean(learnerGoal.trim() && language.trim() && targetMinutes >= 3 && targetMinutes <= 60);
-  const sourceReady = Boolean(document && sourceAuthorized && warningsAccepted);
+  const canNormalize = Boolean(
+    sourceAuthorized
+    && title.trim()
+    && materials.length > 0
+    && materials.every((material) => material.title.trim() && (material.origin === "text" ? material.content.trim() : !material.needsReattach) && (!material.sourceUrl.trim() || material.sourceUrl.trim().startsWith("https://"))),
+  );
+  const sourceReady = Boolean(document && sourcePack && sourceAuthorized && warningsAccepted);
   const readyToCompile = sourceReady && learningBriefReady;
   const draftStatusLabel = draftStatus === "loading"
     ? "Loading draft…"
@@ -487,169 +565,26 @@ export default function SourceCreator() {
       )}
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <section className="premium-surface rounded-[1.6rem] border border-white/80 p-6 sm:p-7">
-          <p className="eyebrow">Your material</p>
-          <h2 className="mt-2 font-display text-xl font-semibold">Build one Source Pack</h2>
-          <p className="mt-2 text-sm leading-6 text-ink-soft">
-            Add notes, transcripts, excerpts, files, and an optional video, playlist, book, or course-page reference here. Course Architect treats them as one course input—not separate products.
-          </p>
-          <label className="mt-5 block text-sm font-medium" htmlFor="source-title">
-            Source Pack title
-          </label>
-          <input
-            id="source-title"
-            value={title}
-            maxLength={200}
+        <Suspense fallback={<section className="premium-surface rounded-[1.6rem] p-7 text-sm text-ink-soft" role="status">Loading Source Pack editor…</section>}>
+          <SourcePackEditor
+            title={title}
+            materials={materials}
+            rightsBasis={rightsBasis}
+            sourceAuthorized={sourceAuthorized}
+            busy={busy}
             disabled={activeJob}
-            onChange={(event) => {
-              invalidateNormalizedSource();
-              setTitle(event.target.value);
-            }}
-            className="mt-2 w-full rounded-lg border border-ink/15 px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
+            canNormalize={canNormalize}
+            onTitle={(value) => { invalidateNormalizedSource(); setTitle(value); }}
+            onUpdate={updateMaterial}
+            onAddText={addTextMaterial}
+            onRemove={removeMaterial}
+            onMove={moveMaterial}
+            onFiles={addFiles}
+            onRightsBasis={(basis) => { invalidateNormalizedSource(); setRightsBasis(basis); }}
+            onAuthorized={(confirmed) => { invalidateNormalizedSource(); setSourceAuthorized(confirmed); }}
+            onNormalize={() => void normalizeSourcePack()}
           />
-
-          <div className="mt-6 rounded-xl border border-lapis/15 bg-lapis-soft/60 p-4">
-              <label className="block text-sm font-medium" htmlFor="source-url">Reference link <span className="font-normal text-ink-soft">(optional)</span></label>
-              <input
-                id="source-url"
-                type="url"
-                inputMode="url"
-                value={sourceUrl}
-                disabled={activeJob}
-                placeholder="https://youtube.com/playlist?list=…"
-                onChange={(event) => {
-                  invalidateNormalizedSource();
-                  setSourceUrl(event.target.value);
-                  setSourceKind(inferSourceReferenceKind(event.target.value));
-                  setSourceMode(event.target.value.trim() ? "reference" : "paste");
-                }}
-                className="mt-2 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"
-              />
-              {sourceUrl.trim() && <><label className="mt-3 block text-sm font-medium" htmlFor="source-kind">Reference type</label>
-              <select
-                id="source-kind"
-                value={sourceKind}
-                disabled={activeJob}
-                onChange={(event) => {
-                  invalidateNormalizedSource();
-                  setSourceKind(event.target.value as SourceReferenceKind);
-                }}
-                className="mt-2 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"
-              >
-                <option value="youtube_video">YouTube video</option>
-                <option value="youtube_playlist">YouTube playlist</option>
-                <option value="book">Book or chapter</option>
-                <option value="webpage">Web page</option>
-              </select>
-              </>}
-              <p className="mt-3 text-xs leading-5 text-ink-soft">
-                A link records provenance only. Add the authorized transcript, excerpt, or your own notes below; Museion never scrapes protected captions, downloads video, or copies a book from its URL.
-              </p>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-end gap-3">
-            <label className="min-w-44 flex-1 text-sm font-medium" htmlFor="source-format">
-              Notes, transcript, or excerpt format
-              <select
-                id="source-format"
-                value={mediaType}
-                disabled={activeJob}
-                onChange={(event) => {
-                  invalidateNormalizedSource();
-                  setMediaType(event.target.value as TextMediaType);
-                }}
-                className="mt-2 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"
-              >
-                <option value="text/markdown">Markdown</option>
-                <option value="text/plain">Plain text</option>
-              </select>
-            </label>
-          </div>
-
-          <label className="mt-5 block text-sm font-medium" htmlFor="source-text">
-            Authorized text material
-          </label>
-          <textarea
-            id="source-text"
-            value={text}
-            disabled={activeJob}
-            maxLength={MAX_NORMALIZED_CHARACTERS}
-            onChange={(event) => {
-              invalidateNormalizedSource();
-              setText(event.target.value);
-              setSourceMode(sourceUrl.trim() ? "reference" : "paste");
-            }}
-            rows={10}
-            placeholder="Paste an authorized transcript, exported captions, bounded excerpt, course notes, or your own material…"
-            className="mt-2 w-full resize-y rounded-lg border border-ink/15 px-3 py-3 leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
-          />
-          <p className="mt-2 text-right font-mono text-xs tabular-nums text-ink-soft">
-            {text.length.toLocaleString("en-US")}/{MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")}
-          </p>
-          <button
-            type="button"
-            disabled={busy || activeJob || !title.trim() || !text.trim()}
-            onClick={() => void normalizePastedText()}
-            className="mt-3 w-full rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50"
-          >
-            {busy ? "Normalizing Source Pack…" : "Normalize text Source Pack"}
-          </button>
-
-          <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-soft"><span className="h-px flex-1 bg-ink/10" /><span>and / or add files</span><span className="h-px flex-1 bg-ink/10" /></div>
-          <div className="mt-5">
-          <label
-            htmlFor="source-file"
-            aria-disabled={busy || activeJob}
-            onDragEnter={(event) => {
-              event.preventDefault();
-              if (!busy && !activeJob) setDragActive(true);
-            }}
-            onDragOver={(event) => event.preventDefault()}
-            onDragLeave={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false);
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setDragActive(false);
-              if (!busy && !activeJob) void normalizeFiles(Array.from(event.dataTransfer.files));
-            }}
-            className={`flex min-h-28 flex-col items-center justify-center rounded-xl border border-dashed px-5 py-5 text-center transition ${
-              busy || activeJob
-                ? "cursor-not-allowed border-lapis/25 bg-lapis-soft opacity-50"
-                : dragActive
-                  ? "cursor-copy border-lapis bg-lapis-soft outline-2 outline-offset-2 outline-lapis"
-                  : "cursor-pointer border-lapis/40 bg-lapis-soft hover:border-lapis"
-            }`}
-          >
-            <span className="font-medium text-lapis-dark">
-              {busy ? "Normalizing Source Pack…" : dragActive ? "Drop material into this Source Pack" : "Choose or drop files into this Source Pack"}
-            </span>
-            <span className="mt-1 text-sm text-ink-soft">
-              TXT, Markdown and selectable-text PDF. Pasted text above is included automatically when present.
-            </span>
-          </label>
-          <input
-            ref={fileInput}
-            id="source-file"
-            type="file"
-            multiple
-            accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
-            disabled={busy || activeJob}
-            onChange={(event) => {
-              const input = event.currentTarget;
-              void normalizeFiles(Array.from(input.files ?? [])).finally(() => {
-                input.value = "";
-              });
-            }}
-            className="sr-only"
-          />
-          <p className="mt-3 text-xs leading-relaxed text-ink-soft">
-            Combined limits: 8 files, {(MAX_SOURCE_BYTES / 1024 / 1024).toFixed(0)} MB, {MAX_SOURCE_PAGES}{" "}
-            pages and {MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")} normalized characters. File bytes are never kept in the browser draft.
-          </p>
-          </div>
-
-        </section>
+        </Suspense>
 
         <section
           aria-live="polite"
@@ -679,15 +614,11 @@ export default function SourceCreator() {
                   <dd className="mt-1 font-semibold">{document.charCount.toLocaleString()}</dd>
                 </div>
               </dl>
-              {document.sourceReference && (
-                <div className="mt-4 rounded-lg border border-lapis/15 bg-lapis-soft/60 p-3 text-sm">
-                  <p className="font-semibold capitalize">{document.sourceReference.kind.replaceAll("_", " ")} reference</p>
-                  <a href={document.sourceReference.url} target="_blank" rel="noreferrer" className="mt-1 block break-all text-xs font-medium text-lapis-dark underline underline-offset-4">
-                    {document.sourceReference.url}
-                  </a>
-                  <p className="mt-2 text-xs leading-5 text-ink-soft">Reference metadata is hash-bound to this record. Course claims still derive only from the normalized text shown below.</p>
-                </div>
-              )}
+              {sourcePack && <div className="mt-4 rounded-xl border border-lapis/15 bg-lapis-soft/45 p-4 text-sm">
+                <div className="flex items-center justify-between gap-3"><p className="font-semibold">{sourcePack.materials.length} normalized {sourcePack.materials.length === 1 ? "material" : "materials"}</p><span className="font-mono text-[0.65rem] text-ink-soft">pack {sourcePack.sha256.slice(0, 10)}…</span></div>
+                <ul className="mt-3 space-y-2">{sourcePack.materials.map((material, index) => <li key={material.id} className="rounded-lg bg-surface/80 px-3 py-2"><div className="flex items-center justify-between gap-3"><span className="min-w-0 truncate font-medium">{index + 1}. {material.title}</span><span className="shrink-0 text-xs capitalize text-ink-soft">{material.role.replaceAll("-", " ")}</span></div>{material.document.sourceReference ? <a href={material.document.sourceReference.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs font-medium text-lapis-dark underline underline-offset-4">{material.document.sourceReference.kind.replaceAll("_", " ")} reference</a> : <span className="mt-1 block text-xs text-ink-soft">No external reference</span>}</li>)}</ul>
+                <p className="mt-3 text-xs leading-5 text-ink-soft">Every material hash and reference is bound to this pack. Course claims still derive only from the normalized evidence pages shown below.</p>
+              </div>}
               <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-3 text-xs">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-ink-soft">Document SHA-256</p>
@@ -713,23 +644,6 @@ export default function SourceCreator() {
                   </label>
                 </div>
               )}
-
-              <label className="mt-4 flex items-start gap-3 rounded-xl border border-ink/10 bg-surface px-4 py-3 text-sm font-medium">
-                <input type="checkbox" checked={sourceAuthorized} onChange={(event) => setSourceAuthorized(event.target.checked)} className="mt-1" />
-                <span><span className="block">I am allowed to use this source.</span><span className="mt-1 block font-normal leading-5 text-ink-soft">Museion keeps provenance, but authorization and copyright remain the creator’s responsibility.</span></span>
-              </label>
-              <label className="mt-3 block text-sm font-medium" htmlFor="source-rights-basis">
-                Rights basis
-                <select id="source-rights-basis" value={rightsBasis} onChange={(event) => setRightsBasis(event.target.value as SourceRightsBasis)} className="mt-2 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5">
-                  <option value="personal-notes">My own notes</option>
-                  <option value="creator-owned">Creator-owned material</option>
-                  <option value="licensed">Licensed material</option>
-                  <option value="open-licensed">Open-licensed material</option>
-                  <option value="public-domain">Public domain</option>
-                  <option value="authorized-excerpt">Authorized bounded excerpt</option>
-                </select>
-                <span className="mt-1 block font-normal leading-5 text-ink-soft">Recorded in the Source Pack manifest; it does not replace your responsibility to verify permission.</span>
-              </label>
 
               <div className="mt-5 flex flex-wrap gap-2" aria-label="Source pages">
                 {document.pages.map((sourcePage) => (
@@ -791,24 +705,31 @@ export default function SourceCreator() {
       </button>
       {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 shadow-xl">Opening Course Architect…</div>}><CourseArchitectPanel
         document={document}
-        textLength={text.length}
-        sourceUrl={sourceUrl}
+        textLength={materials.reduce((total, material) => total + material.content.length, 0)}
+        materialCount={materials.length}
+        fileMaterialCount={materials.filter((material) => material.origin === "file").length}
+        sourceUrl={materials.find((material) => material.sourceUrl.trim())?.sourceUrl ?? ""}
         sourceAuthorized={sourceAuthorized}
         warningsAccepted={warningsAccepted}
         learnerGoal={learnerGoal}
         onAddMaterial={(value) => {
           invalidateNormalizedSource();
-          setText((current) => current.trim() ? `${current.trim()}\n\n${value}` : value);
-          setSourceMode(sourceUrl.trim() ? "reference" : "paste");
+          setMaterials((current) => {
+            const empty = current.find((material) => material.origin === "text" && !material.content.trim());
+            if (empty) return current.map((material) => material.id === empty.id ? { ...material, content: value } : material);
+            if (current.length >= 8) return current;
+            return [...current, { ...emptyTextMaterial(newDraftId(), `Material ${current.length + 1}`), content: value, role: "notes" }];
+          });
         }}
         onSetGoal={setLearnerGoal}
         onSetReference={(value, kind) => {
           invalidateNormalizedSource();
-          setSourceUrl(value);
-          setSourceKind(kind);
-          setSourceMode("reference");
+          setMaterials((current) => {
+            const target = current.find((material) => !material.sourceUrl.trim()) ?? current[0];
+            return current.map((material) => material.id === target.id ? { ...material, sourceUrl: value, sourceKind: kind } : material);
+          });
         }}
-        onFiles={(files) => void normalizeFiles(files)}
+        onFiles={(files) => addFiles(files)}
         onClose={() => {
           setArchitectOpen(false);
           architectTrigger.current?.focus();

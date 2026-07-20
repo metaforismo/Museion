@@ -50,6 +50,7 @@ For local development, use the locally reachable `/api/mcp` URL supported by the
 - Rights confirmation and a rights basis are mandatory.
 - Raw material is normalized for compilation but omitted from Source Pack tool summaries.
 - Every accepted course run stores a sanitized Source Pack manifest bound to the compiled document hash. Creator review reports per-material extracted-span and learning-block citation coverage without echoing raw material.
+- Creator Studio and MCP now share the same eight-material pack boundary. The visible editor preserves per-material roles, ordering, and references; the compiler API re-verifies document, material, pack, and rights integrity rather than trusting the browser draft.
 - Source references are provenance only; claims need exact supplied text spans.
 - Course generation is bounded by the existing compiler stages, typed schemas, critic, one repair, citation gates, and private/public artifact split.
 - Generated courses must be shown as `Generated from your sources`, never as `Museion Original`.

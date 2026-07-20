@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   SourceDocumentSchema,
+  SourcePackSchema,
   SourcePackManifestSchema,
   SourceRightsBasisSchema,
   createSingleDocumentSourcePackManifest,
@@ -36,6 +37,7 @@ export const CompileAudienceSchema = z.object({
 export const CompilerRunRequestSchema = z.object({
   requestId: z.string().uuid().optional(),
   document: SourceDocumentSchema,
+  sourcePack: SourcePackSchema.optional(),
   rights: z.object({
     confirmed: z.literal(true),
     basis: SourceRightsBasisSchema,
@@ -43,7 +45,12 @@ export const CompilerRunRequestSchema = z.object({
   }).strict(),
   audience: CompileAudienceSchema,
   templateId: CourseTemplateIdSchema.default("socratic-foundations"),
-}).strict();
+}).strict().superRefine((request, context) => {
+  if (!request.sourcePack) return;
+  if (request.sourcePack.rights.basis !== request.rights.basis || request.sourcePack.rights.notes !== request.rights.notes) {
+    context.addIssue({ code: "custom", path: ["rights"], message: "Compiler rights must match the Source Pack declaration" });
+  }
+});
 
 interface CompilerRunRecord {
   id: string;

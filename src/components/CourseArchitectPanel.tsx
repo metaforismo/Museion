@@ -12,12 +12,15 @@ type ArchitectMessage = { id: string; role: "architect" | "creator" | "marker"; 
 function packAssessment(input: {
   document: SourceDocument | null;
   textLength: number;
+  materialCount: number;
+  fileMaterialCount: number;
   sourceUrl: string;
   sourceAuthorized: boolean;
   warningsAccepted: boolean;
   learnerGoal: string;
 }) {
   if (!input.document) {
+    if (input.fileMaterialCount > 0) return `The draft contains ${input.materialCount} material${input.materialCount === 1 ? "" : "s"}, including ${input.fileMaterialCount} file${input.fileMaterialCount === 1 ? "" : "s"}. Normalize the complete pack so I can inspect each material's pages, role, warnings, reference, and hash.`;
     if (input.sourceUrl && input.textLength === 0) return "I can see a reference, but a URL is provenance—not evidence. Add an authorized transcript, excerpt, file, or your own notes before I can evaluate the pack.";
     if (input.textLength < 80) return "The pack needs enough source substance to support exact claims and a real learning sequence. Add a transcript, bounded excerpt, notes, or files, then normalize it.";
     return "There is usable text in the draft. Normalize the Source Pack so I can inspect page boundaries, warnings, and hashes before Course Architect designs anything.";
@@ -38,6 +41,8 @@ function firstHttpsUrl(value: string): string | null {
 export default function CourseArchitectPanel({
   document,
   textLength,
+  materialCount,
+  fileMaterialCount,
   sourceUrl,
   sourceAuthorized,
   warningsAccepted,
@@ -50,6 +55,8 @@ export default function CourseArchitectPanel({
 }: {
   document: SourceDocument | null;
   textLength: number;
+  materialCount: number;
+  fileMaterialCount: number;
   sourceUrl: string;
   sourceAuthorized: boolean;
   warningsAccepted: boolean;
@@ -84,7 +91,7 @@ export default function CourseArchitectPanel({
     { id: crypto.randomUUID(), role: "architect", text },
   ]);
 
-  const evaluate = () => addArchitectMessage(packAssessment({ document, textLength, sourceUrl, sourceAuthorized, warningsAccepted, learnerGoal }));
+  const evaluate = () => addArchitectMessage(packAssessment({ document, textLength, materialCount, fileMaterialCount, sourceUrl, sourceAuthorized, warningsAccepted, learnerGoal }));
 
   const send = () => {
     const message = input.trim();

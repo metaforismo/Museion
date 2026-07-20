@@ -32,6 +32,7 @@ export async function ingestPdfSource(input: {
   originalFileName?: string | null;
   createdAt?: string;
   language?: string;
+  sourceReference?: SourceReference;
 }): Promise<SourceDocument> {
   if (input.bytes.byteLength > MAX_SOURCE_BYTES) {
     throw new SourceIngestionError(
@@ -47,6 +48,7 @@ export async function ingestPdfSource(input: {
     rawPages: pages,
     byteLength: input.bytes.byteLength,
     originalFileName: input.originalFileName,
+    sourceReference: input.sourceReference,
     createdAt: input.createdAt,
     language: input.language,
   });
