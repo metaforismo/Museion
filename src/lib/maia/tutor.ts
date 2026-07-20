@@ -1,4 +1,5 @@
 import type { Step } from "../content/types";
+import { describeActivity, describeActivityInline, type LabActivity } from "./activity";
 import type { LearnerSession } from "../engine/session";
 import { log } from "../server/log";
 import type {
@@ -50,7 +51,7 @@ export function tutorSafetyIssues(
   return issues;
 }
 
-function deterministicFallback(session: LearnerSession): TutorTurn {
+function deterministicFallback(session: LearnerSession, activityInline: string | null): TutorTurn {
   if (session.awaitingAdvance) {
     return {
       message: "You solved this step. Explain the key move in your own words, then continue when you are ready.",
@@ -59,10 +60,13 @@ function deterministicFallback(session: LearnerSession): TutorTurn {
     };
   }
   const hint = session.requestHint();
+  // Even offline, Maia has eyes: acknowledge the learner's live widget
+  // state (their own values only) before the authored hint.
+  const seen = activityInline ? ` ${activityInline}` : "";
   return {
     message: hint
-      ? `${OFFLINE_NOTICE} ${hint}`
-      : `${OFFLINE_NOTICE} No more hints are available at this level. Explain what you know about the current step, then try one small move.`,
+      ? `${OFFLINE_NOTICE}${seen} ${hint}`
+      : `${OFFLINE_NOTICE}${seen} No more hints are available at this level. Explain what you know about the current step, then try one small move.`,
     pedagogicalMove: hint ? "give-conceptual-hint" : "request-self-explanation",
     uiActions: [],
   };
@@ -109,11 +113,17 @@ export async function maiaRespond(
   learnerMessage: string,
   tutorProvider: TutorProvider = provider(),
   signal?: AbortSignal,
+  activity: LabActivity | null = null,
 ): Promise<TutorDelivery> {
-  const step = session.currentStep;
+  // The active variant decides the answer the leak gate must protect.
+  const step = session.activeStep;
   const stepId = step.id;
   const startVersion = session.version;
   const allowedUiTargetIds: string[] = [];
+  // Rendered only when the report matches the active step's widget —
+  // a stale or malformed report is dropped, never trusted.
+  const liveActivity = activity ? describeActivity(step, activity) : null;
+  if (liveActivity) session.log("maia_activity_observed", { stepId });
 
   if (tutorProvider.available()) {
     const input = {
@@ -121,6 +131,7 @@ export async function maiaRespond(
       history: [...session.chatHistory],
       learnerMessage,
       allowedUiTargetIds,
+      liveActivity,
     };
     try {
       let result = await tutorProvider.generate(input, { signal });
@@ -176,7 +187,7 @@ export async function maiaRespond(
     throw new Error("Session changed while Maia was responding");
   }
 
-  const turn = deterministicFallback(session);
+  const turn = deterministicFallback(session, liveActivity && activity ? describeActivityInline(step, activity) : null);
   session.chatHistory.push(
     { role: "user", content: learnerMessage },
     { role: "assistant", content: turn.message },

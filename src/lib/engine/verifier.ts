@@ -58,6 +58,15 @@ export function verify(step: Step, rawAnswer: string): VerificationResult {
       correct = spec.acceptedForms.map(normalize).includes(norm);
       break;
     }
+    case "graph": {
+      const params = parseGraphParams(norm);
+      correct =
+        params !== null &&
+        Math.abs(params.a - spec.target.a) <= spec.tolerance &&
+        Math.abs(params.h - spec.target.h) <= spec.tolerance &&
+        Math.abs(params.k - spec.target.k) <= spec.tolerance;
+      break;
+    }
   }
 
   return {
@@ -67,11 +76,38 @@ export function verify(step: Step, rawAnswer: string): VerificationResult {
   };
 }
 
+/** Parse "a=1,h=-3,k=2" (normalized form) into parameters; null if malformed. */
+export function parseGraphParams(normalized: string): { a: number; h: number; k: number } | null {
+  const match = normalized.match(/^a=(-?\d+(?:\.\d+)?),h=(-?\d+(?:\.\d+)?),k=(-?\d+(?:\.\d+)?)$/);
+  if (!match) return null;
+  return { a: Number(match[1]), h: Number(match[2]), k: Number(match[3]) };
+}
+
 export function matchMisconception(
   step: Step,
   normalizedAnswer: string,
 ): Misconception | null {
   const candidateValue = parseNumber(normalizedAnswer);
+  // Graph triggers match numerically per component, within the step tolerance.
+  if (step.answer.kind === "graph") {
+    const params = parseGraphParams(normalizedAnswer);
+    if (!params) return null;
+    const tolerance = step.answer.tolerance;
+    for (const misconception of step.misconceptions) {
+      for (const trigger of misconception.triggerAnswers) {
+        const triggerParams = parseGraphParams(normalize(trigger));
+        if (
+          triggerParams &&
+          Math.abs(params.a - triggerParams.a) <= tolerance &&
+          Math.abs(params.h - triggerParams.h) <= tolerance &&
+          Math.abs(params.k - triggerParams.k) <= tolerance
+        ) {
+          return misconception;
+        }
+      }
+    }
+    return null;
+  }
   for (const misconception of step.misconceptions) {
     for (const trigger of misconception.triggerAnswers) {
       const triggerNorm = normalize(trigger);

@@ -10,9 +10,30 @@ describe("curriculum graph", () => {
 
   it("recommends only unlocked nodes", () => {
     const start = recommendCurriculumNodes(museionFoundations, new Set());
-    expect(start.map(({ id }) => id)).toEqual(["negative-numbers", "order-of-operations", "sorted-search-space", "claims-to-evidence-operationalize"]);
+    expect(start.map(({ id }) => id)).toEqual([
+      "negative-numbers",
+      "order-of-operations",
+      "sorted-search-space",
+      "claims-to-evidence-operationalize",
+      "forces-and-motion-net-force",
+      "natural-selection-variation",
+      "recursion-base-case",
+      "proportional-reasoning-unit-rate",
+    ]);
     const afterFoundations = recommendCurriculumNodes(museionFoundations, new Set(["negative-numbers", "order-of-operations"]));
-    expect(afterFoundations.map(({ id }) => id)).toEqual(["fractions-unlike-denominators", "linear-equations-intro", "binary-numbers", "algebra-balance-equality-as-invariant", "sorted-search-space", "functions-as-change-input-output", "claims-to-evidence-operationalize"]);
+    expect(afterFoundations.map(({ id }) => id)).toEqual([
+      "fractions-unlike-denominators",
+      "linear-equations-intro",
+      "binary-numbers",
+      "algebra-balance-equality-as-invariant",
+      "sorted-search-space",
+      "functions-as-change-input-output",
+      "claims-to-evidence-operationalize",
+      "forces-and-motion-net-force",
+      "natural-selection-variation",
+      "recursion-base-case",
+      "proportional-reasoning-unit-rate",
+    ]);
   });
 
   it("fails closed on dangling prerequisites and cycles", () => {
@@ -35,6 +56,10 @@ describe("curriculum graph", () => {
       "functions-as-change",
       "claims-to-evidence",
       "samples-to-conclusions",
+      "forces-and-motion",
+      "natural-selection",
+      "recursion-foundations",
+      "proportional-reasoning",
     ]);
     for (const course of coursePaths) {
       expect(new Set(course.lessonIds).size).toBe(course.lessonIds.length);

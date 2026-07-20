@@ -183,6 +183,30 @@ const jobsGlobal = globalThis as unknown as { __museionCompilerJobs?: Map<string
 const compilerJobs = jobsGlobal.__museionCompilerJobs ?? new Map<string, CompilerJob>();
 jobsGlobal.__museionCompilerJobs = compilerJobs;
 
+export const COMPILER_JOB_TTL_MS = 30 * 60 * 1_000;
+export const MAX_COMPILER_JOBS = 200;
+const TERMINAL_JOB_STATUSES: CompilerJobStatus[] = ["succeeded", "failed", "cancelled"];
+
+function pruneCompilerJobs(now = Date.now()): void {
+  for (const [id, job] of compilerJobs) {
+    if (TERMINAL_JOB_STATUSES.includes(job.status) && now - Date.parse(job.updatedAt) > COMPILER_JOB_TTL_MS) {
+      compilerJobs.delete(id);
+    }
+  }
+  if (compilerJobs.size <= MAX_COMPILER_JOBS) return;
+  const oldestTerminalFirst = [...compilerJobs.entries()]
+    .filter(([, job]) => TERMINAL_JOB_STATUSES.includes(job.status))
+    .sort(([, a], [, b]) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt));
+  for (const [id] of oldestTerminalFirst) {
+    if (compilerJobs.size <= MAX_COMPILER_JOBS) break;
+    compilerJobs.delete(id);
+  }
+}
+
+export function compilerJobCountForTests(): number {
+  return compilerJobs.size;
+}
+
 function jobView(job: CompilerJob): CompilerJobView {
   return {
     runId: job.runId,
@@ -205,6 +229,7 @@ export async function enqueueCompilerRun(
   requestId?: string,
   sourcePackManifest?: SourcePackManifest,
 ): Promise<CompilerJobView> {
+  pruneCompilerJobs();
   if (requestId) {
     const existing = compilerJobs.get(requestId);
     if (existing) {
@@ -247,12 +272,14 @@ export async function enqueueCompilerRun(
     job.status = "succeeded";
     job.completedStages = job.totalStages;
     job.updatedAt = new Date().toISOString();
+    pruneCompilerJobs();
   }).catch((error) => {
     if (job.status === "cancelled") return;
     job.status = "failed";
     job.error = compilerFailurePayload(error).error;
     job.retryable = true;
     job.updatedAt = new Date().toISOString();
+    pruneCompilerJobs();
   });
   return jobView(job);
 }
@@ -273,6 +300,7 @@ export function cancelCompilerRun(runId: string, ownerId: string): boolean {
   job.retryable = true;
   job.updatedAt = new Date().toISOString();
   job.controller.abort();
+  pruneCompilerJobs();
   return true;
 }
 

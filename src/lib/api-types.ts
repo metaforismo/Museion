@@ -4,7 +4,7 @@
  * server code into the browser bundle.
  */
 
-import type { PublicLesson } from "./content/types";
+import type { MisconceptionHighlight, PublicLesson } from "./content/types";
 import type { ScaffoldingLevel } from "./engine/mastery";
 import type {
   ChatMessage,
@@ -25,6 +25,8 @@ export interface SessionStateResponse {
   complete: boolean;
   stepIndex: number;
   currentStepId: string | null;
+  /** Which authored variant of the current step is active (0 = base). */
+  activeVariantIndex: number;
   awaitingAdvance: boolean;
   sessionVersion: number;
   /** Post-solve state needed to resume before the explicit advance. */
@@ -46,6 +48,10 @@ export interface AnswerResponse {
   awaitingAdvance: boolean;
   sessionVersion: number;
   finalStepSolved: boolean;
+  /** Variant of the step now active after this attempt (0 = base). */
+  activeVariantIndex: number;
+  /** Attention mark for the diagnosed misconception, if one is authored. */
+  misconceptionHighlight: MisconceptionHighlight | null;
   /** Verified worked solution — present only after a correct answer. */
   solution: string | null;
   /** Session aggregates — present only when the lesson just completed. */
@@ -67,7 +73,7 @@ export function buildSessionState(
 ): SessionStateResponse {
   const solvedStep = session.awaitingAdvance
     ? {
-        solution: session.currentStep.solution,
+        solution: session.activeStep.solution,
         mastery: session.mastery.mastery(session.currentStep.concept),
       }
     : null;
@@ -78,6 +84,7 @@ export function buildSessionState(
     complete: session.complete,
     stepIndex: session.stepIndex,
     currentStepId: session.complete ? null : session.currentStep.id,
+    activeVariantIndex: session.complete ? 0 : session.activeVariantIndex(),
     awaitingAdvance: session.awaitingAdvance,
     sessionVersion: session.version,
     solvedStep,

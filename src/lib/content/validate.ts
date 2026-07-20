@@ -8,7 +8,7 @@
  * right answers.
  */
 
-import type { Lesson } from "./types";
+import type { Lesson, Step } from "./types";
 import { verify } from "../engine/verifier";
 
 export function validateLesson(lesson: Lesson): string[] {
@@ -37,35 +37,75 @@ export function validateLesson(lesson: Lesson): string[] {
       issues.push(`${where(step.id)}: missing verified solution`);
     }
 
-    switch (step.answer.kind) {
-      case "numeric":
-        if (step.answer.tolerance < 0) {
-          issues.push(`${where(step.id)}: negative tolerance`);
-        }
-        break;
-      case "multipleChoice":
-        if (
-          step.answer.correctIndex < 0 ||
-          step.answer.correctIndex >= step.answer.options.length
-        ) {
-          issues.push(`${where(step.id)}: correctIndex out of range`);
-        }
-        break;
-      case "expression":
-        if (step.answer.acceptedForms.length === 0) {
-          issues.push(`${where(step.id)}: no accepted forms`);
-        }
-        break;
-    }
+    const checkAnswerAndTriggers = (candidate: Step, label: string) => {
+      switch (candidate.answer.kind) {
+        case "numeric":
+          if (candidate.answer.tolerance < 0) {
+            issues.push(`${label}: negative tolerance`);
+          }
+          break;
+        case "multipleChoice":
+          if (
+            candidate.answer.correctIndex < 0 ||
+            candidate.answer.correctIndex >= candidate.answer.options.length
+          ) {
+            issues.push(`${label}: correctIndex out of range`);
+          }
+          break;
+        case "expression":
+          if (candidate.answer.acceptedForms.length === 0) {
+            issues.push(`${label}: no accepted forms`);
+          }
+          break;
+      }
 
-    for (const misconception of step.misconceptions) {
-      for (const trigger of misconception.triggerAnswers) {
-        if (verify(step, trigger).correct) {
+      for (const misconception of candidate.misconceptions) {
+        for (const trigger of misconception.triggerAnswers) {
+          if (verify(candidate, trigger).correct) {
+            issues.push(
+              `${label}: misconception "${misconception.id}" trigger ` +
+                `"${trigger}" verifies as a CORRECT answer`,
+            );
+          }
+        }
+
+        // Highlights may only point at what is already on screen: a term
+        // must literally occur in this surface's prompt, and a graph
+        // region only exists on a graph step.
+        const highlight = misconception.highlight;
+        if (highlight?.kind === "term" && !candidate.prompt.includes(highlight.text)) {
           issues.push(
-            `${where(step.id)}: misconception "${misconception.id}" trigger ` +
-              `"${trigger}" verifies as a CORRECT answer`,
+            `${label}: misconception "${misconception.id}" highlight ` +
+              `"${highlight.text}" does not occur in the prompt`,
           );
         }
+        if (highlight?.kind === "graph-region" && candidate.answer.kind !== "graph") {
+          issues.push(
+            `${label}: misconception "${misconception.id}" uses a graph-region ` +
+              `highlight on a non-graph step`,
+          );
+        }
+      }
+    };
+
+    checkAnswerAndTriggers(step, where(step.id));
+
+    // Variants hold the same authoring bar: their triggers are proven
+    // against the variant's own answer, exactly like base steps.
+    for (const [index, variant] of (step.variants ?? []).entries()) {
+      checkAnswerAndTriggers(
+        {
+          ...step,
+          prompt: variant.prompt,
+          answer: variant.answer,
+          solution: variant.solution,
+          misconceptions: variant.misconceptions,
+          hints: variant.hints ?? step.hints,
+        },
+        `${where(step.id)}/variant-${index + 1}`,
+      );
+      if (variant.solution.trim() === "") {
+        issues.push(`${where(step.id)}/variant-${index + 1}: missing verified solution`);
       }
     }
   }

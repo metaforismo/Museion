@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import GraphTransformLab from "@/components/GraphTransformLab";
+import MaiaCharacter from "@/components/MaiaCharacter";
 import MaiaPanel, { type MaiaOutbox } from "@/components/MaiaPanel";
+import RecursionCodeLab from "@/components/RecursionCodeLab";
 import type {
   AnswerResponse,
   ChatMessage,
@@ -17,12 +20,13 @@ import {
   RequestTimeoutError,
 } from "@/lib/client/fetch-with-timeout";
 import { sessionStorageKey } from "@/lib/client/storage";
-import type { PublicLesson, PublicStep } from "@/lib/content/types";
+import type { MisconceptionHighlight, PublicLesson, PublicStep } from "@/lib/content/types";
+import type { LabActivity } from "@/lib/maia/activity";
 import type { CourseLessonContext } from "@/lib/curriculum";
 
 type Feedback =
   | { kind: "correct"; mastery: number; solution: string | null }
-  | { kind: "wrong"; attempts: number }
+  | { kind: "wrong"; attempts: number; highlight: MisconceptionHighlight | null }
   | null;
 
 type PendingAction = "answer" | "advance" | "hint" | "recover" | null;
@@ -105,6 +109,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
+  const [variantIndex, setVariantIndex] = useState(0);
   const [answerFocusRequest, setAnswerFocusRequest] = useState(0);
   const [chatSyncKey, setChatSyncKey] = useState(0);
   const outboxSeq = useRef(0);
@@ -128,6 +133,15 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
     setPendingAction(null);
   }, []);
 
+  // Live, unchecked widget state (labs report as the learner works).
+  // Sent alongside Maia messages so she can see the canvas; the server
+  // cross-checks it against the active step before trusting it.
+  const labActivityRef = useRef<LabActivity | null>(null);
+  const reportLabState = useCallback((activity: LabActivity) => {
+    labActivityRef.current = activity;
+  }, []);
+  const getLabActivity = useCallback(() => labActivityRef.current, []);
+
   const sendToMaia = useCallback((text: string, targetStepId: string) => {
     outboxSeq.current += 1;
     setOutbox({ id: outboxSeq.current, text, stepId: targetStepId });
@@ -149,6 +163,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         : null,
     );
     setHints(state.revealedHints);
+    setVariantIndex(state.activeVariantIndex ?? 0);
     setInitialChat(state.chatHistory);
     setSessionId(state.sessionId);
     setRequestError(null);
@@ -201,7 +216,15 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
     };
   }, [lesson.id, mode, applyState]);
 
-  const step: PublicStep | undefined = activeLesson.steps[stepIndex];
+  // Display the authored variant the engine says is active. Identity
+  // (id) stays with the base step so guards and records line up.
+  const step: PublicStep | undefined = useMemo(() => {
+    const baseStep = activeLesson.steps[stepIndex];
+    const variantSurface = variantIndex > 0 ? baseStep?.variants?.[variantIndex - 1] : undefined;
+    return baseStep && variantSurface
+      ? { ...baseStep, prompt: variantSurface.prompt, kind: variantSurface.kind, options: variantSurface.options, graph: variantSurface.graph }
+      : baseStep;
+  }, [activeLesson, stepIndex, variantIndex]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -240,6 +263,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         setRetryMutation(null);
         setRecoveryNeeded(false);
         setSessionVersion(outcome.sessionVersion);
+        setVariantIndex(outcome.activeVariantIndex ?? 0);
         if (outcome.correct) {
           setFeedback({
             kind: "correct",
@@ -248,7 +272,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
           });
           setShowSolution(false);
         } else {
-          setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep });
+          setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep, highlight: outcome.misconceptionHighlight ?? null });
           setShakeTick((t) => t + 1);
         }
       } catch (error) {
@@ -448,7 +472,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   }
 
   return (
-    <div className="w-full px-4 py-8 lg:pr-[25rem]">
+    <div className="w-full px-4 py-8 pb-32 lg:pb-48">
       <div className="mx-auto min-w-0 max-w-4xl">
         {requestError && (
           <div role="alert" className="mb-5 border-l-2 border-wrong bg-wrong-soft/70 px-4 py-3">
@@ -479,13 +503,60 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
             )}
           </div>
         )}
-        {/* Progress */}
-        <div className="mb-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-            <Link href={backHref} className="inline-flex min-h-11 items-center font-semibold text-lapis-dark hover:underline">
-              {backLabel}
+        {/* Slim chrome: back, continuous progress, phase + step. The lesson
+            title lives here small — the activity is the page, Koji-style. */}
+        <div className="mb-5">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link
+              href={backHref}
+              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-ink-soft transition hover:bg-surface hover:text-lapis-dark"
+            >
+              <span aria-hidden="true">←</span>
+              <span className="hidden sm:inline">{backLabel}</span>
+              <span className="sr-only sm:hidden">{backLabel}</span>
             </Link>
-            <span className="rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft">
+            {/* One segment per step: green = verified done, blue = where you
+                are now, quiet = still ahead. Koji functional colors. */}
+            <div
+              className="flex min-w-0 flex-1 items-center gap-1"
+              role="progressbar"
+              aria-label="Lesson progress"
+              aria-valuemin={0}
+              aria-valuemax={activeLesson.steps.length}
+              aria-valuenow={Math.min(stepIndex + 1, activeLesson.steps.length)}
+            >
+              {activeLesson.steps.map((progressStep, segmentIndex) => {
+                const solvedCount = Math.min(stepIndex + (feedback?.kind === "correct" ? 1 : 0), activeLesson.steps.length);
+                const state = segmentIndex < solvedCount ? "done" : segmentIndex === stepIndex && !complete ? "current" : "ahead";
+                return (
+                  <span
+                    key={progressStep.id}
+                    className={`h-2 min-w-0 flex-1 rounded-full transition-colors duration-500 ${
+                      state === "done" ? "bg-correct" : state === "current" ? "bg-lapis" : "bg-ink/8"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ink">
+              {/* The Museion Method move this moment exercises, derived from real state. */}
+              <span className="rounded-full bg-lapis-soft px-2.5 py-0.5 text-xs font-semibold text-lapis-dark">
+                {feedback?.kind === "wrong"
+                  ? "Diagnose"
+                  : feedback?.kind === "correct"
+                    ? "Explain"
+                    : mode === "practice"
+                      ? "Revisit"
+                      : "Predict"}
+              </span>
+              <span className="hidden text-xs text-ink-soft sm:inline">
+                Step {Math.min(stepIndex + 1, activeLesson.steps.length)} of {activeLesson.steps.length}
+              </span>
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1">
+            <h1 className="min-w-0 truncate text-sm font-semibold text-ink-soft">{activeLesson.title}</h1>
+            <span className="text-xs font-medium text-ink-soft">
               {mode === "practice"
                 ? "Hint-free practice"
                 : courseContext
@@ -493,62 +564,46 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                   : activeLesson.track}
             </span>
           </div>
-          <div className="mb-2 grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-4">
-            <h1 className="min-w-0 font-display text-2xl font-semibold">
-              {activeLesson.title}
-            </h1>
-            <span className="whitespace-nowrap text-sm text-ink">
-              Step {Math.min(stepIndex + 1, activeLesson.steps.length)} of{" "}
-              {activeLesson.steps.length}
-            </span>
-          </div>
-          <div
-            className="flex gap-1.5"
-            role="progressbar"
-            aria-label="Lesson progress"
-            aria-valuemin={0}
-            aria-valuemax={activeLesson.steps.length}
-            aria-valuenow={Math.min(stepIndex + 1, activeLesson.steps.length)}
-          >
-            {activeLesson.steps.map((s, i) => (
-              <div
-                key={s.id}
-                className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-                  i < stepIndex
-                    ? "bg-gold"
-                    : i === stepIndex
-                      ? "bg-lapis"
-                      : "bg-ink/10"
-                }`}
-              />
-            ))}
-          </div>
           {mode === "practice" && (
-            <p className="mt-2 text-xs text-ink">
+            <p className="mt-2 px-1 text-xs text-ink">
               Practice mode removes the hint ladder. Maia can still ask a guiding question,
               so this is not the independent transfer checkpoint.
             </p>
           )}
         </div>
 
-        {/* Step card */}
+        {/* Step card. The shake retriggers via class, never by remounting —
+            remounting would wipe in-progress lab state on a wrong answer. */}
         {step && (
           <div
-            key={`${step.id}-${shakeTick > 0 && feedback?.kind === "wrong" ? shakeTick : "steady"}`}
+            key={step.id}
             aria-busy={busy}
-            className={`rounded-xl border border-ink/10 bg-surface p-6 shadow-sm ${
-              feedback?.kind === "wrong" ? "animate-shake" : "animate-fade-up"
+            onAnimationEnd={() => setShakeTick(0)}
+            className={`rounded-[2rem] border border-ink/8 bg-surface p-6 shadow-[var(--shadow-2)] sm:p-10 ${
+              shakeTick > 0 && feedback?.kind === "wrong" ? "animate-shake" : "animate-fade-up"
             }`}
           >
-            <p className="text-lg leading-relaxed">{step.prompt}</p>
+            {variantIndex > 0 && (
+              <p className="mx-auto mb-3 w-fit rounded-full bg-lapis-soft px-3 py-1 text-center text-xs font-semibold text-lapis-dark animate-pop-in">
+                Fresh numbers, same idea — variation {variantIndex}
+              </p>
+            )}
+            <p className="mx-auto max-w-2xl text-center text-lg leading-relaxed sm:text-xl sm:leading-8">
+              <PromptWithMark
+                prompt={step.prompt}
+                highlight={feedback?.kind === "wrong" ? feedback.highlight : null}
+              />
+            </p>
 
-            <div className="mt-6">
+            <div className="mt-8">
               <AnswerControl
-                key={step.id}
+                key={`${step.id}:${variantIndex}`}
                 step={step}
                 disabled={busy || feedback?.kind === "correct"}
                 checking={pendingAction === "answer"}
                 focusRequest={answerFocusRequest}
+                graphHighlight={feedback?.kind === "wrong" && feedback.highlight?.kind === "graph-region" ? feedback.highlight.param : null}
+                onLabState={reportLabState}
                 onSubmit={submitAnswer}
               />
             </div>
@@ -559,18 +614,24 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                 tabIndex={-1}
                 role="status"
                 aria-live="polite"
-                className="mt-4 rounded-lg bg-correct-soft px-4 py-3 outline-none animate-fade-up"
+                className="mt-5 rounded-2xl border-2 border-correct/25 bg-correct-soft p-4 outline-none animate-fade-up sm:p-5"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-medium text-correct">
-                    Correct — nice reasoning.
-                    <span className="ml-2 text-sm font-normal">Adaptive support updated.</span>
-                  </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <MaiaCharacter state="celebrating" className="h-16 w-14 shrink-0" title="Maia celebrating" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-display text-lg font-semibold text-correct">Correct — nice reasoning.</p>
+                      <span className="animate-pop-in rounded-full bg-correct px-2.5 py-0.5 text-[0.68rem] font-bold text-white [animation-delay:0.15s]">
+                        +1 verified move
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-sm text-ink-soft">Adaptive support updated.</p>
+                  </div>
                   {!complete && (
                     <button
                       onClick={() => void advance()}
                       disabled={busy}
-                      className="rounded-lg bg-correct px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
+                      className="min-h-12 rounded-2xl bg-correct px-7 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:opacity-95 disabled:cursor-wait disabled:translate-y-0 disabled:opacity-70"
                     >
                       {pendingAction === "advance" ? "Opening next step…" : "Continue"}
                     </button>
@@ -605,32 +666,46 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                 ref={feedbackRef}
                 tabIndex={-1}
                 role="alert"
-                className="mt-4 rounded-lg bg-wrong-soft px-4 py-3 outline-none"
+                className="mt-5 rounded-2xl border-2 border-wrong/20 bg-wrong-soft p-4 outline-none sm:p-5"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-medium text-wrong">Not yet — stay with it.</p>
-                  <span className="font-mono text-xs text-wrong">
-                    Attempt {feedback.attempts}
-                  </span>
+                <div className="flex items-start gap-4">
+                  <MaiaCharacter state="redirecting" className="mt-1 h-16 w-14 shrink-0" title="Maia redirecting" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline justify-between gap-3">
+                      <p className="font-display text-lg font-semibold text-wrong">Not yet — stay with it.</p>
+                      <span className="font-mono text-xs text-wrong/80">Attempt {feedback.attempts}</span>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-ink-soft">
+                      Checked by code, not by a model. A different line of reasoning will get there.
+                    </p>
+                    {feedback.highlight && (feedback.highlight.kind === "graph-region" || step.prompt.includes(feedback.highlight.text)) && (
+                      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-semibold text-ink animate-pop-in">
+                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-gold" />
+                        {feedback.highlight.kind === "term"
+                          ? "Maia marked the part to re-read"
+                          : `Maia marked the ${feedback.highlight.param} control — watch what it moves`}
+                      </p>
+                    )}
+                    <div className="mt-4 flex flex-wrap gap-2.5">
+                      <button
+                        type="button"
+                        aria-label="Try the answer again"
+                        onClick={() => setAnswerFocusRequest((request) => request + 1)}
+                        className="min-h-11 rounded-2xl bg-gold px-6 text-sm font-bold text-ink shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:opacity-95"
+                      >
+                        Try again
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="ask Maia why"
+                        onClick={() => sendToMaia(ASK_WHY_MESSAGE, step.id)}
+                        className="min-h-11 rounded-2xl border border-ink/15 bg-surface px-5 text-sm font-semibold text-ink transition hover:border-lapis/40 hover:text-lapis-dark"
+                      >
+                        Get help
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-1 text-sm text-ink-soft">
-                  Your answer was checked deterministically. Try a different line of reasoning
-                  {mode === "lesson" ? ", take a hint," : ""} or{" "}
-                  <button
-                    onClick={() => sendToMaia(ASK_WHY_MESSAGE, step.id)}
-                    className="font-medium text-lapis underline-offset-2 hover:underline"
-                  >
-                    ask Maia why
-                  </button>
-                  .
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setAnswerFocusRequest((request) => request + 1)}
-                  className="mt-3 min-h-11 text-sm font-semibold text-wrong underline underline-offset-4"
-                >
-                  Try the answer again
-                </button>
               </div>
             )}
 
@@ -649,15 +724,27 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                     {pendingAction === "hint" ? "Getting hint…" : "Take a hint"}
                   </button>
                 </div>
-                {hints.map((hint, i) => (
-                  <p
-                    key={i}
-                    className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-sm animate-fade-up"
-                  >
-                    <span className="mr-2 font-semibold text-gold">{i + 1}.</span>
-                    {hint}
+                {/* Progressive disclosure: only the newest rung stays open;
+                    earlier hints collapse behind a toggle. */}
+                {hints.length > 1 && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer list-none text-xs font-semibold text-ink-soft underline-offset-4 hover:underline">
+                      Show earlier hints ({hints.length - 1})
+                    </summary>
+                    {hints.slice(0, -1).map((hint, i) => (
+                      <p key={i} className="mt-2 rounded-lg bg-gold-soft/60 px-4 py-2.5 text-sm text-ink-soft">
+                        <span className="mr-2 font-semibold text-gold">{i + 1}.</span>
+                        {hint}
+                      </p>
+                    ))}
+                  </details>
+                )}
+                {hints.length > 0 && (
+                  <p className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-sm animate-fade-up">
+                    <span className="mr-2 font-semibold text-gold">{hints.length}.</span>
+                    {hints[hints.length - 1]}
                   </p>
-                ))}
+                )}
                 {hintNote && (
                   <p className="mt-3 text-sm italic text-ink-soft">{hintNote}</p>
                 )}
@@ -674,6 +761,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         sessionVersion={sessionVersion}
         onSessionVersion={setSessionVersion}
         outbox={outbox}
+        getActivity={getLabActivity}
         initialMessages={initialChat}
       />
     </div>
@@ -698,11 +786,16 @@ function CompletionScreen({
   const backHref = courseContext ? `/courses/${courseContext.courseId}` : "/library";
   const backLabel = courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:py-24">
-      <p className="eyebrow">{practiceDone ? "Hint-free practice recorded" : "Lesson path completed"}</p>
-      <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
-        {practiceDone ? "Practice complete" : "Lesson complete"}
-      </h1>
+    <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:py-20">
+      <div className="flex items-end gap-5">
+        <MaiaCharacter state="celebrating" animated className="h-28 w-24 shrink-0 animate-pop-in" title="Maia celebrating" />
+        <div>
+          <p className="eyebrow">{practiceDone ? "Hint-free practice recorded" : "Lesson path completed"}</p>
+          <h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+            {practiceDone ? "Practice complete" : "Lesson complete"}
+          </h1>
+        </div>
+      </div>
       <p className="mt-4 max-w-[62ch] text-lg leading-8 text-ink-soft">
         {practiceDone
           ? `You completed a hint-free retrieval run on “${lesson.title}”.`
@@ -845,17 +938,44 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
   );
 }
 
+/**
+ * The step prompt with the engine's attention mark applied. A term
+ * highlight wraps the first occurrence of authored text that is already
+ * in the prompt — attention only, no added information. Falls back to
+ * the plain prompt whenever the mark's text is not on this surface
+ * (e.g. the active variant changed on the same attempt).
+ */
+function PromptWithMark({ prompt, highlight }: { prompt: string; highlight: MisconceptionHighlight | null }) {
+  if (highlight?.kind !== "term") return <>{prompt}</>;
+  const at = prompt.indexOf(highlight.text);
+  if (at === -1) return <>{prompt}</>;
+  return (
+    <>
+      {prompt.slice(0, at)}
+      <mark className="rounded-md bg-gold-soft px-1 py-0.5 text-inherit shadow-[inset_0_-2px_0_var(--color-gold)] animate-pop-in">
+        <span className="sr-only">Maia marks: </span>
+        {highlight.text}
+      </mark>
+      {prompt.slice(at + highlight.text.length)}
+    </>
+  );
+}
+
 function AnswerControl({
   step,
   disabled,
   checking,
   focusRequest,
+  graphHighlight,
+  onLabState,
   onSubmit,
 }: {
   step: PublicStep;
   disabled: boolean;
   checking: boolean;
   focusRequest: number;
+  graphHighlight: "a" | "h" | "k" | null;
+  onLabState?: (activity: LabActivity) => void;
   onSubmit: (answer: string) => void;
 }) {
   const [value, setValue] = useState("");
@@ -866,6 +986,35 @@ function AnswerControl({
     if (focusRequest > 0 && !disabled) firstControlRef.current?.focus();
   }, [disabled, focusRequest]);
 
+  if (step.lab?.kind === "recursion-code") {
+    return (
+      <RecursionCodeLab
+        lab={step.lab}
+        disabled={disabled}
+        checking={checking}
+        onStateChange={(state) => onLabState?.({ kind: "recursion", slots: state.slots })}
+        onSubmit={onSubmit}
+      />
+    );
+  }
+
+  if (step.kind === "graph" && step.graph) {
+    // Centered column like every other control — a full-width lab pushed
+    // its submit button under Maia's floating bubble on tall viewports.
+    return (
+      <div className="mx-auto max-w-2xl">
+        <GraphTransformLab
+          graph={step.graph}
+          disabled={disabled}
+          checking={checking}
+          highlight={graphHighlight}
+          onStateChange={(state) => onLabState?.({ kind: "graph", ...state })}
+          onSubmit={onSubmit}
+        />
+      </div>
+    );
+  }
+
   if (step.kind === "multipleChoice" && step.options) {
     return (
       <form
@@ -873,16 +1022,17 @@ function AnswerControl({
           event.preventDefault();
           if (selected !== null) onSubmit(String(selected));
         }}
+        className="mx-auto max-w-2xl"
       >
         <fieldset disabled={disabled} className="flex flex-col gap-2.5">
           <legend className="sr-only">Choose one answer</legend>
           {step.options.map((option, i) => (
             <label
               key={option}
-              className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left font-medium transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-lapis ${
+              className={`flex min-h-13 cursor-pointer items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left font-medium transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-lapis ${
                 selected === i
-                  ? "border-lapis bg-lapis-soft text-lapis-dark"
-                  : "border-ink/15 bg-surface hover:border-lapis"
+                  ? "border-lapis bg-lapis-soft text-lapis-dark shadow-[var(--shadow-1)]"
+                  : "border-ink/12 bg-surface hover:border-lapis/50 hover:-translate-y-0.5"
               }`}
             >
               <input
@@ -908,13 +1058,15 @@ function AnswerControl({
             </label>
           ))}
         </fieldset>
-        <button
-          type="submit"
-          disabled={disabled || selected === null}
-          className="mt-3 rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {checking ? "Checking…" : "Check answer"}
-        </button>
+        <div className="mt-5 flex justify-end">
+          <button
+            type="submit"
+            disabled={disabled || selected === null}
+            className="min-h-12 rounded-2xl bg-lapis px-8 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-40"
+          >
+            {checking ? "Checking…" : "Check answer"}
+          </button>
+        </div>
       </form>
     );
   }
@@ -925,7 +1077,7 @@ function AnswerControl({
         e.preventDefault();
         if (value.trim()) onSubmit(value);
       }}
-      className="flex flex-col gap-3 sm:flex-row"
+      className="mx-auto flex max-w-md flex-col items-stretch justify-center gap-3 sm:flex-row"
     >
       <input
         ref={firstControlRef}
@@ -936,12 +1088,12 @@ function AnswerControl({
         placeholder={step.kind === "expression" ? "e.g. 5/6" : "Your answer"}
         aria-label="Your answer"
         inputMode={step.kind === "numeric" ? "decimal" : "text"}
-        className="w-full min-w-0 rounded-lg border border-ink/15 bg-surface px-4 py-2.5 outline-none transition focus:border-lapis disabled:opacity-60 sm:w-44"
+        className="w-full min-w-0 rounded-2xl border-2 border-ink/12 bg-surface px-5 py-3 text-center font-mono text-lg tabular-nums outline-none transition focus:border-lapis disabled:opacity-60 sm:w-52"
       />
       <button
         type="submit"
         disabled={disabled || !value.trim()}
-        className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark disabled:opacity-50"
+        className="min-h-12 rounded-2xl bg-lapis px-8 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark disabled:translate-y-0 disabled:opacity-40"
       >
         {checking ? "Checking…" : "Check"}
       </button>

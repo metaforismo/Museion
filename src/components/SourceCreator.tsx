@@ -36,11 +36,11 @@ type CompilerJob = {
 };
 
 const COMPILE_STAGES = [
-  { id: "source_graph", label: "Extract source graph", model: "Luna" },
-  { id: "blueprint", label: "Design learning path", model: "Terra" },
-  { id: "course_artifact", label: "Write questions and activities", model: "Terra" },
-  { id: "critic", label: "Audit for publication", model: "Sol" },
-  { id: "repair", label: "Repair if needed", model: "Sol" },
+  { id: "source_graph", label: "Extract source graph", model: "Structure pass" },
+  { id: "blueprint", label: "Design learning path", model: "Design pass" },
+  { id: "course_artifact", label: "Write questions and activities", model: "Design pass" },
+  { id: "critic", label: "Audit for publication", model: "Audit pass" },
+  { id: "repair", label: "Repair if needed", model: "Audit pass" },
 ] as const;
 
 function emptyTextMaterial(id = "draft_primary", title = "Primary material"): CreatorMaterialDraft {
@@ -497,21 +497,21 @@ export default function SourceCreator() {
           : "Saved on this device";
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
       <div className="max-w-3xl">
-        <p className="eyebrow">
+        <p className="text-sm font-medium text-lapis-dark">
           Source review
         </p>
-        <h1 className="mt-4 font-display text-5xl font-semibold tracking-[-0.04em] sm:text-6xl">
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.03em]">
           Start with a source you trust.
         </h1>
-        <p className="mt-5 max-w-[62ch] text-lg leading-8 text-ink-soft">
+        <p className="mt-4 max-w-[62ch] leading-7 text-ink-soft">
           Museion first normalizes the source, fixes page boundaries and hashes
           every page. Nothing is compiled until you can inspect that record.
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-lapis/15 bg-lapis-soft/55 px-4 py-3 text-sm">
-          <span className="font-semibold text-lapis-dark">Source → Codex → validated course</span>
-          <span className="text-ink-soft">When ChatGPT via Codex is connected, Museion runs the Luna/Terra/Sol compiler and publishes only after deterministic gates pass.</span>
+          <span className="font-semibold text-lapis-dark">Source → validated course</span>
+          <span className="text-ink-soft">When live AI is connected, Museion designs the course in staged passes and publishes only after deterministic checks pass.</span>
           <Link href="/settings" className="font-semibold text-lapis-dark underline underline-offset-4">Check connection</Link>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
@@ -547,10 +547,18 @@ export default function SourceCreator() {
           <li
             key={step.label}
             aria-current={step.current ? "step" : undefined}
-            className={`rounded-xl px-4 py-3 ${step.ready ? "bg-lapis-soft" : step.current ? "border border-lapis/25 bg-surface" : "bg-paper"}`}
+            className={`flex items-center gap-3 rounded-xl px-4 py-3 ${step.ready ? "bg-correct-soft" : step.current ? "bg-lapis-soft/70 shadow-[inset_0_0_0_1.5px_var(--color-lapis)]" : "bg-paper"}`}
           >
-            <span className="block text-sm font-semibold">{step.label}</span>
-            <span className="mt-0.5 block text-xs text-ink-soft">{step.detail}</span>
+            <span
+              aria-hidden="true"
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.7rem] font-bold ${step.ready ? "bg-correct text-white" : step.current ? "bg-lapis text-white" : "bg-ink/10 text-ink-soft"}`}
+            >
+              {step.ready ? "✓" : step.label.charAt(0)}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">{step.label}</span>
+              <span className="mt-0.5 block truncate text-xs text-ink-soft">{step.detail}</span>
+            </span>
           </li>
         ))}
       </ol>
@@ -589,12 +597,17 @@ export default function SourceCreator() {
         <section
           aria-live="polite"
           aria-busy={busy}
-          className="premium-surface min-w-0 rounded-[1.6rem] border border-white/80 p-6 sm:p-7"
+          className="premium-surface min-w-0 rounded-2xl border border-white/80 p-6 sm:p-7"
         >
           <h2 className="font-display text-xl font-semibold">Normalized record</h2>
           {!document || !page ? (
-            <div className="mt-5 rounded-xl bg-paper px-5 py-8 text-center text-sm text-ink-soft">
-              Add a source to inspect its canonical pages, warnings and hashes.
+            <div className="mt-5 grid place-items-center gap-3 rounded-xl bg-paper px-5 py-10 text-center">
+              <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-2xl bg-lapis-soft text-lapis">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" /><path strokeLinecap="round" d="M14 3v5h5M9.5 13h5M9.5 16.5h5" /></svg>
+              </span>
+              <p className="max-w-[32ch] text-sm leading-6 text-ink-soft">
+                Add a source to inspect its canonical pages, warnings and hashes.
+              </p>
             </div>
           ) : (
             <>
@@ -681,7 +694,7 @@ export default function SourceCreator() {
                 <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/40"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-xs">{stage.model}</span></li>; })}</ol>
                 <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
               </div>}
-              <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-3 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[0_12px_32px_rgba(19,28,49,0.18)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
+              <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-20 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[var(--shadow-2)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
                 {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
               </button>
               {!sourceAuthorized && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Confirm source authorization to continue.</p>}
@@ -698,7 +711,7 @@ export default function SourceCreator() {
         aria-haspopup="dialog"
         aria-expanded={architectOpen}
         onClick={() => setArchitectOpen(true)}
-        className="fixed bottom-20 right-4 z-40 flex items-center gap-3 rounded-2xl border border-lapis/15 bg-surface px-3 py-2.5 shadow-[0_18px_50px_rgba(19,28,49,0.18)] transition hover:-translate-y-0.5 hover:border-lapis/35 sm:bottom-5 sm:right-6"
+        className="fixed bottom-20 right-4 z-40 flex items-center gap-3 rounded-2xl border border-lapis/15 bg-surface px-3 py-2.5 shadow-[var(--shadow-2)] transition hover:-translate-y-0.5 hover:border-lapis/35 sm:bottom-5 sm:right-6"
       >
         <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft font-display text-sm font-semibold tracking-[-0.04em] text-lapis-dark">CA</span>
         <span className="text-left"><span className="block font-display font-semibold">Course Architect</span><span className="block text-xs text-ink-soft">Build from my material</span></span>

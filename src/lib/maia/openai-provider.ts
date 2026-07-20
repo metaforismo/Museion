@@ -38,6 +38,7 @@ export class OpenAITutorProvider implements TutorProvider {
           input.snapshot,
           input.allowedUiTargetIds,
           options.repairIssues,
+          input.liveActivity,
         ),
         input: [
           ...input.history.map((message) => ({

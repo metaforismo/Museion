@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import SourceCreator from "@/components/SourceCreator";
 
 export const metadata: Metadata = {
-  title: "Create a course",
+  title: "Source Studio",
   description: "Normalize and review a trusted source before compiling a course.",
 };
 

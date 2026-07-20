@@ -15,21 +15,73 @@ import { normalize, parseNumber } from "../engine/verifier";
 
 const NUMBER_TOKEN = /-?\d+(?:\.\d+)?(?:\s*\/\s*-?\d+(?:\.\d+)?)?/g;
 
+/** Italian and Chinese small-number words (0-12), unchanged from the original gate. */
 const SMALL_NUMBER_WORDS: Record<number, string[]> = {
-  0: ["zero", "zero", "零"],
-  1: ["one", "uno", "una", "一"],
-  2: ["two", "due", "二", "两"],
-  3: ["three", "tre", "三"],
-  4: ["four", "quattro", "四"],
-  5: ["five", "cinque", "五"],
-  6: ["six", "sei", "六"],
-  7: ["seven", "sette", "七"],
-  8: ["eight", "otto", "八"],
-  9: ["nine", "nove", "九"],
-  10: ["ten", "dieci", "十"],
-  11: ["eleven", "undici", "十一"],
-  12: ["twelve", "dodici", "十二"],
+  0: ["zero", "零"],
+  1: ["uno", "una", "一"],
+  2: ["due", "二", "两"],
+  3: ["tre", "三"],
+  4: ["quattro", "四"],
+  5: ["cinque", "五"],
+  6: ["sei", "六"],
+  7: ["sette", "七"],
+  8: ["otto", "八"],
+  9: ["nove", "九"],
+  10: ["dieci", "十"],
+  11: ["undici", "十一"],
+  12: ["dodici", "十二"],
 };
+
+/** French, Spanish, German and Portuguese small-number words (0-20). */
+const ROMANCE_GERMANIC_NUMBER_WORDS: Record<number, string[]> = {
+  0: ["zéro", "cero", "null", "zero"],
+  1: ["un", "une", "uno", "una", "eins", "um", "uma"],
+  2: ["deux", "dos", "zwei", "dois", "duas"],
+  3: ["trois", "tres", "drei", "três"],
+  4: ["quatre", "cuatro", "vier", "quatro"],
+  5: ["cinq", "cinco", "fünf"],
+  6: ["six", "seis", "sechs"],
+  7: ["sept", "siete", "sieben", "sete"],
+  8: ["huit", "ocho", "acht", "oito"],
+  9: ["neuf", "nueve", "neun", "nove"],
+  10: ["dix", "diez", "zehn", "dez"],
+  11: ["onze", "once", "elf"],
+  12: ["douze", "doce", "zwölf", "doze"],
+  13: ["treize", "trece", "dreizehn", "treze"],
+  14: ["quatorze", "catorce", "vierzehn"],
+  15: ["quinze", "quince", "fünfzehn"],
+  16: ["seize", "dieciséis", "sechzehn", "dezesseis"],
+  17: ["dix-sept", "dix sept", "diecisiete", "siebzehn", "dezessete"],
+  18: ["dix-huit", "dix huit", "dieciocho", "achtzehn", "dezoito"],
+  19: ["dix-neuf", "dix neuf", "diecinueve", "neunzehn", "dezenove"],
+  20: ["vingt", "veinte", "zwanzig", "vinte"],
+};
+
+const ONES_EN = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+const TENS_EN = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+/** Every spelled-out English form (hyphenated and spaced) for an integer 0-999. */
+function spellEnglish(value: number): string[] {
+  if (!Number.isInteger(value) || value < 0 || value > 999) return [];
+  if (value < 20) return [ONES_EN[value]];
+  if (value < 100) {
+    const tens = TENS_EN[Math.floor(value / 10)];
+    const remainder = value % 10;
+    return remainder === 0 ? [tens] : [`${tens}-${ONES_EN[remainder]}`, `${tens} ${ONES_EN[remainder]}`];
+  }
+  const hundredWord = `${ONES_EN[Math.floor(value / 100)]} hundred`;
+  const remainder = value % 100;
+  if (remainder === 0) return [hundredWord];
+  return spellEnglish(remainder).flatMap((word) => [`${hundredWord} ${word}`, `${hundredWord} and ${word}`]);
+}
+
+function spelledWordsFor(absoluteValue: number): string[] {
+  return [
+    ...spellEnglish(absoluteValue),
+    ...(SMALL_NUMBER_WORDS[absoluteValue] ?? []),
+    ...(ROMANCE_GERMANIC_NUMBER_WORDS[absoluteValue] ?? []),
+  ];
+}
 
 function escapePattern(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -37,13 +89,14 @@ function escapePattern(value: string): string {
 
 function revealsSpelledNumber(value: number, text: string): boolean {
   if (!Number.isInteger(value)) return false;
-  const absoluteWords = SMALL_NUMBER_WORDS[Math.abs(value)];
-  if (!absoluteWords) return false;
+  const absoluteWords = spelledWordsFor(Math.abs(value));
+  if (absoluteWords.length === 0) return false;
+  const negativePrefixes = ["minus", "negative", "meno", "moins", "menos", "负"];
   const signedWords = value < 0
-    ? absoluteWords.flatMap((word) => [`minus ${word}`, `negative ${word}`, `meno ${word}`, `负${word}`])
+    ? absoluteWords.flatMap((word) => negativePrefixes.map((prefix) => prefix === "负" ? `${prefix}${word}` : `${prefix} ${word}`))
     : absoluteWords;
-  const answerCue = "(?:answer|result|value|solution|risposta|risultato|valore|soluzione|答案|结果|值)";
-  const equalityCue = "(?:is|equals|is:|è|vale|等于|是)";
+  const answerCue = "(?:answer|result|value|solution|risposta|risultato|valore|soluzione|réponse|résultat|respuesta|resultado|antwort|ergebnis|resposta|答案|结果|值)";
+  const equalityCue = "(?:is|equals|is:|è|é|vale|est|es|ist|等于|是)";
   return signedWords.some((word) => {
     const escaped = escapePattern(word);
     const boundary = /[\p{L}\p{N}]$/u.test(word) ? "(?![\\p{L}\\p{N}])" : "";
@@ -94,6 +147,18 @@ export function revealsAnswer(step: Step, text: string): boolean {
       return spec.acceptedForms.some((form) =>
         normalized.includes(normalize(form)),
       );
+    }
+    case "graph": {
+      // Leaks: stating a target parameter's value ("h is 3", "k = 2"),
+      // or naming the vertex coordinates as a pair.
+      const paramLeak = ([["a", spec.target.a], ["h", spec.target.h], ["k", spec.target.k]] as const).some(([name, value]) => {
+        const rendered = escapePattern(String(value)).replace("-", "[-−]");
+        return new RegExp(`\\b${name}\\s*(?:=|is|equals|should be|è|vale|es|ist|是)\\s*${rendered}(?![\\d.])`, "iu").test(text);
+      });
+      const h = escapePattern(String(spec.target.h)).replace("-", "[-−]");
+      const k = escapePattern(String(spec.target.k)).replace("-", "[-−]");
+      const vertexLeak = new RegExp(`\\(\\s*${h}\\s*[,;]\\s*${k}\\s*\\)`, "u").test(text);
+      return paramLeak || vertexLeak;
     }
   }
 }

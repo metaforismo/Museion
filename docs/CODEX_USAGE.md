@@ -55,4 +55,4 @@ Codex was used as the primary engineering agent on 2026-07-15 to organize planni
 - No deployed route or learning-outcome result has been verified; external deployment and submission remain behind explicit authorization.
 - This document records actions and decisions, not private chain-of-thought.
 
-The `/feedback` Session ID and final dated verification summary must be added before submission.
+The `/feedback` Session ID is not recorded in this document. It is captured at submission time via the required-fields checklist in [`docs/build-week/DEVPOST_DRAFT.md`](build-week/DEVPOST_DRAFT.md), which lists it alongside Submitter Type, Country, Category, and repository URL.

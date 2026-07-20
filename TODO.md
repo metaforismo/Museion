@@ -2,6 +2,22 @@
 
 Status legend: `[x]` done · `[ ]` planned
 
+## Final-review pass — redesign, flagship lab, hardening
+
+- [x] Real typography (Fraunces display + Inter UI via `next/font`), three-tier type scale, elevation/radius tokens, shared card classes.
+- [x] Landing rebuilt around an interactive, deterministic method-trace demo (clickable, reduced-motion safe).
+- [x] Dashboard mission card with a live Museion Method strip driven by the real next action; sidebar IA (Learn / Your work / Paths / Maia).
+- [x] Museion Method phase chips inside the lesson player; method vocabulary unified across README, landing, and product.
+- [x] Function Transformation Lab: new deterministic `graph` answer kind (drag + keyboard + numeric), authored lesson with misconception triples, engine tests.
+- [x] Maia mascot redrawn (gradient body, expression states, idle/blink honoring reduced motion); learner-facing AI codenames removed; runtime detail behind Settings disclosure.
+- [x] Onboarding mounted for first-time visitors; preferences mirrored to a cookie and used by the dashboard.
+- [x] Judge flow: focus chrome, sample-lesson labeling, completion bridge to dashboard/library.
+- [x] Hardening with tests: leak gate for spelled numbers (en 0–999 + fr/es/de/pt), bounded compiler-job/Maia-cache/rate-limit state, MCP rate limiting, server-side source-warning recomputation, Maia 409 resync, mobile sticky-CTA fixes.
+- [ ] Second lab: safe recursive coding with visible tests and call stack (deterministic interpreter, time/recursion/memory limits).
+- [x] Spaced revisit scheduler: deterministic expanding ladder (1/3/7/14/30 days) over recorded unassisted verifications; due items join the review queue, upcoming checks are listed with their rung.
+- [ ] Client-component test environment (jsdom + Testing Library) for LessonPlayer/SourceCreator/MaiaPanel.
+- [ ] Move `src/lib/store.ts` behind the `StateBackend` abstraction; durable learner sessions.
+
 ## Current iteration — one Course Architect, one Source Pack, one MCP
 
 - [x] Preserve Museion Originals as the primary learning experience.
@@ -121,6 +137,7 @@ Status legend: `[x]` done · `[ ]` planned
 ## v0.5 — Content & exercise depth
 
 - [x] Practice banks for every lesson
+- [x] Per-step micro-variations: authored fresh-numbers variants with their own verified answers, misconception triggers, and hint ladders, served deterministically after repeated wrong attempts (linear-equations pilot)
 - [ ] More lessons per track: Algebra (two-step inequalities, systems intro), Arithmetic (percentages, ratios), CS (hexadecimal, logic gates, Big-O intuition)
 - [ ] New step kinds: multi-input (e.g. "give both solutions"), ordering, drag-to-match pairs
 - [ ] Adaptive practice composition: pick the next exercise targeting the learner's weakest concept (the "optimal problem X for target Y" pattern)
@@ -131,8 +148,9 @@ Status legend: `[x]` done · `[ ]` planned
 ## v0.6 — The interactive moat
 
 - [ ] Interactive lesson widgets: manipulable components (number line, balance scale, fraction bars, binary bit-flipper) whose state is code-owned ground truth
-- [ ] Feed widget state into Maia's snapshot ("the learner set the slider to 2.3 and stopped")
-- [ ] Let Maia act on the environment: highlight a region, annotate, pose an intermediate micro-question
+- [x] Feed live widget state into Maia's context: labs report unchecked canvas/slot state with each message, server-validated against the active step; even the offline reply acknowledges it ("I can see your canvas: a=1, h=-3, k=2")
+- [x] Misconception-triggered environment highlights: the engine marks the exact equation term or graph control a diagnosed wrong path is about (authored per misconception, validated leak-free)
+- [ ] Further environment actions: free annotations and intermediate micro-questions
 - [ ] Lesson illustrations / diagrams per step
 
 ## v0.7 — Prove it works (the honest metric)

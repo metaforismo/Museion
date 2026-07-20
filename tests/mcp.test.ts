@@ -1,16 +1,24 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { handleMcpRequest } from "@/lib/mcp/protocol";
+import { handleMcpRequest, MCP_ANONYMOUS_RATE_LIMIT, MCP_CALLER_RATE_LIMIT } from "@/lib/mcp/protocol";
+import { resetRateLimitForTests } from "@/lib/server/rate-limit";
 
 const originalToken = process.env.MUSEION_MCP_TOKEN;
+
+beforeEach(() => {
+  resetRateLimitForTests();
+});
 
 afterEach(() => {
   if (originalToken === undefined) delete process.env.MUSEION_MCP_TOKEN;
   else process.env.MUSEION_MCP_TOKEN = originalToken;
 });
 
-function request(authorization?: string) {
-  return new Request("http://localhost/api/mcp", { headers: authorization ? { authorization } : {} });
+function request(authorization?: string, clientId?: string) {
+  const headers: Record<string, string> = {};
+  if (authorization) headers.authorization = authorization;
+  if (clientId) headers["x-mcp-client-id"] = clientId;
+  return new Request("http://localhost/api/mcp", { headers });
 }
 
 describe("Museion MCP protocol", () => {
@@ -59,10 +67,31 @@ describe("Museion MCP protocol", () => {
     const malformed = await handleMcpRequest(request(), { jsonrpc: "1.0", id: 4, method: "tools/list" });
     expect(malformed.status).toBe(400);
 
-    const attempts = await Promise.all(Array.from({ length: 50 }, (_, index) => handleMcpRequest(request(), {
+    const attempts = await Promise.all(Array.from({ length: 50 }, (_, index) => handleMcpRequest(request(undefined, `client-${index}`), {
       jsonrpc: "2.0", id: index, method: "tools/call",
       params: { name: "museion.prepare_source_pack", arguments: { title: "x", materials: [], rights: { confirmed: true, basis: "personal-notes" } } },
     })));
     expect(attempts.every((attempt) => attempt.status === 200 && JSON.stringify(attempt.body).includes("isError"))).toBe(true);
+  });
+
+  it("rate limits repeated tool calls from an unidentified caller", async () => {
+    const call = { jsonrpc: "2.0" as const, id: 1, method: "tools/call" as const, params: { name: "museion.prepare_source_pack", arguments: { title: "x", materials: [], rights: { confirmed: true, basis: "personal-notes" } } } };
+    const attempts = [];
+    for (let index = 0; index < MCP_ANONYMOUS_RATE_LIMIT + 1; index += 1) {
+      attempts.push(await handleMcpRequest(request(), call));
+    }
+    expect(attempts.slice(0, MCP_ANONYMOUS_RATE_LIMIT).every((attempt) => attempt.status === 200)).toBe(true);
+    const limited = attempts[MCP_ANONYMOUS_RATE_LIMIT];
+    expect(limited.status).toBe(429);
+    expect(limited.body).toMatchObject({ error: { code: -32005 } });
+  });
+
+  it("gives distinct identified callers independent, higher rate-limit budgets than anonymous callers", async () => {
+    const call = { jsonrpc: "2.0" as const, id: 1, method: "tools/call" as const, params: { name: "museion.prepare_source_pack", arguments: { title: "x", materials: [], rights: { confirmed: true, basis: "personal-notes" } } } };
+    for (let index = 0; index < MCP_CALLER_RATE_LIMIT; index += 1) {
+      expect((await handleMcpRequest(request(undefined, "client-a"), call)).status).toBe(200);
+    }
+    expect((await handleMcpRequest(request(undefined, "client-a"), call)).status).toBe(429);
+    expect((await handleMcpRequest(request(undefined, "client-b"), call)).status).toBe(200);
   });
 });

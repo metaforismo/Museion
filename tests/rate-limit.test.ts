@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { checkRateLimit } from "@/lib/server/rate-limit";
+import {
+  checkRateLimit,
+  RATE_LIMIT_SWEEP_INTERVAL_CALLS,
+  rateLimitKeyCountForTests,
+  resetRateLimitForTests,
+} from "@/lib/server/rate-limit";
 
 describe("checkRateLimit", () => {
+  beforeEach(() => {
+    resetRateLimitForTests();
+  });
+
   it("allows up to the limit inside the window, then denies", () => {
     const t0 = 1_000_000;
     for (let i = 0; i < 3; i++) {
@@ -31,5 +40,14 @@ describe("checkRateLimit", () => {
     checkRateLimit("k5", 1, 30_000, t0);
     const denied = checkRateLimit("k5", 1, 30_000, t0 + 10_000);
     expect(denied.retryAfterSeconds).toBe(20);
+  });
+
+  it("prunes a key once its whole timestamp array has expired, via periodic sweep", () => {
+    const t0 = 5_000_000;
+    checkRateLimit("stale-key", 1, 1_000, t0);
+    for (let i = 0; i < RATE_LIMIT_SWEEP_INTERVAL_CALLS; i++) {
+      checkRateLimit(`filler-${i}`, 1, 1_000, t0 + 50_000 + i);
+    }
+    expect(rateLimitKeyCountForTests()).toBe(RATE_LIMIT_SWEEP_INTERVAL_CALLS);
   });
 });

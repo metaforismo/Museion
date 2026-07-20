@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fraunces, Inter } from "next/font/google";
 import SiteShell from "@/components/SiteShell";
 import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
@@ -14,6 +15,19 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions." },
 };
 
+const fontDisplay = Fraunces({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const fontSans = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const searchableLessons = allLessons().map(({ id, title, track, description, concepts }) => ({ id, title, track, description, concepts }));
   const searchableCourses = coursePaths.map(({ id, title, subject, tagline, lessonIds }) => ({
@@ -24,7 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     lessonCount: lessonIds.length,
   }));
   return (
-    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
+    <html lang="en" className={`${fontDisplay.variable} ${fontSans.variable} h-full antialiased`} data-scroll-behavior="smooth">
       <body>
         <a href="#main-content" className="skip-link">Skip to content</a>
         <SiteShell courses={searchableCourses} lessons={searchableLessons}>{children}</SiteShell>

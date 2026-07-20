@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { maiaRespond } from "@/lib/maia/tutor";
+import { BoundedTtlCache } from "@/lib/server/bounded-cache";
 import { log } from "@/lib/server/log";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import { getOwnedSession } from "@/lib/server/session-access";
@@ -12,16 +13,43 @@ const MAX_LEARNER_TURNS = 30;
 const BURST_LIMIT = 6;
 const BURST_WINDOW_MS = 60_000;
 
+/**
+ * Live widget state reported with the message. Bounded and typed here,
+ * then cross-checked against the active step server-side — an invalid
+ * or mismatched report is dropped, never trusted.
+ */
+const ActivitySchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("graph"),
+    a: z.number().finite().min(-100).max(100),
+    h: z.number().finite().min(-100).max(100),
+    k: z.number().finite().min(-100).max(100),
+  }).strict(),
+  z.object({
+    kind: z.literal("recursion"),
+    slots: z.record(z.string().min(1).max(60), z.string().min(1).max(60)),
+  }).strict(),
+]);
+
 const MaiaCommandSchema = z.object({
   message: z.string().trim().min(1).max(2_000),
   expectedStepId: z.string().min(1).max(200),
   expectedVersion: z.number().int().nonnegative(),
   idempotencyKey: z.string().uuid(),
+  activity: ActivitySchema.optional(),
 }).strict();
 
+/** Idempotency cache size — bounds memory while covering realistic burst traffic. */
+const MAIA_IDEMPOTENCY_MAX_ENTRIES = 500;
+/** How long a completed turn stays replayable under the same idempotency key. */
+const MAIA_IDEMPOTENCY_TTL_MS = 10 * 60_000;
+
 type MaiaResult = Awaited<ReturnType<typeof maiaRespond>> & { sessionVersion: number };
-const globalMaia = globalThis as unknown as { __museionMaiaCommands?: Map<string, Promise<MaiaResult>> };
-const maiaCommands = globalMaia.__museionMaiaCommands ?? new Map<string, Promise<MaiaResult>>();
+const globalMaia = globalThis as unknown as { __museionMaiaCommands?: BoundedTtlCache<Promise<MaiaResult>> };
+const maiaCommands = globalMaia.__museionMaiaCommands ?? new BoundedTtlCache<Promise<MaiaResult>>({
+  maxEntries: MAIA_IDEMPOTENCY_MAX_ENTRIES,
+  ttlMs: MAIA_IDEMPOTENCY_TTL_MS,
+});
 globalMaia.__museionMaiaCommands = maiaCommands;
 
 export async function POST(
@@ -76,7 +104,7 @@ export async function POST(
   }
 
   log.info("maia_turn_started", { sessionId, learnerTurns });
-  const pending = maiaRespond(session, body.data.message, undefined, request.signal)
+  const pending = maiaRespond(session, body.data.message, undefined, request.signal, body.data.activity ?? null)
     .then((delivery) => ({ ...delivery, sessionVersion: session.version }));
   maiaCommands.set(commandKey, pending);
   try {

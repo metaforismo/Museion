@@ -36,7 +36,11 @@ export function markOnboarded(): void {
 }
 
 export function saveLearningPreferences(preferences: LearningPreferences): void {
-  try { localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences)); } catch { /* preferences are optional */ }
+  try {
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+    // Mirror into a cookie so server components can personalize copy.
+    document.cookie = `museion-preferences=${encodeURIComponent(JSON.stringify(preferences))}; path=/; max-age=31536000; samesite=lax`;
+  } catch { /* preferences are optional */ }
 }
 
 export function readLearningPreferences(): LearningPreferences {

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import SubjectIcon from "@/components/SubjectIcon";
+import { subjectColor } from "@/lib/curriculum/subjects";
+
 export interface CatalogLesson {
   id: string;
   title: string;
@@ -143,40 +146,41 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
           </div>
         </div>
       ) : (
-        <div className="mt-6 grid gap-4 md:grid-cols-12">
-          {filteredLessons.map((lesson, index) => {
-            const featured = lesson.id === "linear-equations-intro";
-            const wide = index % 4 === 0 || index % 4 === 3;
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredLessons.map((lesson) => {
+            const accent = subjectColor(lesson.track);
 
             return (
-              <article key={lesson.id} className={`${wide ? "md:col-span-7" : "md:col-span-5"}`}>
+              <article key={lesson.id} className="min-w-0">
                 <Link
                   href={`/lessons/${lesson.id}`}
-                  className={`group flex min-h-64 h-full flex-col rounded-[1.4rem] p-6 transition duration-200 hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-lapis ${featured ? "bg-ink text-white shadow-[0_18px_50px_rgba(19,28,49,0.15)]" : "border border-ink/10 bg-surface/75 hover:border-lapis/30"}`}
+                  className="group flex h-full flex-col rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] transition duration-200 hover:-translate-y-0.5 hover:border-lapis/30 hover:shadow-[var(--shadow-1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-lapis"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold">
-                    <span className={featured ? "text-gold" : "text-lapis-dark"}>{lesson.track}</span>
-                    <span className={featured ? "text-white/60" : "text-ink-soft"}>{lesson.stepCount} verified steps</span>
+                  <div className="flex items-center gap-2.5">
+                    <SubjectIcon subject={lesson.track} size={32} iconSize={16} />
+                    <span className="min-w-0 flex-1 truncate text-[0.68rem] font-semibold uppercase tracking-[0.09em]" style={{ color: `color-mix(in srgb, ${accent} 62%, var(--color-ink))` }}>{lesson.track}</span>
+                    <span className="shrink-0 text-[0.68rem] font-medium text-ink-soft">{lesson.stepCount} verified steps</span>
                   </div>
-                  <h3 className="mt-6 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{lesson.title}</h3>
-                  <p className={`mt-3 max-w-[55ch] text-sm leading-6 ${featured ? "text-white/65" : "text-ink-soft"}`}>
+                  <h3 className="mt-3 text-lg font-semibold tracking-[-0.01em] transition group-hover:text-lapis-dark">{lesson.title}</h3>
+                  <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-ink-soft">
                     {lesson.description}
                   </p>
-                  <div className="mt-auto flex flex-wrap items-end justify-between gap-4 pt-7">
-                    <div className="flex flex-wrap gap-2">
-                      {lesson.concepts.slice(0, 3).map((concept) => (
-                        <span key={concept} className={`rounded-md px-2 py-1 text-xs ${featured ? "bg-white/10 text-white/80" : "bg-lapis-soft text-lapis-dark"}`}>
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
+                    <div className="flex min-w-0 flex-wrap gap-1.5">
+                      {lesson.concepts.slice(0, 2).map((concept) => (
+                        <span key={concept} className="rounded-md bg-paper px-2 py-1 text-[0.68rem] text-ink-soft">
                           {concept}
                         </span>
                       ))}
                     </div>
-                    <span className={`shrink-0 text-xs font-semibold ${featured ? "text-gold" : "text-lapis-dark"}`}>
-                      Open lesson
+                    <span className="shrink-0 text-xs font-semibold opacity-0 transition group-hover:opacity-100" style={{ color: accent }} aria-hidden="true">
+                      Open →
                     </span>
                   </div>
                   {lesson.practiceAvailable && (
-                    <p className={`mt-4 border-t pt-3 text-xs font-medium ${featured ? "border-white/10 text-white/65" : "border-ink/10 text-ink-soft"}`}>
-                      Hint-free practice available after the lesson
+                    <p className="mt-3 flex items-center gap-1.5 border-t border-ink/8 pt-2.5 text-[0.68rem] font-medium text-ink-soft">
+                      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-correct" />
+                      Hint-free practice after the lesson
                     </p>
                   )}
                 </Link>

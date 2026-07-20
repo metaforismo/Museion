@@ -13,7 +13,7 @@
  * crutch).
  */
 
-import type { Lesson, Step } from "../content/types";
+import type { Lesson, MisconceptionHighlight, Step } from "../content/types";
 import { MasteryModel, type ScaffoldingLevel } from "./mastery";
 import { verify, type VerificationResult } from "./verifier";
 
@@ -28,6 +28,14 @@ export interface StepOutcome {
   awaitingAdvance: boolean;
   sessionVersion: number;
   finalStepSolved: boolean;
+  /** Variant of this step now active after the attempt (0 = base). */
+  activeVariantIndex: number;
+  /**
+   * Bounded environment action for the diagnosed misconception, captured
+   * against the surface the learner actually answered — so idempotent
+   * replays return the same mark even after the active variant moves on.
+   */
+  misconceptionHighlight: MisconceptionHighlight | null;
 }
 
 export interface MutationGuard {
@@ -123,6 +131,45 @@ export class LearnerSession {
     return this.lesson.steps[this.stepIndex];
   }
 
+  /**
+   * Which authored variant of the current step is active. A pure
+   * function of the recorded wrong attempts, so replay and idempotent
+   * retries always resolve the same surface: the base step for the
+   * first two attempts, then a fresh variant after every second wrong
+   * answer, cycling back to the base when the bank is exhausted.
+   */
+  activeVariantIndex(): number {
+    if (this.complete) return 0;
+    const step = this.currentStep;
+    const variants = step.variants ?? [];
+    if (variants.length === 0) return 0;
+    const wrong = this.recordFor(step).attempts.filter((attempt) => !attempt.correct).length;
+    return Math.floor(wrong / 2) % (variants.length + 1);
+  }
+
+  /**
+   * The current step with its active variant applied. Identity fields
+   * (id, concept) always come from the base step; prompt, answer,
+   * solution, misconceptions — and hints when the variant authors its
+   * own — come from the variant. Everything that judges or describes
+   * the step (verifier, hints, Maia's snapshot, the revealed solution)
+   * must go through this, never through `currentStep` directly.
+   */
+  get activeStep(): Step {
+    const step = this.currentStep;
+    const index = this.activeVariantIndex();
+    if (index === 0) return step;
+    const variant = (step.variants ?? [])[index - 1];
+    return {
+      ...step,
+      prompt: variant.prompt,
+      answer: variant.answer,
+      solution: variant.solution,
+      misconceptions: variant.misconceptions,
+      hints: variant.hints ?? step.hints,
+    };
+  }
+
   recordFor(step: Step): StepRecord {
     let record = this.records.get(step.id);
     if (!record) {
@@ -146,7 +193,8 @@ export class LearnerSession {
     if (guard && this.answerResults.has(guard.idempotencyKey)) return this.answerResults.get(guard.idempotencyKey)!;
     this.assertGuard(guard);
     if (this.awaitingAdvance) throw new Error("Advance the solved step before answering again");
-    const step = this.currentStep;
+    // Verify against the variant the learner was actually shown.
+    const step = this.activeStep;
     const record = this.recordFor(step);
     const result = verify(step, rawAnswer);
     record.attempts.push(result);
@@ -185,6 +233,8 @@ export class LearnerSession {
       awaitingAdvance: this.awaitingAdvance,
       sessionVersion: this.version,
       finalStepSolved: result.correct && this.stepIndex === this.lesson.steps.length - 1,
+      activeVariantIndex: this.activeVariantIndex(),
+      misconceptionHighlight: result.misconception?.highlight ?? null,
     };
     if (guard) this.answerResults.set(guard.idempotencyKey, outcome);
     return outcome;
@@ -223,7 +273,7 @@ export class LearnerSession {
     }
     this.assertGuard(guard);
     if (this.awaitingAdvance) throw new Error("Hints are unavailable after the step is solved");
-    const step = this.currentStep;
+    const step = this.activeStep;
     const record = this.recordFor(step);
     const depthAllowed = Math.min(
       this.mastery.maxHintDepth(step.concept),
@@ -246,7 +296,7 @@ export class LearnerSession {
 
   /** Structured lesson state injected into Maia's context. */
   snapshot(): SessionSnapshot {
-    const step = this.currentStep;
+    const step = this.activeStep;
     const record = this.recordFor(step);
     const last = record.attempts.at(-1);
     return {
@@ -270,7 +320,7 @@ export class LearnerSession {
   /** Hint texts already granted for the current step (for resume). */
   revealedHints(): string[] {
     if (this.complete) return [];
-    const step = this.currentStep;
+    const step = this.activeStep;
     return step.hints.slice(0, this.recordFor(step).hintsUsed);
   }
 
