@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { compilerFailurePayload, enqueueCompilerRun, CompilerRunRequestSchema } from "@/lib/compiler";
-import { createSingleDocumentSourcePackManifest, createSourcePackManifest, sourcePackToDocument, verifySourcePackIntegrity } from "@/lib/source";
+import {
+  createSingleDocumentSourcePackManifest,
+  createSourcePackManifest,
+  sourcePackToDocument,
+  verifySourceDocumentIntegrity,
+  verifySourcePackIntegrity,
+} from "@/lib/source";
 import { resolveLearnerId, setLearnerCookie } from "@/lib/server/learner";
 
 export async function POST(request: Request) {
@@ -18,6 +24,7 @@ export async function POST(request: Request) {
       document = expectedDocument;
       sourcePackManifest = createSourcePackManifest(parsed.data.sourcePack, document);
     } else {
+      await verifySourceDocumentIntegrity(document);
       sourcePackManifest = await createSingleDocumentSourcePackManifest(document, parsed.data.rights);
     }
     const response = NextResponse.json(

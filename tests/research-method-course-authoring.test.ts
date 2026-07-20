@@ -31,6 +31,8 @@ function expectedAnswer(step: Lesson["steps"][number]): string {
       return String(step.answer.correctIndex);
     case "expression":
       return step.answer.acceptedForms[0];
+    case "graph":
+      return `a=${step.answer.target.a},h=${step.answer.target.h},k=${step.answer.target.k}`;
   }
 }
 

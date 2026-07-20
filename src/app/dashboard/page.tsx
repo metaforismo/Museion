@@ -1,79 +1,328 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Files02Icon, GraduationScrollIcon, Idea01Icon, LibraryIcon, RepeatIcon, Target01Icon } from "@hugeicons/core-free-icons";
+
 import DashboardEmptyState from "@/components/DashboardEmptyState";
 import MaiaCharacter from "@/components/MaiaCharacter";
+import ProgressRing from "@/components/ProgressRing";
+import SubjectIcon from "@/components/SubjectIcon";
 import { coursePaths } from "@/lib/curriculum";
-import { buildDashboardSnapshot } from "@/lib/dashboard";
+import { subjectColor } from "@/lib/curriculum/subjects";
+import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
 import { readLearnerId } from "@/lib/server/learner";
+import { readLearnerPreferences } from "@/lib/server/preferences";
 
 export const metadata: Metadata = { title: "Home", description: "Your courses, review queue, evidence and next learning action." };
 export const dynamic = "force-dynamic";
 
-function formatTemplate(value: string) { return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+const METHOD_MOVES = ["Ground", "Predict", "Interact", "Diagnose", "Explain", "Transfer", "Revisit"] as const;
 
-function CoursePathCard({ course, index }: { course: (typeof coursePaths)[number]; index: number }) {
-  return <Link href={`/courses/${course.id}`} className="group flex min-h-56 flex-col border-t border-ink/15 px-1 py-5 transition hover:border-lapis">
-    <div className="flex items-center justify-between gap-4">
-      <span className="font-mono text-[0.66rem] font-semibold tabular-nums text-lapis-dark">PATH {String(index + 1).padStart(2, "0")}</span>
-      <span className="text-xs text-ink-soft">{course.subject}</span>
-    </div>
-    <h3 className="mt-5 max-w-sm font-display text-2xl font-semibold tracking-[-0.03em] transition group-hover:text-lapis-dark">{course.title}</h3>
-    <p className="mt-2 max-w-md text-sm leading-6 text-ink-soft">{course.tagline}</p>
-    <div className="mt-auto pt-6">
-      <div className="mb-3 flex items-center justify-between text-[0.68rem] text-ink-soft"><span>{course.lessonIds.length} connected lessons</span><span>{course.estimatedMinutes} min</span></div>
-      <div className="flex items-center gap-1.5" aria-hidden="true">{course.lessonIds.map((lessonId, lessonIndex) => <span key={lessonId} className={`h-1.5 flex-1 rounded-full transition-colors ${lessonIndex === 0 ? "bg-lapis" : "bg-ink/10 group-hover:bg-lapis/25"}`} />)}</div>
-      <span className="mt-4 inline-flex text-sm font-semibold text-lapis-dark">Open learning path <span className="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span></span>
-    </div>
-  </Link>;
+function formatTemplate(value: string) {
+  return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+/** Which method move the recommended action actually exercises. */
+function activeMethodMove(action: DashboardSnapshot["nextAction"]): (typeof METHOD_MOVES)[number] {
+  if (action.kind === "review") return "Revisit";
+  if (action.kind === "resume") return "Interact";
+  if (action.kind === "launch") return "Predict";
+  return "Ground";
+}
+
+function CoursePathCard({ course, progress }: { course: (typeof coursePaths)[number]; progress: { completed: number; total: number } }) {
+  const accent = subjectColor(course.subject);
+  const started = progress.completed > 0;
+  return (
+    <Link
+      href={`/courses/${course.id}`}
+      className="surface-card-quiet group relative flex min-h-40 flex-col overflow-hidden p-5 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-1)]"
+      style={{ borderTop: `3px solid color-mix(in srgb, ${accent} 60%, white)` }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <SubjectIcon subject={course.subject} size={38} iconSize={19} />
+          <span className="text-[0.7rem] font-medium text-ink-soft">{course.subject}<span className="block text-[0.62rem] capitalize text-ink-soft">{course.level}</span></span>
+        </div>
+        {started ? (
+          <ProgressRing completed={progress.completed} total={progress.total} color={accent} />
+        ) : (
+          <span className="rounded-full bg-paper px-2 py-0.5 text-[0.62rem] font-medium text-ink-soft">Not started</span>
+        )}
+      </div>
+      <h3 className="mt-3 font-display text-xl font-semibold tracking-[-0.01em] transition group-hover:text-lapis-dark">{course.title}</h3>
+      <p className="mt-1.5 text-sm leading-6 text-ink-soft">{course.tagline}</p>
+      <div className="mt-auto flex items-center justify-between pt-4 text-[0.7rem] text-ink-soft">
+        <span>{course.lessonIds.length} lessons · {course.estimatedMinutes} min</span>
+        <span className="font-semibold opacity-0 transition group-hover:opacity-100" style={{ color: accent }} aria-hidden="true">{started ? "Continue" : "Start"} →</span>
+      </div>
+    </Link>
+  );
 }
 
 export default async function DashboardPage() {
   const learnerId = await readLearnerId();
-  const snapshot = await buildDashboardSnapshot(learnerId ?? "new-learner");
+  const [snapshot, preferences] = await Promise.all([
+    buildDashboardSnapshot(learnerId ?? "new-learner"),
+    readLearnerPreferences(),
+  ]);
   const hasActivity = snapshot.activeLearning.length > 0;
-  return <div className="mx-auto w-full max-w-[90rem] px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
-    <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-sm font-medium text-lapis-dark">Your learning workspace</p><h1 className="mt-1 font-display text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">Welcome back.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">Continue from recorded work, review a real signal, or build from a source you trust.</p></div>
-      <div className="flex items-center gap-2 text-xs"><span className="rounded-full border border-ink/10 bg-surface px-3 py-1.5 text-ink-soft">{snapshot.runtime.label}</span><span className="rounded-full border border-ink/10 bg-surface px-3 py-1.5 text-ink-soft">{snapshot.runtime.persistence === "process-local" ? "Local learning record" : "Generated work synced · lessons local"}</span></div>
-    </header>
+  const activeMove = activeMethodMove(snapshot.nextAction);
+  const resumeItem = snapshot.activeLearning.find((item) => snapshot.nextAction.href === item.href) ?? null;
+  const greeting = preferences?.goal
+    ? `Working toward: ${preferences.goal}.`
+    : "Continue from recorded work, review a real signal, or build from a source you trust.";
 
-    <section className="mt-7 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,.65fr)]" aria-labelledby="next-action-title">
-      <article className="relative overflow-hidden rounded-[1.6rem] border border-lapis/15 bg-surface p-5 shadow-[var(--shadow-tight)] sm:grid sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center sm:gap-5 sm:p-7">
-        <div className="relative z-10"><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-correct"/><p className="text-xs font-semibold uppercase tracking-[0.08em] text-lapis-dark">Recommended next move</p></div><h2 id="next-action-title" className="mt-3 max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">{snapshot.nextAction.title}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">{snapshot.nextAction.description}</p><div className="mt-5 flex flex-wrap items-center gap-3"><Link href={snapshot.nextAction.href} className="inline-flex min-h-11 items-center rounded-xl bg-lapis px-5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(43,74,203,.18)] transition hover:-translate-y-0.5 hover:bg-lapis-dark">Begin <span aria-hidden="true" className="ml-2">→</span></Link><details className="group"><summary className="cursor-pointer list-none rounded-lg px-2 py-2 text-xs font-medium text-ink-soft hover:bg-paper">Why this?</summary><p className="absolute left-5 right-5 top-full z-20 mt-2 rounded-xl border border-ink/10 bg-surface p-3 text-xs leading-5 text-ink-soft shadow-lg sm:left-auto sm:right-36 sm:w-72">{snapshot.nextAction.reason}</p></details></div></div>
-        <div className="absolute -bottom-8 -right-2 opacity-20 sm:relative sm:bottom-auto sm:right-auto sm:opacity-100"><div aria-hidden="true" className="absolute inset-5 rounded-full bg-lapis-soft blur-xl"/><MaiaCharacter state="curious" className="relative h-40 w-32" title="Maia is ready to guide the next learning move"/></div>
-      </article>
-      <aside className="grid grid-cols-2 overflow-hidden rounded-[1.6rem] border border-ink/10 bg-surface shadow-[var(--shadow-tight)] xl:grid-cols-1">
-        <div className="p-5"><div className="flex items-center justify-between"><div><p className="text-xs font-medium text-ink-soft">Review queue</p><p className="mt-2 text-3xl font-semibold tabular-nums">{snapshot.reviewQueue.length}</p></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-gold-soft text-lg" aria-hidden="true">↻</span></div><p className="mt-3 hidden text-sm leading-6 text-ink-soft sm:block">{snapshot.reviewQueue.length ? "Ranked from recorded learning signals." : "Items appear only after a real signal."}</p></div>
-        <div className="border-l border-ink/8 p-5 xl:border-l-0 xl:border-t"><p className="text-xs font-medium text-ink-soft">Evidence signals</p><p className="mt-2 text-3xl font-semibold tabular-nums">{snapshot.evidence.length}</p><Link href="/progress" className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-lapis-dark">Inspect record <span aria-hidden="true" className="ml-1">→</span></Link></div>
-      </aside>
-    </section>
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="title-page">Welcome back.</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">{greeting}</p>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="rounded-full border border-ink/10 bg-surface px-3 py-1.5 text-ink-soft">
+            {snapshot.runtime.provider === "offline" ? "Offline verified guidance" : "Live guidance connected"}
+          </span>
+          <span className="hidden rounded-full border border-ink/10 bg-surface px-3 py-1.5 text-ink-soft sm:inline">
+            {snapshot.runtime.persistence === "process-local" ? "Learning record on this device" : "Generated work synced"}
+          </span>
+        </div>
+      </header>
 
-    <section aria-label="Museion learning protocol" tabIndex={0} className="mt-4 overflow-x-auto rounded-2xl border border-ink/8 bg-surface px-4 py-3 shadow-[var(--shadow-tight)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis">
-      <ol className="grid min-w-[42rem] grid-cols-5 gap-2">{[["01","Observe","Source"],["02","Predict","Commit"],["03","Test","Check"],["04","Revise","With Maia"],["05","Transfer","Unassisted"]].map(([number,title,detail], index) => <li key={title} className="relative flex items-center gap-3 px-2"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[0.65rem] font-semibold ${index === 0 ? "bg-lapis text-white" : "bg-paper text-ink-soft"}`}>{number}</span><span><span className="block text-xs font-semibold">{title}</span><span className="block text-[0.66rem] text-ink-soft">{detail}</span></span>{index < 4 && <span aria-hidden="true" className="absolute -right-1 h-px w-3 bg-ink/15"/>}</li>)}</ol>
-    </section>
+      {/* Mission — one compact, justified next move */}
+      <section className="surface-card mt-6 overflow-hidden" aria-labelledby="next-action-title">
+        <div className="flex items-stretch">
+          <div className="flex-1 p-5 sm:p-6">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-lapis-dark">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-lapis" />
+              Next move · {activeMove}
+            </p>
+            <h2 id="next-action-title" className="mt-2.5 max-w-2xl font-display text-2xl font-semibold tracking-[-0.01em] sm:text-[1.7rem]">
+              {snapshot.nextAction.title}
+            </h2>
+            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-ink-soft">
+              {snapshot.nextAction.description} {snapshot.nextAction.reason}
+            </p>
+            {resumeItem && (
+              <div className="mt-4 flex max-w-md items-center gap-3">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink/8">
+                  <div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, resumeItem.progress * 100)}%` }} />
+                </div>
+                <span className="font-mono text-xs tabular-nums text-ink-soft">{Math.round(resumeItem.progress * 100)}%</span>
+              </div>
+            )}
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <Link
+                href={snapshot.nextAction.href}
+                className="group inline-flex min-h-11 items-center rounded-xl bg-lapis px-5 text-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark"
+              >
+                Begin <span aria-hidden="true" className="ml-2 transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Link>
+              <p className="text-xs text-ink-soft">
+                <span className="font-medium text-ink">Review queue</span>{" "}
+                {snapshot.reviewQueue.length === 0 ? "empty" : `${snapshot.reviewQueue.length} waiting`} ·{" "}
+                {snapshot.evidence.length === 0
+                  ? "no evidence recorded yet — the first checked move starts the record"
+                  : `${snapshot.evidence.length} evidence ${snapshot.evidence.length === 1 ? "signal" : "signals"} recorded`}
+              </p>
+            </div>
+          </div>
+          <div className="relative hidden items-end pr-6 sm:flex">
+            <span aria-hidden="true" className="absolute bottom-2 right-4 h-24 w-24 rounded-full bg-lapis-soft/80 blur-xl" />
+            <MaiaCharacter state={snapshot.nextAction.kind === "review" ? "thinking" : "curious"} animated className="relative h-36 w-30 -mb-1" title="Maia is ready for the next learning move" />
+          </div>
+        </div>
 
-    <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,.65fr)]">
-      <div className="space-y-6">
-        {hasActivity && <section aria-labelledby="active-title"><div className="mb-3 flex items-end justify-between"><div><p className="text-xs font-medium text-ink-soft">Current thread</p><h2 id="active-title" className="mt-1 text-xl font-semibold">Continue learning</h2></div><Link href="/library" className="text-sm font-medium text-lapis-dark">View library</Link></div>
-          <div className="grid gap-3 sm:grid-cols-2">{snapshot.activeLearning.map((item) => <Link key={item.id} href={item.href} className="group rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] transition hover:-translate-y-0.5 hover:border-lapis/30"><div className="flex items-center justify-between gap-3"><span className="text-[0.68rem] font-medium text-ink-soft">{item.kind === "generated" ? "From your source" : "Museion lesson"}</span><span className="font-mono text-xs tabular-nums text-ink-soft">{Math.round(item.progress * 100)}%</span></div><h3 className="mt-4 font-semibold group-hover:text-lapis-dark">{item.title}</h3><p className="mt-1.5 text-sm text-ink-soft">{item.detail}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/8"><div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, item.progress * 100)}%` }} /></div></Link>)}</div>
-        </section>}
+        {/* Method strip — the active move is derived from the real recommendation */}
+        <ol className="grid grid-cols-7 border-t border-ink/8 bg-paper/50" aria-label="The Museion Method">
+          {METHOD_MOVES.map((move, index) => {
+            const isActive = move === activeMove;
+            return (
+              <li key={move} className="relative flex flex-col items-center gap-1 px-1 py-2.5 text-center">
+                <span
+                  className={`h-1 w-6 rounded-full transition sm:w-9 ${isActive ? "bg-lapis shadow-[0_0_8px_rgba(43,74,203,0.55)]" : "bg-ink/10"}`}
+                  aria-hidden="true"
+                />
+                <span className={`text-[0.56rem] font-semibold sm:text-[0.66rem] ${isActive ? "text-ink" : "text-ink-soft"}`}>
+                  <span className="hidden sm:inline">{move}</span>
+                  <span className="sm:hidden">{index + 1}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
 
-        <section aria-labelledby="paths-title"><div className="mb-1 flex items-end justify-between"><div><p className="text-xs font-medium text-ink-soft">Museion curriculum</p><h2 id="paths-title" className="mt-1 text-xl font-semibold">{hasActivity ? "Explore another path" : "Choose a learning path"}</h2></div><Link href="/library" className="text-sm font-medium text-lapis-dark">All lessons</Link></div>
-          <div className="grid gap-x-6 sm:grid-cols-2">{coursePaths.map((course, index) => <CoursePathCard key={course.id} course={course} index={index} />)}</div>
+      {snapshot.journey.lessonsCompleted > 0 && (
+        <section aria-label="Your journey so far" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Lessons completed", value: snapshot.journey.lessonsCompleted, icon: GraduationScrollIcon, tint: "var(--color-lapis)" },
+            { label: "Courses finished", value: snapshot.journey.coursesCompleted, icon: LibraryIcon, tint: "var(--color-subject-cs)" },
+            { label: "Concepts observed", value: snapshot.journey.conceptsObserved, icon: Idea01Icon, tint: "var(--color-gold)" },
+            { label: "Unaided transfers", value: snapshot.journey.unassistedTransfers, icon: Target01Icon, tint: "var(--color-subject-biology)" },
+          ].map((stat) => (
+            <div key={stat.label} className="surface-card-quiet flex items-center gap-3 px-4 py-3">
+              <span
+                aria-hidden="true"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                style={{ backgroundColor: `color-mix(in srgb, ${stat.tint} 12%, transparent)`, color: stat.tint }}
+              >
+                <HugeiconsIcon icon={stat.icon} size={20} strokeWidth={1.8} />
+              </span>
+              <div className="min-w-0">
+                <p className="font-display text-2xl font-semibold leading-none tabular-nums">{stat.value}</p>
+                <p className="mt-1 truncate text-[0.7rem] leading-4 text-ink-soft">{stat.label}</p>
+              </div>
+            </div>
+          ))}
         </section>
+      )}
 
-        <section aria-labelledby="evidence-title" className="rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] sm:p-6"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-medium text-ink-soft">Understanding evidence</p><h2 id="evidence-title" className="mt-1 text-xl font-semibold">What the record supports</h2></div><Link href="/progress" className="text-sm font-medium text-lapis-dark">See evidence</Link></div>
-          {snapshot.evidence.length ? <div className="mt-5 grid gap-x-6 gap-y-1 sm:grid-cols-2">{snapshot.evidence.slice(0,6).map((item) => <div key={`${item.concept}:${item.state}`} className="flex items-center justify-between border-t border-ink/8 py-3"><div><p className="text-sm font-medium">{item.concept}</p><p className="mt-0.5 text-xs text-ink-soft">{item.state === "observed-guided" ? "Observed in guided work" : item.state === "hint-free-practice" ? "Hint-free practice completed" : "Immediate near transfer"}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.result === "incorrect" || item.result === "developing" ? "bg-gold-soft text-ink" : "bg-correct-soft text-correct"}`}>{item.result}</span></div>)}</div> : <DashboardEmptyState icon="evidence" title="No evidence has been recorded" description="Complete a checked learning move. Museion will record only the observation the engine can support." actionHref={snapshot.nextAction.href} actionLabel="Make the first checked move" />}
-        </section>
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(19rem,.6fr)]">
+        <div className="space-y-6">
+          {hasActivity && (
+            <section aria-labelledby="active-title">
+              <div className="mb-3 flex items-end justify-between">
+                <h2 id="active-title" className="title-panel">Continue learning</h2>
+                <Link href="/library" className="text-sm font-medium text-lapis-dark">View library</Link>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {snapshot.activeLearning.map((item) => (
+                  <Link key={item.id} href={item.href} className="surface-card-quiet group p-5 transition hover:border-lapis/30 hover:shadow-[var(--shadow-1)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[0.68rem] font-medium text-ink-soft">{item.kind === "generated" ? "From your source" : "Museion Original"}</span>
+                      <span className="font-mono text-xs tabular-nums text-ink-soft">{Math.round(item.progress * 100)}%</span>
+                    </div>
+                    <h3 className="mt-3 font-display text-lg font-semibold group-hover:text-lapis-dark">{item.title}</h3>
+                    <p className="mt-1 text-sm text-ink-soft">{item.detail}</p>
+                    <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/8">
+                      <div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, item.progress * 100)}%` }} />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section aria-labelledby="paths-title">
+            <div className="mb-1 flex items-end justify-between">
+              <h2 id="paths-title" className="title-panel">{hasActivity ? "Explore another path" : "Choose a learning path"}</h2>
+              <Link href="/library" className="text-sm font-medium text-lapis-dark">All lessons</Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {coursePaths.map((course) => (
+                <CoursePathCard key={course.id} course={course} progress={snapshot.courseProgress[course.id] ?? { completed: 0, total: course.lessonIds.length }} />
+              ))}
+            </div>
+          </section>
+
+          <section aria-labelledby="evidence-title">
+            <div className="mb-3 flex items-end justify-between gap-4">
+              <h2 id="evidence-title" className="title-panel">What the record supports</h2>
+              <Link href="/progress" className="text-sm font-medium text-lapis-dark">Full evidence</Link>
+            </div>
+            {snapshot.evidence.length ? (
+              <div className="surface-card-quiet grid gap-x-6 gap-y-0 px-5 sm:grid-cols-2">
+                {snapshot.evidence.slice(0, 6).map((item) => (
+                  <div key={`${item.concept}:${item.state}`} className="flex items-center justify-between border-t border-ink/8 py-3 first:border-t-0 sm:[&:nth-child(2)]:border-t-0">
+                    <div>
+                      <p className="text-sm font-medium">{item.concept}</p>
+                      <p className="mt-0.5 text-xs text-ink-soft">
+                        {item.state === "observed-guided" ? "Observed in guided work" : item.state === "hint-free-practice" ? "Hint-free practice completed" : "Immediate near transfer"}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.result === "incorrect" || item.result === "developing" ? "bg-gold-soft text-ink" : "bg-correct-soft text-correct"}`}>
+                      {item.result}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="surface-card-quiet">
+                <DashboardEmptyState
+                  icon="evidence"
+                  title="No evidence has been recorded"
+                  description="Complete a checked learning move. Museion will record only the observation the engine can support."
+                  actionHref={snapshot.nextAction.href}
+                  actionLabel="Make the first checked move"
+                />
+              </div>
+            )}
+          </section>
+        </div>
+
+        <aside className="space-y-6">
+          <section aria-labelledby="misconceptions-title">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="misconceptions-title" className="flex items-center gap-2 title-panel"><span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-lg" style={{ backgroundColor: "color-mix(in srgb, var(--color-gold) 14%, transparent)", color: "var(--color-gold)" }}><HugeiconsIcon icon={RepeatIcon} size={15} strokeWidth={2} /></span>Recent misconceptions</h2>
+              <span className="font-mono text-xs tabular-nums text-ink-soft">{snapshot.misconceptions.length}</span>
+            </div>
+            {snapshot.misconceptions.length ? (
+              <div className="surface-card-quiet px-5">
+                <div className="divide-y divide-ink/8">
+                  {snapshot.misconceptions.slice(0, 3).map((item) => (
+                    <Link key={`${item.id}:${item.observedAt}`} href={item.href} className="block py-3.5">
+                      <p className="text-xs font-medium text-lapis-dark">{item.concept}</p>
+                      <p className="mt-1 line-clamp-2 text-sm leading-5 text-ink">{item.label}</p>
+                      <p className="mt-1 text-xs text-ink-soft">
+                        {item.status === "corrected-in-session" ? "Corrected during the session; worth rechecking" : "Not yet resolved"}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+                <Link href="/review" className="mb-4 mt-1 inline-flex text-sm font-semibold text-lapis-dark">Open review</Link>
+              </div>
+            ) : (
+              <div className="surface-card-quiet">
+                <DashboardEmptyState
+                  icon="review"
+                  title="Nothing needs correction yet"
+                  description="Appears only when a checked answer matches a known wrong path."
+                  actionHref="/library"
+                  actionLabel="Choose a lesson"
+                />
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="sources-title">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="sources-title" className="flex items-center gap-2 title-panel"><span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-lg" style={{ backgroundColor: "color-mix(in srgb, var(--color-lapis) 12%, transparent)", color: "var(--color-lapis)" }}><HugeiconsIcon icon={Files02Icon} size={15} strokeWidth={2} /></span>Recent sources</h2>
+              {snapshot.recentSources.length > 0 && <Link href="/create" className="text-xs font-medium text-lapis-dark">Add source</Link>}
+            </div>
+            {snapshot.recentSources.length ? (
+              <div className="surface-card-quiet px-5">
+                <div className="divide-y divide-ink/8">
+                  {snapshot.recentSources.map((source) => (
+                    <Link key={source.id} href={source.href} className="block py-3.5">
+                      <p className="truncate text-sm font-medium">{source.title}</p>
+                      <p className="mt-1 text-xs text-ink-soft">
+                        {source.pages} {source.pages === 1 ? "page" : "pages"} · {formatTemplate(source.templateId)}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="surface-card-quiet">
+                <DashboardEmptyState
+                  icon="source"
+                  title="No source has been compiled"
+                  description="Bring material you may use — provenance stays attached to the course."
+                  actionHref="/create"
+                  actionLabel="Open Source Studio"
+                />
+              </div>
+            )}
+          </section>
+        </aside>
       </div>
 
-      <aside className="space-y-6">
-        <section className="rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)]" aria-labelledby="misconceptions-title"><div className="flex items-center justify-between"><h2 id="misconceptions-title" className="font-semibold">Recent misconceptions</h2><span className="font-mono text-xs tabular-nums text-ink-soft">{snapshot.misconceptions.length}</span></div>{snapshot.misconceptions.length ? <><div className="mt-3 divide-y divide-ink/8">{snapshot.misconceptions.slice(0,3).map((item) => <Link key={`${item.id}:${item.observedAt}`} href={item.href} className="block py-3"><p className="text-xs font-medium text-lapis-dark">{item.concept}</p><p className="mt-1 line-clamp-2 text-sm leading-5 text-ink">{item.label}</p><p className="mt-1 text-xs text-ink-soft">{item.status === "corrected-in-session" ? "Corrected during the session; worth rechecking" : "Not yet resolved"}</p></Link>)}</div><Link href="/review" className="mt-3 inline-flex text-sm font-semibold text-lapis-dark">Open misconception lab</Link></> : <DashboardEmptyState icon="review" title="Nothing needs correction yet" description="A misconception appears here only after a checked response matches a registered reasoning pattern." actionHref="/library" actionLabel="Choose a lesson" />}</section>
-
-        <section className="rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)]" aria-labelledby="sources-title"><div className="flex items-center justify-between"><h2 id="sources-title" className="font-semibold">Recent sources</h2>{snapshot.recentSources.length > 0 && <Link href="/create" className="text-xs font-medium text-lapis-dark">Add source</Link>}</div>{snapshot.recentSources.length ? <div className="mt-3 divide-y divide-ink/8">{snapshot.recentSources.map((source) => <Link key={source.id} href={source.href} className="block py-3"><p className="truncate text-sm font-medium">{source.title}</p><p className="mt-1 text-xs text-ink-soft">{source.pages} {source.pages === 1 ? "page" : "pages"} · {formatTemplate(source.templateId)}</p></Link>)}</div> : <DashboardEmptyState icon="source" title="No source has been compiled" description="Add material you are allowed to use. Museion keeps its provenance attached to the generated course." actionHref="/create" actionLabel="Open Source studio" />}</section>
-      </aside>
+      <p className="mt-10 border-t border-ink/10 pt-4 text-xs leading-5 text-ink-soft">
+        {snapshot.limitations[0]} <Link href="/progress" className="font-medium text-lapis-dark">Read the evidence boundary.</Link>
+      </p>
     </div>
-    <p className="mt-7 border-t border-ink/10 pt-4 text-xs leading-5 text-ink-soft">{snapshot.limitations[0]} <Link href="/progress" className="font-medium text-lapis-dark">Read the evidence boundary.</Link></p>
-  </div>;
+  );
 }

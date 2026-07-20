@@ -1,9 +1,11 @@
 import { getAiSettings } from "@/lib/ai/settings";
 import { allLessons } from "@/lib/content";
+import { coursePaths } from "@/lib/curriculum";
 import { hasPractice } from "@/lib/engine/practice";
 import { listCompilerRuns } from "@/lib/compiler/runs";
 import { listJudgeSessions } from "@/lib/judge/store";
 import { stateBackend } from "@/lib/server/durable-state";
+import { planRevisits } from "@/lib/revisit/scheduler";
 import { getProfile, listSessionsForLearner } from "@/lib/store";
 
 import { DashboardSnapshotSchema, type DashboardSnapshot } from "./contracts";
@@ -113,6 +115,21 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
     }
   }
 
+  // Spaced revisits whose interval has elapsed join the queue: the
+  // schedule is computed from recorded timestamps, never invented.
+  const queuedConcepts = new Set(reviewQueue.map((item) => item.concept.toLowerCase()));
+  for (const item of planRevisits(authoredSessions, Date.now())) {
+    if (reviewQueue.length >= 6) break;
+    if (item.status !== "due" || queuedConcepts.has(titleCase(item.concept).toLowerCase())) continue;
+    reviewQueue.push({
+      id: `revisit:${item.concept}`,
+      concept: titleCase(item.concept),
+      reason: item.reason,
+      href: item.href,
+      priority: item.missedSinceVerified ? "high" : "normal",
+    });
+  }
+
   const observations = answeredConcepts(authoredSessions);
   const observedConcepts = new Set([...observations.guided, ...observations.practiced]);
   const evidence: DashboardSnapshot["evidence"] = profile
@@ -160,6 +177,25 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
                 ? { kind: "launch" as const, title: `Start ${firstLesson.title}`, description: "Make your first checked learning move.", href: `/lessons/${firstLesson.id}`, reason: "There is no learning record yet." }
                 : { kind: "create" as const, title: "Create a course from a source", description: "Bring a document you want to understand.", href: "/create", reason: "There is no unfinished or high-priority review item." };
 
+  // Real per-course progress from completed lessons — nothing invented.
+  const completed = profile?.completedLessons ?? new Set<string>();
+  const courseProgress: Record<string, { completed: number; total: number }> = {};
+  let coursesCompleted = 0;
+  for (const course of coursePaths) {
+    const done = course.lessonIds.filter((id) => completed.has(id)).length;
+    courseProgress[course.id] = { completed: done, total: course.lessonIds.length };
+    if (done === course.lessonIds.length) coursesCompleted += 1;
+  }
+  const unassistedTransfers = generatedSessions.filter(
+    (session) => session.transfer.status === "scored" && session.transfer.correct === true,
+  ).length;
+  const journey = {
+    lessonsCompleted: completed.size,
+    coursesCompleted,
+    unassistedTransfers,
+    conceptsObserved: observedConcepts.size,
+  };
+
   const settings = getAiSettings();
   return DashboardSnapshotSchema.parse({
     schemaVersion: "1.0",
@@ -176,6 +212,8 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
       createdAt: run.createdAt,
       href: `/learn/${run.runId}`,
     })),
+    courseProgress,
+    journey,
     runtime: {
       provider: settings.provider,
       label: settings.provider === "codex" ? "ChatGPT via Codex" : settings.provider === "offline" ? "Offline demo" : "OpenAI API",

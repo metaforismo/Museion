@@ -35,6 +35,38 @@ describe("revealsAnswer: numeric", () => {
   });
 });
 
+describe("revealsAnswer: spelled-out numbers above twelve, other languages", () => {
+  it("catches a spelled English answer above twelve", () => {
+    const step = makeStep({ kind: "numeric", value: 13, tolerance: 0 });
+    expect(revealsAnswer(step, "The answer is thirteen.")).toBe(true);
+  });
+
+  it("catches hyphenated and spaced compound English number words", () => {
+    const step = makeStep({ kind: "numeric", value: 42, tolerance: 0 });
+    expect(revealsAnswer(step, "The answer is forty-two.")).toBe(true);
+    expect(revealsAnswer(step, "The answer is forty two.")).toBe(true);
+  });
+
+  it("does not flag an unrelated spelled number for a different answer", () => {
+    const step = makeStep({ kind: "numeric", value: 42, tolerance: 0 });
+    expect(revealsAnswer(step, "The answer is thirteen students away from done.")).toBe(false);
+  });
+
+  it("catches spelled thirteen in French, Spanish and German", () => {
+    const step = makeStep({ kind: "numeric", value: 13, tolerance: 0 });
+    expect(revealsAnswer(step, "La réponse est treize.")).toBe(true);
+    expect(revealsAnswer(step, "La respuesta es trece.")).toBe(true);
+    expect(revealsAnswer(step, "Das Ergebnis ist dreizehn.")).toBe(true);
+  });
+
+  it("leaves clean coaching sentences alone", () => {
+    const step = makeStep({ kind: "numeric", value: 13, tolerance: 0 });
+    expect(
+      revealsAnswer(step, "What do you get when you add those two numbers together?"),
+    ).toBe(false);
+  });
+});
+
 describe("revealsAnswer: multiple choice", () => {
   const step = makeStep({
     kind: "multipleChoice",

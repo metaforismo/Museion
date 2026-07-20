@@ -35,8 +35,8 @@ export default function AboutPage() {
     <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:py-24">
       <article className="animate-fade-up">
         <p className="eyebrow">The name and the method</p>
-        <h1 className="mt-4 font-display text-5xl font-semibold tracking-[-0.04em] sm:text-6xl">
-          Why “Museion”?
+        <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.03em]">
+          Why &ldquo;Museion&rdquo;?
         </h1>
 
         <section className="mt-6 space-y-4 text-lg leading-relaxed text-ink">
@@ -89,7 +89,7 @@ export default function AboutPage() {
           {PRINCIPLES.map((principle, index) => (
             <div
               key={principle.title}
-              className={`grid gap-3 rounded-[1.35rem] p-6 sm:grid-cols-[3rem_1fr] ${index % 2 === 0 ? "premium-surface border border-white/80" : "border border-ink/10 bg-paper/50 lg:ml-10"}`}
+              className={`grid gap-3 rounded-2xl p-6 sm:grid-cols-[3rem_1fr] ${index % 2 === 0 ? "premium-surface border border-white/80" : "border border-ink/10 bg-paper/50 lg:ml-10"}`}
             >
               <span className="tabular-nums font-mono text-sm font-semibold text-lapis">0{index + 1}</span>
               <div><h3 className="font-display text-lg font-semibold text-lapis-dark">{principle.title}</h3><p className="mt-2 leading-relaxed text-ink-soft">{principle.body}</p></div>

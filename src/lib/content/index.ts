@@ -16,12 +16,26 @@ import probabilityBaseRates from "./lessons/probability-as-evidence-base-rates";
 import functionsInputOutput from "./lessons/functions-as-change-input-output";
 import functionsRateOfChange from "./lessons/functions-as-change-rate-of-change";
 import functionsLinearModels from "./lessons/functions-as-change-linear-models";
+import functionsTransformationLab from "./lessons/functions-as-change-transformation-lab";
 import claimsOperationalize from "./lessons/claims-to-evidence-operationalize";
 import claimsObservationInference from "./lessons/claims-to-evidence-observation-inference";
 import claimsFalsifiableComparison from "./lessons/claims-to-evidence-falsifiable-comparison";
 import samplesSamplingFrame from "./lessons/samples-to-conclusions-sampling-frame";
 import samplesVariability from "./lessons/samples-to-conclusions-variability";
 import samplesBoundedEstimates from "./lessons/samples-to-conclusions-bounded-estimates";
+import forcesNetForce from "./lessons/forces-and-motion-net-force";
+import forcesAcceleration from "./lessons/forces-and-motion-acceleration";
+import forcesTransfer from "./lessons/forces-and-motion-transfer";
+import selectionVariation from "./lessons/natural-selection-variation";
+import selectionSurvival from "./lessons/natural-selection-differential-survival";
+import selectionTransfer from "./lessons/natural-selection-transfer";
+import recursionBaseCase from "./lessons/recursion-base-case";
+import recursionTracing from "./lessons/recursion-tracing";
+import recursionTransfer from "./lessons/recursion-transfer";
+import recursionCodeLab from "./lessons/recursion-code-lab";
+import proportionUnitRate from "./lessons/proportional-reasoning-unit-rate";
+import proportionScaling from "./lessons/proportional-reasoning-scaling";
+import proportionTransfer from "./lessons/proportional-reasoning-transfer";
 
 export * from "./types";
 export { validateLesson } from "./validate";
@@ -44,12 +58,26 @@ const LESSONS: readonly Lesson[] = [
   functionsInputOutput,
   functionsRateOfChange,
   functionsLinearModels,
+  functionsTransformationLab,
   claimsOperationalize,
   claimsObservationInference,
   claimsFalsifiableComparison,
   samplesSamplingFrame,
   samplesVariability,
   samplesBoundedEstimates,
+  forcesNetForce,
+  forcesAcceleration,
+  forcesTransfer,
+  selectionVariation,
+  selectionSurvival,
+  selectionTransfer,
+  recursionBaseCase,
+  recursionTracing,
+  recursionTransfer,
+  recursionCodeLab,
+  proportionUnitRate,
+  proportionScaling,
+  proportionTransfer,
 ];
 
 export function allLessons(): readonly Lesson[] {

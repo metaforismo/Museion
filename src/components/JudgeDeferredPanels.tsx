@@ -39,6 +39,14 @@ function EvidenceResult({ session, reviewHref, onReset }: { session: JudgeSessio
   return <section className="mt-7 space-y-5">
     <div className={`rounded-[1.4rem] p-7 ${session.transfer.correct ? "bg-correct-soft" : "bg-wrong-soft"}`}><p className="text-sm font-semibold uppercase tracking-wide">Observed result</p><h2 className="mt-2 font-display text-3xl font-semibold">{session.transfer.correct ? "Correct" : "Not correct"}</h2><p className="mt-3 leading-relaxed">{observation.statement}</p></div>
     <div className="rounded-[1.4rem] bg-surface p-6 shadow-[0_18px_60px_rgba(35,53,91,0.07)]"><h3 className="font-display text-xl font-semibold">Evidence ledger</h3><dl className="mt-5 grid border-y border-ink/10 text-sm sm:grid-cols-3 sm:divide-x sm:divide-ink/10">{[{ label: "Observation", value: "Immediate near transfer" }, { label: "Assistance", value: "0 Maia · 0 hints · 0 solutions" }, { label: "Event records", value: `${observation.eventIds.length} reconciled` }].map((item) => <div key={item.label} className="border-b border-ink/10 py-4 last:border-b-0 sm:border-b-0 sm:px-4 sm:first:pl-0"><dt className="text-ink-soft">{item.label}</dt><dd className="mt-1 font-medium">{item.value}</dd></div>)}</dl><h4 className="mt-6 font-semibold">What this does not establish</h4><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft">{observation.limitations.map((item) => <li key={item}>{item}</li>)}</ul><p className="mt-4 break-words font-mono text-xs text-ink-soft">Source citations: {observation.citations.map((item) => item.spanId).join(", ")}</p></div>
-    <div className="flex flex-wrap gap-3"><button type="button" onClick={onReset} className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white">Run again</button><Link href={reviewHref} className="rounded-lg border border-lapis px-5 py-2.5 font-medium text-lapis">Inspect provenance</Link></div>
+    <div className="rounded-[var(--radius-card)] border border-lapis/20 bg-lapis-soft/50 p-6">
+      <h3 className="font-display text-lg font-semibold">Keep going</h3>
+      <p className="mt-1 text-sm leading-6 text-ink-soft">This run is recorded. The full library has six authored learning paths, and your dashboard tracks the next justified move.</p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Link href="/dashboard" className="rounded-lg bg-ink px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark">Go to your dashboard</Link>
+        <Link href="/library" className="rounded-lg border border-ink/15 bg-surface px-5 py-2.5 font-medium">Browse the library</Link>
+      </div>
+    </div>
+    <div className="flex flex-wrap gap-3"><button type="button" onClick={onReset} className="rounded-lg border border-lapis px-5 py-2.5 font-medium text-lapis">Run again</button><Link href={reviewHref} className="rounded-lg border border-ink/15 px-5 py-2.5 font-medium text-ink-soft">Inspect provenance</Link></div>
   </section>;
 }

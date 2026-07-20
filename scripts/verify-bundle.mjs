@@ -3,7 +3,9 @@ import path from "node:path";
 
 const staticDir = path.resolve(".next/static");
 const budgets = {
-  totalBytes: 3 * 1024 * 1024,
+  // 3 MiB of app assets plus ~0.35 MiB of self-hosted display/UI fonts
+  // (Fraunces 500/600 + Inter). JavaScript budgets stay unchanged.
+  totalBytes: Math.round(3.35 * 1024 * 1024),
   largestJavaScriptBytes: 550 * 1024,
   pdfWorkerBytes: 1400 * 1024,
 };

@@ -37,7 +37,7 @@ export default async function CreatorReviewPage() {
       <div className="flex flex-wrap items-start justify-between gap-5">
         <div className="max-w-3xl">
           <p className="eyebrow">Creator review · verified replay</p>
-          <h1 className="mt-4 font-display text-5xl font-semibold tracking-[-0.04em] sm:text-6xl">{artifact.title}</h1>
+          <h1 className="mt-4 title-page">{artifact.title}</h1>
           <p className="mt-5 max-w-[62ch] text-lg leading-8 text-ink-soft">Inspect what the compiler grounded, planned, and accepted before a learner sees it.</p>
         </div>
         <div className={`rounded-full px-4 py-2 text-sm font-semibold ${blockingIssues.length === 0 ? "bg-correct-soft text-correct" : "bg-wrong-soft text-wrong"}`}>
@@ -54,7 +54,7 @@ export default async function CreatorReviewPage() {
         ))}
       </section>
 
-      <section className="premium-surface mt-8 rounded-[1.6rem] border border-white/80 p-6 sm:p-8">
+      <section className="premium-surface mt-8 rounded-[var(--radius-card)] border border-white/80 p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div><h2 className="font-display text-2xl font-semibold">Source Graph</h2><p className="mt-1 text-sm text-ink-soft">{graph.concepts.length} concepts · {graph.claims.length} claims · {Object.keys(graph.spans).length} exact spans</p></div>
           <code className="max-w-full overflow-x-auto text-xs text-ink-soft" title={graphHash}>graph {graphHash.slice(0, 16)}…</code>
@@ -84,7 +84,7 @@ export default async function CreatorReviewPage() {
         </details>
       </section>
 
-      <section className="premium-surface mt-6 rounded-[1.6rem] border border-white/80 p-6 sm:p-8">
+      <section className="premium-surface mt-6 rounded-[var(--radius-card)] border border-white/80 p-6 sm:p-8">
         <h2 className="font-display text-2xl font-semibold">Blueprint</h2>
         <p className="mt-2 text-ink-soft">{blueprint.bigQuestion}</p>
         <ol className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -93,7 +93,7 @@ export default async function CreatorReviewPage() {
         <p className="mt-5 rounded-lg bg-gold-soft p-4"><strong>Aha:</strong> {blueprint.ahaMoment}</p>
       </section>
 
-      <section className="premium-surface mt-6 rounded-[1.6rem] border border-white/80 p-6 sm:p-8">
+      <section className="premium-surface mt-6 rounded-[var(--radius-card)] border border-white/80 p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-display text-2xl font-semibold">Published course</h2><p className="mt-1 text-sm text-ink-soft">Private truth is retained server-side; public serialization removes answer specs and misconception internals.</p></div><code className="text-xs text-ink-soft">artifact {artifactHash.slice(0, 16)}…</code></div>
         <div className="mt-5 space-y-3">
           {artifact.lessons[0].blockIds.map((id, index) => { const block = artifact.blocks[id]; return <div key={id} className="flex items-center gap-4 rounded-lg border border-ink/10 p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lapis-soft font-semibold text-lapis">{index + 1}</span><div><p className="font-semibold">{block.accessibilityLabel}</p><p className="text-sm text-ink-soft">{block.kind} · {block.citations.map((citation) => citation.spanId).join(", ")}</p></div></div>; })}

@@ -35,6 +35,8 @@ export interface TutorTurnInput {
   history: import("../engine/session").ChatMessage[];
   learnerMessage: string;
   allowedUiTargetIds: string[];
+  /** Deterministic sentence describing the learner's live, unchecked widget state. */
+  liveActivity: string | null;
 }
 
 export interface TutorUsage {

@@ -2,7 +2,7 @@
 
 ## Current measured baseline
 
-On 2026-07-15 the offline Vitest suite passed 147 tests; 17 separately gated live cases skipped without explicit opt-in. Lint, strict TypeScript, production build, dependency audit, bundle budgets and Chrome verification passed. The browser gate covers Settings and the complete source → template → replay review → lesson journey, accessibility scans at 1440 and 320 px, keyboard completion, three performance routes, and 20 independent desktop Judge contexts with no console/page/5xx errors or overflow.
+On 2026-07-19 the offline Vitest suite reported 38 test files passed and 1 skipped (39 total), with 309 tests passed and 17 separately gated live cases skipped without explicit opt-in (326 total). Lint, strict TypeScript, production build, dependency audit, bundle budgets and Chrome verification passed. The browser gate covers Settings and the complete source → template → replay review → lesson journey, accessibility scans at 1440 and 320 px, keyboard completion, three performance routes, and 20 independent desktop Judge contexts with no console/page/5xx errors or overflow.
 
 The local Codex runtime (`codex-cli 0.144.2`) was authenticated through its official session. Minimal strict-output checks resolved `gpt-5.6-luna` in 3,916 ms, `gpt-5.6-terra` in 4,917 ms and `gpt-5.6-sol` in 4,606 ms. A non-golden water-cycle source then produced an accepted course through Luna Source Graph, Terra Blueprint, Terra Course Artifact and Sol critic in 76,906 ms. Eight adversarial Maia requests ran through Terra in 42.9 s total with 0 delivered answer leaks, 0 fallback deliveries and 0 repairs. Codex does not expose token usage here, so no token or cost estimate is invented.
 

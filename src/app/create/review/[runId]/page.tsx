@@ -60,7 +60,7 @@ export default async function CompilationRunReview({
       <header className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-start">
         <div>
           <p className="eyebrow">Creator review · {run.mode}</p>
-          <h1 className="mt-4 max-w-4xl font-display text-5xl font-semibold tracking-[-0.04em]">
+          <h1 className="mt-4 max-w-4xl title-page">
             {run.artifact.title}
           </h1>
           <p className="mt-4 max-w-[62ch] text-lg leading-8 text-ink-soft">
@@ -100,7 +100,7 @@ export default async function CompilationRunReview({
       </nav>
 
       <section id="overview" className="mt-7 grid scroll-mt-32 gap-4 md:grid-cols-[1.15fr_.85fr]">
-        <div className="premium-surface rounded-[1.6rem] p-6 sm:p-8">
+        <div className="premium-surface rounded-[var(--radius-card)] p-6 sm:p-8">
           <p className="eyebrow">Course design</p>
           <h2 className="mt-3 font-display text-3xl font-semibold">{template.name}</h2>
           <p className="mt-3 max-w-[58ch] leading-7 text-ink-soft">{template.description}</p>
@@ -123,7 +123,7 @@ export default async function CompilationRunReview({
             </div>
           </dl>
         </div>
-        <div className="rounded-[1.6rem] bg-ink p-6 text-white sm:p-8">
+        <div className="rounded-[var(--radius-card)] bg-ink p-6 text-white sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold">Grounding record</p>
           <p className="mt-5 font-display text-4xl font-semibold">{run.sourceGraph.concepts.length}</p>
           <p className="text-sm text-white/60">source-backed concepts</p>
@@ -132,7 +132,7 @@ export default async function CompilationRunReview({
         </div>
       </section>
 
-      <section id="source-pack" className="mt-6 scroll-mt-32 rounded-[1.6rem] border border-ink/10 bg-surface/65 p-6 sm:p-8">
+      <section id="source-pack" className="mt-6 scroll-mt-32 rounded-[var(--radius-card)] border border-ink/10 bg-surface/65 p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Source Pack ledger</p>
@@ -172,7 +172,7 @@ export default async function CompilationRunReview({
         )}
       </section>
 
-      <section id="sequence" className="premium-surface mt-6 scroll-mt-32 rounded-[1.6rem] p-6 sm:p-8">
+      <section id="sequence" className="premium-surface mt-6 scroll-mt-32 rounded-[var(--radius-card)] p-6 sm:p-8">
         <div className="max-w-2xl">
           <p className="eyebrow">Learning sequence</p>
           <h2 className="mt-3 font-display text-3xl font-semibold">What the learner will do</h2>
@@ -256,7 +256,7 @@ export default async function CompilationRunReview({
         )}
       </section>
 
-      <section id="citations" className="mt-6 scroll-mt-32 rounded-[1.6rem] border border-ink/10 bg-surface/65 p-6 sm:p-8">
+      <section id="citations" className="mt-6 scroll-mt-32 rounded-[var(--radius-card)] border border-ink/10 bg-surface/65 p-6 sm:p-8">
         <p className="eyebrow">Exact evidence</p>
         <h2 className="mt-3 font-display text-3xl font-semibold">Source quotations</h2>
         <p className="mt-3 max-w-2xl leading-7 text-ink-soft">
@@ -275,7 +275,7 @@ export default async function CompilationRunReview({
         </div>
       </section>
 
-      <section id="validation" className="mt-6 scroll-mt-32 rounded-[1.6rem] border border-ink/10 bg-surface/65 p-6 sm:p-8">
+      <section id="validation" className="mt-6 scroll-mt-32 rounded-[var(--radius-card)] border border-ink/10 bg-surface/65 p-6 sm:p-8">
         <p className="eyebrow">Publication gate</p>
         <h2 className="mt-3 font-display text-3xl font-semibold">Deterministic validation</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -299,7 +299,7 @@ export default async function CompilationRunReview({
         </p>
       </section>
 
-      <section id="provenance" className="mt-6 scroll-mt-32 rounded-[1.6rem] border border-ink/10 bg-paper p-6 sm:p-8">
+      <section id="provenance" className="mt-6 scroll-mt-32 rounded-[var(--radius-card)] border border-ink/10 bg-paper p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Provenance</p>

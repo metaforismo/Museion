@@ -177,6 +177,21 @@ export async function createSourceDocument(
 }
 
 /**
+ * Recompute `instruction_like_content` warnings from accepted page text.
+ * Warnings sit outside the document hash, so a client cannot strip them
+ * from a hash-valid document; the server always recomputes and merges.
+ */
+export function recomputeSourceWarnings(document: SourceDocument): SourceWarning[] {
+  return document.pages
+    .filter((page) => INSTRUCTION_LIKE_CONTENT.test(page.text))
+    .map((page) => ({
+      code: "instruction_like_content" as const,
+      pageNumber: page.pageNumber,
+      message: "The source contains instruction-like text. It remains untrusted source data.",
+    }));
+}
+
+/**
  * Recompute every server-authoritative source field before compilation.
  * A browser may normalize for preview, but it cannot choose hashes or route a
  * request into the golden replay by claiming the fixture digest.
@@ -203,5 +218,10 @@ export async function verifySourceDocumentIntegrity(document: SourceDocument): P
   const sha256 = await sha256Hex(canonicalPayload);
   if (document.sha256 !== sha256 || document.id !== `src_${sha256.slice(0, 24)}`) {
     throw new SourceIngestionError("invalid_source", "Source identity does not match its contents.");
+  }
+  for (const warning of recomputeSourceWarnings(document)) {
+    if (!document.warnings.some((existing) => existing.code === warning.code && existing.pageNumber === warning.pageNumber)) {
+      document.warnings.push(warning);
+    }
   }
 }

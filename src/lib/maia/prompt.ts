@@ -41,7 +41,7 @@ Hard rules, in priority order:
    person.`;
 
 /** Render the session snapshot as the per-turn lesson state. */
-export function buildStateBlock(snapshot: SessionSnapshot): string {
+export function buildStateBlock(snapshot: SessionSnapshot, liveActivity: string | null = null): string {
   const state = {
     lessonTitle: snapshot.lessonTitle,
     currentStep: snapshot.stepPrompt,
@@ -52,6 +52,7 @@ export function buildStateBlock(snapshot: SessionSnapshot): string {
     hintsUsed: snapshot.hintsUsed,
     masteryHeuristic: Number(snapshot.mastery.toFixed(2)),
     scaffolding: snapshot.scaffolding,
+    liveWidgetState: liveActivity,
   };
   return [
     '<untrusted_lesson_state encoding="json">',
@@ -64,6 +65,7 @@ export function buildTutorInstructions(
   snapshot: SessionSnapshot,
   allowedUiTargetIds: string[],
   repairIssues: string[] = [],
+  liveActivity: string | null = null,
 ): string {
   const repair = repairIssues.length
     ? `\nYour prior candidate was rejected for these policy codes: ${repairIssues.join(", ")}. Produce a fresh safe turn.`
@@ -77,5 +79,5 @@ You may emit UI actions only for these exact target ids:
 ${JSON.stringify(allowedUiTargetIds)}
 If the list is empty, uiActions must be an empty array.${repair}
 
-${buildStateBlock(snapshot)}`;
+${buildStateBlock(snapshot, liveActivity)}`;
 }

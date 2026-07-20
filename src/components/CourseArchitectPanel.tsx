@@ -31,7 +31,7 @@ function packAssessment(input: {
   const density = input.document.charCount < 240
     ? "The pack is quite short, so the resulting course must stay narrow."
     : "The pack has enough material for a bounded concept graph.";
-  return `${density} Rights, normalization, and the learner goal are present. The Codex-backed pipeline can now extract claims, test source coverage, design misconceptions and transfer, run a critic, and block publication if the evidence cannot support a meaningful Museion course.`;
+  return `${density} Rights, normalization, and the learner goal are present. The AI-assisted design pipeline can now extract claims, test source coverage, design misconceptions and transfer, run a critic, and block publication if the evidence cannot support a meaningful Museion course.`;
 }
 
 function firstHttpsUrl(value: string): string | null {
@@ -70,7 +70,7 @@ export default function CourseArchitectPanel({
   const [mode, setMode] = useState<ArchitectMode>("ask");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ArchitectMessage[]>([
-    { id: "intro", role: "architect", text: "Send me a source link, authorized text, files, or an independent learning goal. I will assemble one Source Pack, identify evidence and rights gaps, and only then hand it to the Codex-backed course pipeline." },
+    { id: "intro", role: "architect", text: "Send me a source link, authorized text, files, or an independent learning goal. I will assemble one Source Pack, identify evidence and rights gaps, and only then hand it to the AI-assisted course pipeline." },
     { id: "boundary", role: "marker", text: "Course Architect creates from your material. Maia remains the learner-facing tutor." },
   ]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -130,11 +130,11 @@ export default function CourseArchitectPanel({
           role="dialog"
           aria-modal="true"
           aria-label="Course Architect"
-          className="absolute inset-x-2 bottom-2 flex max-h-[88vh] flex-col overflow-hidden rounded-[1.5rem] border border-white/80 bg-surface shadow-[0_28px_90px_rgba(19,28,49,0.28)] sm:inset-y-3 sm:left-auto sm:right-3 sm:max-h-none sm:w-[28rem]"
+          className="absolute inset-x-2 bottom-2 flex max-h-[88vh] flex-col overflow-hidden rounded-2xl border border-white/80 bg-surface shadow-[var(--shadow-2)] sm:inset-y-3 sm:left-auto sm:right-3 sm:max-h-none sm:w-[28rem]"
         >
           <header className="flex items-center gap-3 border-b border-ink/10 px-4 py-3">
             <span className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft"><BrandMark className="h-9 w-9" title="Course Architect" /></span>
-            <div className="min-w-0 flex-1"><p className="font-display text-lg font-semibold">Course Architect</p><p className="text-xs text-ink-soft">Deterministic intake · Codex-backed compilation</p></div>
+            <div className="min-w-0 flex-1"><p className="font-display text-lg font-semibold">Course Architect</p><p className="text-xs text-ink-soft">Deterministic intake · AI-assisted compilation</p></div>
             <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink">Close</button>
           </header>
 

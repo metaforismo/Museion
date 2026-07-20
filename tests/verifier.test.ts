@@ -90,3 +90,48 @@ describe("misconception matching", () => {
     }
   });
 });
+
+describe("verify: graph", () => {
+  const spec: AnswerSpec = {
+    kind: "graph",
+    family: "quadratic-vertex",
+    target: { a: 1, h: 3, k: 2 },
+    tolerance: 0.25,
+    xRange: [-6, 6],
+    yRange: [-2, 8],
+  };
+
+  it("accepts the exact parameter triple and values within tolerance", () => {
+    const step = makeStep(spec);
+    expect(verify(step, "a=1,h=3,k=2").correct).toBe(true);
+    expect(verify(step, "A = 1, H = 3, K = 2").correct).toBe(true);
+    expect(verify(step, "a=1,h=3.25,k=2").correct).toBe(true);
+  });
+
+  it("rejects values outside tolerance and malformed input", () => {
+    const step = makeStep(spec);
+    expect(verify(step, "a=1,h=3.5,k=2").correct).toBe(false);
+    expect(verify(step, "a=1,h=-3,k=2").correct).toBe(false);
+    expect(verify(step, "vertex at three two").correct).toBe(false);
+    expect(verify(step, "").correct).toBe(false);
+  });
+
+  it("matches graph misconception triggers per component with tolerance", () => {
+    const step = getLesson("functions-as-change-transformation-lab")!.steps[1];
+    expect(verify(step, "a=1,h=-3,k=2").misconception?.id).toBe("h-sign-flipped");
+    expect(verify(step, "a=1,h=2,k=3").misconception?.id).toBe("h-k-swapped-on-graph");
+    expect(verify(step, "a=2,h=3,k=2").misconception?.id).toBe("scaled-instead-of-shifted");
+    expect(verify(step, "a=1,h=1,k=1").misconception).toBe(null);
+  });
+
+  it("never verifies a registered misconception trigger as correct", () => {
+    const lesson = getLesson("functions-as-change-transformation-lab")!;
+    for (const step of [...lesson.steps, ...(lesson.practice ?? [])]) {
+      for (const misconception of step.misconceptions) {
+        for (const trigger of misconception.triggerAnswers) {
+          expect(verify(step, trigger).correct).toBe(false);
+        }
+      }
+    }
+  });
+});

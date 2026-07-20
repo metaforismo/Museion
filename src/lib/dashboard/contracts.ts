@@ -49,6 +49,19 @@ export const DashboardSnapshotSchema = z.object({
     createdAt: z.string().datetime(),
     href: z.string().startsWith("/"),
   }).strict()).max(4),
+  // Real per-course completion, keyed by course id. Counts a lesson as done
+  // only when the learner has actually completed it — no invented progress.
+  courseProgress: z.record(z.string(), z.object({
+    completed: z.number().int().nonnegative(),
+    total: z.number().int().positive(),
+  }).strict()),
+  // Honest journey totals for tasteful milestones — all from real records.
+  journey: z.object({
+    lessonsCompleted: z.number().int().nonnegative(),
+    coursesCompleted: z.number().int().nonnegative(),
+    unassistedTransfers: z.number().int().nonnegative(),
+    conceptsObserved: z.number().int().nonnegative(),
+  }).strict(),
   runtime: z.object({
     provider: z.enum(["offline", "codex", "openai-api"]),
     label: z.string(),

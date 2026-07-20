@@ -24,9 +24,9 @@ export async function adaptLegacyLesson(
         conceptIds: [conceptId],
         citations: [],
         estimatedSeconds: 90,
-        accessibilityLabel: step.prompt,
+        accessibilityLabel: step.prompt.length > 300 ? `${step.prompt.slice(0, 297)}…` : step.prompt,
         prompt: step.prompt,
-        responseKind: step.answer.kind === "multipleChoice" ? "multiple-choice" : step.answer.kind,
+        responseKind: step.answer.kind === "multipleChoice" ? "multiple-choice" : step.answer.kind === "graph" ? "expression" : step.answer.kind,
         options: step.answer.kind === "multipleChoice" ? step.answer.options : [],
         answerSpecId,
         solution: step.solution,
@@ -39,6 +39,8 @@ export async function adaptLegacyLesson(
     const id = safeId(`answer_${step.id}`);
     if (step.answer.kind === "multipleChoice") return [id, { id, kind: "multiple-choice", correctIndex: step.answer.correctIndex }];
     if (step.answer.kind === "expression") return [id, { id, kind: "expression", acceptedForms: step.answer.acceptedForms }];
+    // Graph steps are authored-runtime only; expose the canonical triple as an accepted expression.
+    if (step.answer.kind === "graph") return [id, { id, kind: "expression", acceptedForms: [`a=${step.answer.target.a},h=${step.answer.target.h},k=${step.answer.target.k}`] }];
     return [id, { id, kind: "numeric", value: step.answer.value, tolerance: step.answer.tolerance }];
   }));
   const misconceptions = Object.fromEntries(lesson.steps.flatMap((step) => step.misconceptions.map((item) => {

@@ -11,7 +11,10 @@ const pdfFixture = path.resolve("tests/fixtures/binary-search-golden-source.pdf"
 await mkdir(outputDir, { recursive: true });
 await mkdir(verificationImageDir, { recursive: true });
 
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const launchOptions = process.env.MUSEION_BROWSER_PATH
+  ? { executablePath: process.env.MUSEION_BROWSER_PATH, headless: true }
+  : { channel: "chrome", headless: true };
+const browser = await chromium.launch(launchOptions).catch(() => chromium.launch({ headless: true }));
 const failures = [];
 
 function watch(page, label) {
@@ -211,7 +214,7 @@ async function keyboardJudgeFlow() {
   const page = await context.newPage();
   watch(page, "keyboard-judge");
   await page.goto(`${baseURL}/judge`);
-  await expectVisible(page.getByText("Verified replay", { exact: true }), "keyboard replay badge");
+  await expectVisible(page.getByText("Sample lesson", { exact: true }), "keyboard replay badge");
   await keyboardActivate(page, page.getByRole("button", { name: /Continue/ }));
 
   await keyboardActivate(page, page.getByRole("radio").first(), "Space");
@@ -287,7 +290,7 @@ async function performanceBudgetFlow() {
     const page = await context.newPage();
     watch(page, `performance ${route}`);
     await page.goto(`${baseURL}${route}`, { waitUntil: "networkidle" });
-    if (route === "/judge") await expectVisible(page.getByText("Verified replay", { exact: true }), "performance judge ready");
+    if (route === "/judge") await expectVisible(page.getByText("Sample lesson", { exact: true }), "performance judge ready");
     const metrics = await page.evaluate(() => {
       const entries = [...performance.getEntriesByType("navigation"), ...performance.getEntriesByType("resource")];
       return {
@@ -310,7 +313,7 @@ async function performanceBudgetFlow() {
 async function submitTextAnswer(page, answer) {
   const input = page.getByPlaceholder("Your answer");
   await input.fill(answer);
-  await page.getByRole("button", { name: "Check" }).click();
+  await page.getByRole("button", { name: "Check", exact: true }).click();
 }
 
 async function learnerRecoveryFlow() {
@@ -368,7 +371,7 @@ async function queuedMaiaOutboxFlow() {
   const firstRequest = page.waitForRequest((request) => request.url().includes("/maia") && request.method() === "POST");
   await askWhy.click();
   await firstRequest;
-  await expectVisible(page.getByRole("button", { name: "Cancel" }), "Maia first request in flight");
+  await expectVisible(page.getByRole("button", { name: "Stop" }), "Maia first request in flight");
 
   const secondRequest = page.waitForRequest((request) => request.url().includes("/maia") && request.method() === "POST");
   await askWhy.click();
@@ -395,7 +398,7 @@ async function staleQueuedOutboxFlow() {
   await page.getByRole("button", { name: "Ask Maia" }).click();
   await page.getByLabel("Message for Maia").fill("Explain this step without giving the answer");
   await page.getByRole("button", { name: "Send" }).click();
-  await expectVisible(page.getByRole("button", { name: "Cancel" }), "Maia request before queued self-explanation");
+  await expectVisible(page.getByRole("button", { name: "Stop" }), "Maia request before queued self-explanation");
   await page.getByLabel(/Lock it in/).fill("Subtracting the same amount preserves equality");
   await page.getByRole("button", { name: "Check with Maia" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
@@ -464,7 +467,7 @@ async function authoritativeRecoveryFlow() {
   await page.goto(`${baseURL}/lessons/linear-equations-intro`);
   await submitTextAnswer(page, "2");
   await page.getByRole("button", { name: "Recover saved state" }).click();
-  await expectVisible(page.getByRole("button", { name: "Check" }), "answer control after state recovery");
+  await expectVisible(page.getByRole("button", { name: "Check", exact: true }), "answer control after state recovery");
   await submitTextAnswer(page, "6");
   await expectVisible(page.getByText(/Correct — nice reasoning/), "answer after authoritative recovery");
   if (answerRequests !== 2) failures.push(`authoritative recovery: expected 2 answer requests, received ${answerRequests}`);
@@ -487,8 +490,8 @@ async function desktopFlow() {
   await expectVisible(page.getByText("Nothing needs correction yet", { exact: true }), "dashboard misconception empty state");
   await expectVisible(page.getByText("No source has been compiled", { exact: true }), "dashboard source empty state");
   await page.goto(`${baseURL}/`);
-  await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "landing heading");
-  await expectVisible(page.getByText("The model is useful. It is not the authority."), "product contract");
+  await expectVisible(page.getByRole("heading", { name: /AI can solve the problem/ }), "landing heading");
+  await expectVisible(page.getByText("The better the assistant, the easier it is to stop thinking."), "product contract");
   await expectVisible(page.getByRole("link", { name: "Open Museion", exact: true }), "workspace entry");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(150);
@@ -557,7 +560,7 @@ async function desktopFlow() {
   await page.route("**/api/sessions/*/answer", delayedAnswer);
   const answerInput = page.getByPlaceholder("Your answer");
   await answerInput.fill("2");
-  await page.getByRole("button", { name: "Check" }).evaluate((button) => {
+  await page.getByRole("button", { name: "Check", exact: true }).evaluate((button) => {
     button.click();
     button.click();
   });
@@ -624,7 +627,7 @@ async function desktopFlow() {
   await expectVisible(page.getByText(/Observed in guided work|Hint-free practice completed/).first(), "recorded evidence state");
   await expectVisible(page.getByText(/Retention is not measured/), "retention boundary");
 
-  await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source studio", exact: true }).click();
+  await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source Studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
   await expectVisible(page.getByRole("heading", { name: "Build one Source Pack" }), "unified Source Pack intake");
   await expectVisible(page.getByLabel("Source Pack materials"), "independently editable Source Pack material list");
@@ -738,13 +741,14 @@ async function desktopFlow() {
   await page.screenshot({ path: path.join(outputDir, "mobile-compiler-review.png"), fullPage: true });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("link", { name: /Launch generated learner experience/ }).click();
-  await expectVisible(page.getByText("Verified replay", { exact: true }), "compiler-run learner launch");
+  await expectVisible(page.getByText("Sample lesson", { exact: true }), "compiler-run learner launch");
   await expectVisible(page.getByRole("heading", { name: /Binary Search/ }), "compiler-run learner title");
 
   await page.goto(`${baseURL}/settings`);
-  await expectVisible(page.getByRole("heading", { name: "Choose how Museion thinks." }), "AI settings");
+  await expectVisible(page.getByRole("heading", { name: "Settings" }), "AI settings");
   await expectVisible(page.getByText("Local AI disabled", { exact: true }).first(), "hosted-safe AI state");
   await expectVisible(page.getByRole("list", { name: "Live AI readiness" }), "AI readiness checklist");
+  await page.getByText("Advanced: models and routing").click();
   await expectVisible(page.getByText("gpt-5.6-luna", { exact: true }), "Luna routing");
   await expectVisible(page.getByText("gpt-5.6-terra", { exact: true }).first(), "Terra routing");
   await expectVisible(page.getByText("gpt-5.6-sol", { exact: true }).first(), "Sol routing");
@@ -825,7 +829,7 @@ async function mobileFlow() {
   await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
   await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "mobile onboarding dashboard destination");
   await page.goto(`${baseURL}/`);
-  await expectVisible(page.getByRole("heading", { name: /Turn material you trust into a course that makes you think/ }), "mobile redesigned home");
+  await expectVisible(page.getByRole("heading", { name: /AI can solve the problem/ }), "mobile redesigned home");
   const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   if (homeOverflow) failures.push("mobile homepage: horizontal overflow");
   await page.screenshot({ path: path.join(outputDir, "mobile-home.png"), fullPage: true });
@@ -858,7 +862,7 @@ async function mobileFlow() {
 
 async function completeJudge(page, label, takeScreenshot = false) {
   await page.goto(`${baseURL}/judge`);
-  await expectVisible(page.getByText("Verified replay", { exact: true }), `${label} replay badge`);
+  await expectVisible(page.getByText("Sample lesson", { exact: true }), `${label} replay badge`);
   await page.getByRole("button", { name: /Continue/ }).click();
 
   await page.getByRole("radio").first().check();
@@ -913,7 +917,7 @@ async function judgeRecoveryFlow() {
   const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
   const page = await context.newPage();
   await page.goto(`${baseURL}/judge`);
-  await expectVisible(page.getByText("Verified replay", { exact: true }), "judge recovery initial session");
+  await expectVisible(page.getByText("Sample lesson", { exact: true }), "judge recovery initial session");
   const sessionId = await page.evaluate(() => localStorage.getItem("museion_judge_session_v1"));
   if (!sessionId) throw new Error("Judge recovery fixture did not create a session");
 
@@ -957,8 +961,8 @@ async function judgeConcurrencyFlow() {
   second.on("pageerror", (error) => failures.push(`judge-concurrency-second page: ${error.message}`));
   await Promise.all([first.goto(`${baseURL}/judge`), second.goto(`${baseURL}/judge`)]);
   await Promise.all([
-    expectVisible(first.getByText("Verified replay", { exact: true }), "judge concurrency first session"),
-    expectVisible(second.getByText("Verified replay", { exact: true }), "judge concurrency second session"),
+    expectVisible(first.getByText("Sample lesson", { exact: true }), "judge concurrency first session"),
+    expectVisible(second.getByText("Sample lesson", { exact: true }), "judge concurrency second session"),
   ]);
   const [firstId, secondId] = await Promise.all([
     first.evaluate(() => localStorage.getItem("museion_judge_session_v1")),

@@ -36,8 +36,9 @@ export async function POST(
     stepIndex: session.stepIndex,
     // The verified solution is revealed only AFTER the step is solved:
     // a worked explanation reinforces learning once the reasoning work
-    // has been done — never before.
-    solution: outcome.correct ? step.solution : null,
+    // has been done — never before. It must describe the variant the
+    // learner actually solved, so it comes from the active step.
+    solution: outcome.correct ? session.activeStep.solution : null,
     stats: null,
   });
 }

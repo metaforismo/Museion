@@ -1,29 +1,39 @@
 import Link from "next/link";
-
-import AppIcon, { type AppIconName } from "./AppIcon";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ChartUpIcon, Files02Icon, RepeatIcon } from "@hugeicons/core-free-icons";
 
 interface DashboardEmptyStateProps {
   actionHref: string;
   actionLabel: string;
   description: string;
-  icon: AppIconName;
+  icon: "evidence" | "review" | "source";
   title: string;
 }
 
+const ICONS = { evidence: ChartUpIcon, review: RepeatIcon, source: Files02Icon } as const;
+const TINTS = {
+  evidence: "var(--color-subject-biology)",
+  review: "var(--color-gold)",
+  source: "var(--color-lapis)",
+} as const;
+
 export default function DashboardEmptyState({ actionHref, actionLabel, description, icon, title }: DashboardEmptyStateProps) {
+  const tint = TINTS[icon];
   return (
-    <div className="mt-4 border-t border-ink/8 pt-4">
-      <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-xl border border-ink/8 bg-paper text-lapis-dark" aria-hidden="true">
-          <AppIcon name={icon} className="h-[1.1rem] w-[1.1rem]" />
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-ink">{title}</p>
-          <p className="mt-1 text-xs leading-5 text-ink-soft">{description}</p>
-          <Link href={actionHref} className="mt-3 inline-flex min-h-9 items-center rounded-lg text-xs font-semibold text-lapis-dark hover:underline hover:underline-offset-4">
-            {actionLabel}<span className="ml-1.5" aria-hidden="true">→</span>
-          </Link>
-        </div>
+    <div className="flex items-start gap-3 p-4">
+      <span
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+        style={{ backgroundColor: `color-mix(in srgb, ${tint} 12%, transparent)`, color: tint }}
+        aria-hidden="true"
+      >
+        <HugeiconsIcon icon={ICONS[icon]} size={16} strokeWidth={1.8} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        <p className="mt-0.5 text-xs leading-5 text-ink-soft">{description}</p>
+        <Link href={actionHref} className="mt-2 inline-flex min-h-8 items-center text-xs font-semibold text-lapis-dark hover:underline hover:underline-offset-4">
+          {actionLabel}<span className="ml-1.5" aria-hidden="true">→</span>
+        </Link>
       </div>
     </div>
   );

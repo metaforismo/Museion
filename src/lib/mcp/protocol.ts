@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { enqueueCompilerRun, CompileAudienceSchema, CourseTemplateIdSchema } from "@/lib/compiler";
 import { coursePaths } from "@/lib/curriculum";
+import { checkRateLimit } from "@/lib/server/rate-limit";
 import { createSourcePack, createSourcePackManifest, publicSourcePackSummary, sourcePackToDocument, SourcePackInputSchema } from "@/lib/source";
 
 const JsonRpcRequestSchema = z.object({
@@ -122,6 +123,26 @@ function authorized(request: Request): boolean {
   return expectedBytes.length === suppliedBytes.length && timingSafeEqual(expectedBytes, suppliedBytes);
 }
 
+const MCP_RATE_LIMITED_TOOLS = new Set(["museion.prepare_source_pack", "museion.create_course"]);
+const MCP_ANONYMOUS_KEY = "anonymous";
+export const MCP_CALLER_RATE_LIMIT = 20;
+export const MCP_ANONYMOUS_RATE_LIMIT = 5;
+const MCP_RATE_WINDOW_MS = 60_000;
+
+function mcpCallerKey(request: Request): string {
+  const bearer = request.headers.get("authorization")?.trim();
+  if (bearer) return `bearer:${bearer}`;
+  const clientId = request.headers.get("x-mcp-client-id")?.trim();
+  if (clientId) return `client:${clientId.slice(0, 200)}`;
+  return MCP_ANONYMOUS_KEY;
+}
+
+function mcpRateLimit(request: Request, toolName: string) {
+  const key = mcpCallerKey(request);
+  const limit = key === MCP_ANONYMOUS_KEY ? MCP_ANONYMOUS_RATE_LIMIT : MCP_CALLER_RATE_LIMIT;
+  return checkRateLimit(`mcp:${toolName}:${key}`, limit, MCP_RATE_WINDOW_MS);
+}
+
 export async function handleMcpRequest(request: Request, payload: unknown) {
   const parsed = JsonRpcRequestSchema.safeParse(payload);
   if (!parsed.success) return { status: 400, body: rpcError(null, -32600, "Invalid Request") };
@@ -141,6 +162,12 @@ export async function handleMcpRequest(request: Request, payload: unknown) {
 
   const call = ToolCallSchema.safeParse(params);
   if (!call.success) return { status: 400, body: rpcError(id, -32602, "Invalid tool call") };
+  if (MCP_RATE_LIMITED_TOOLS.has(call.data.name)) {
+    const rate = mcpRateLimit(request, call.data.name);
+    if (!rate.allowed) {
+      return { status: 429, body: rpcError(id, -32005, `Rate limit exceeded for ${call.data.name}. Try again in about ${rate.retryAfterSeconds}s.`, { retryAfterSeconds: rate.retryAfterSeconds }) };
+    }
+  }
   try {
     if (call.data.name === "museion.list_originals") {
       const originals = coursePaths.map(({ id: courseId, title, tagline, subject, learnerBand, estimatedMinutes, lessonIds }) => ({ courseId, title, tagline, subject, learnerBand, estimatedMinutes, lessonCount: lessonIds.length, provenance: "Museion Original" }));

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const headers = {
-  "Access-Control-Allow-Headers": "authorization, content-type, mcp-protocol-version",
+  "Access-Control-Allow-Headers": "authorization, content-type, mcp-protocol-version, x-mcp-client-id",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Origin": "*",
   "Cache-Control": "no-store",
