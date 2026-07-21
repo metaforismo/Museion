@@ -223,6 +223,18 @@ function publicAttempt(attempt: PrivateConnectionAttempt): CodexConnectionAttemp
   };
 }
 
+export function parseCodexDeviceLoginOutput(diagnostic: string): {
+  verificationUrl: string | null;
+  userCode: string | null;
+} {
+  return {
+    verificationUrl: diagnostic.match(/https:\/\/[^\s]+/i)?.[0]?.replace(/[),.;]+$/, "") ?? null,
+    // Current Codex releases use four characters before the separator and
+    // between four and eight after it. Older releases emitted 4-4 groups.
+    userCode: diagnostic.match(/\b[A-Z0-9]{4}-[A-Z0-9]{4,8}\b/)?.[0] ?? null,
+  };
+}
+
 export async function startCodexDeviceLogin(): Promise<CodexConnectionAttempt> {
   if (!localAiEnabled()) throw new CodexRuntimeError("LOCAL_AI_DISABLED", "Local ChatGPT AI is disabled on this runtime.");
   const existing = connectionGlobal.__museionCodexConnection;
@@ -249,8 +261,9 @@ export async function startCodexDeviceLogin(): Promise<CodexConnectionAttempt> {
   const collect = (chunk: Buffer) => {
     if (diagnostic.length >= 16_384) return;
     diagnostic += chunk.toString("utf8").slice(0, 16_384 - diagnostic.length);
-    attempt.verificationUrl ??= diagnostic.match(/https:\/\/[^\s]+/i)?.[0]?.replace(/[),.;]+$/, "") ?? null;
-    attempt.userCode ??= diagnostic.match(/\b[A-Z0-9]{4}(?:-[A-Z0-9]{4})+\b/)?.[0] ?? null;
+    const parsed = parseCodexDeviceLoginOutput(diagnostic);
+    attempt.verificationUrl ??= parsed.verificationUrl;
+    attempt.userCode ??= parsed.userCode;
   };
   child.stdout.on("data", collect);
   child.stderr.on("data", collect);
