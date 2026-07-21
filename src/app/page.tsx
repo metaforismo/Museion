@@ -454,8 +454,6 @@ export default function HomePage() {
 
       <section className={styles.finalCta} aria-labelledby="final-title">
         <div className={styles.finalSky}>
-          <Cloud className={styles.finalCloudLeft} />
-          <Cloud className={styles.finalCloudRight} />
           <Image
             src="/landing/footer-cloud-blue-v1.webp"
             alt=""
@@ -483,17 +481,14 @@ export default function HomePage() {
             <Link href="/judge" className={styles.primaryButton}>Try Museion <span aria-hidden="true">→</span></Link>
           </div>
           <div className={styles.finalScene} data-reveal="soft">
-            <div className={styles.finalMaiaWrap}>
-              <Image
-                src="/landing/maia-peeking-v3.webp"
-                alt="Maia peeking over the cloud horizon"
-                width={768}
-                height={768}
-                sizes="(max-width: 700px) 300px, 480px"
-                className={styles.finalMaia}
-              />
-            </div>
-            <div className={styles.finalHorizon} aria-hidden="true" />
+            <Image
+              src="/landing/footer-maia-cloud-scene-v1.webp"
+              alt="Maia emerging from a continuous cloud landscape"
+              width={1672}
+              height={941}
+              sizes="100vw"
+              className={styles.finalSceneImage}
+            />
           </div>
         </div>
         <footer className={styles.landingFooter}>

@@ -919,22 +919,28 @@
 .faq details p { color: #606878; font-size: .8rem; line-height: 1.7; max-width: 62ch; padding: 1rem 2rem .1rem 0; }
 
 .finalCta { background: #fff; overflow: hidden; position: relative; text-align: center; }
-.finalSky { background: linear-gradient(180deg, #fff 0%, #edf8ff 28%, #c8e8ff 100%); min-height: 760px; overflow: hidden; padding: 4.5rem 1.5rem 0; position: relative; }
+.finalSky { background: linear-gradient(180deg, #fff 0%, #edf8ff 28%, #c8e8ff 100%); overflow: hidden; padding: 4.5rem 1.5rem 0; position: relative; }
 .finalCopy { position: relative; z-index: 4; }
 .finalCopy h2 { font-size: clamp(2.6rem, 5.5vw, 5rem); font-weight: 590; margin-top: .75rem !important; }
 .finalCopy > p:last-of-type { color: #5f6b7c; font-size: .9rem; margin: 1rem 0 1.5rem !important; }
-.finalScene { height: 430px; margin: 1.25rem auto 0; max-width: 1180px; position: relative; z-index: 2; }
-.finalMaiaWrap { bottom: -2.15rem; height: 410px; left: 50%; position: absolute; transform: translateX(-50%); width: 510px; z-index: 5; }
-.finalMaia { height: 100%; object-fit: contain; width: 100%; }
-.finalHorizon { background: #fff; border-radius: 52% 52% 0 0 / 72% 72% 0 0; bottom: -6.8rem; height: 12.5rem; left: -8%; position: absolute; right: -8%; z-index: 4; }
-.finalCloudLeft { bottom: -1rem; left: -6rem; transform: scale(1.75); z-index: 2; }
-.finalCloudRight { bottom: 0; right: -6rem; transform: scale(1.9); z-index: 2; }
+.finalScene { margin: 1.25rem -1.5rem 0; position: relative; z-index: 2; }
+.finalScene::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .72) 58%, #fff 100%);
+  bottom: -1px;
+  content: "";
+  height: clamp(3rem, 6vw, 6rem);
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+.finalSceneImage { display: block; height: auto; object-fit: contain; width: 100%; }
 .footerAccentCloud { height: auto; object-fit: contain; pointer-events: none; position: absolute; z-index: 1; }
 .footerAccentCloudBlue { right: 8%; top: 25%; width: 9rem; }
 .footerAccentCloudWhite { left: 9%; top: 33%; width: 6.5rem; }
 .finalStarOne { color: #ff965d; font-size: 1.7rem; left: 20%; top: 48%; }
 .finalStarTwo { color: #70baff; font-size: 1.5rem; right: 22%; top: 36%; }
-.landingFooter { align-items: center; background: #fff; border-top: 1px solid rgba(35,71,113,.08); color: #35465b; display: grid; font-size: .72rem; grid-template-columns: 1fr auto 1fr; min-height: 220px; padding: 2.5rem clamp(1.5rem, 5vw, 5rem); position: relative; z-index: 5; }
+.landingFooter { align-items: center; background: #fff; color: #35465b; display: grid; font-size: .72rem; grid-template-columns: 1fr auto 1fr; min-height: 220px; padding: 2.5rem clamp(1.5rem, 5vw, 5rem); position: relative; z-index: 5; }
 .footerBrand { align-items: center; color: var(--landing-ink); display: flex; font-size: .8rem; font-weight: 700; gap: .5rem; }
 .footerPromise { align-items: center; display: flex; flex-direction: column; gap: .45rem; }
 .footerPromise strong { color: #1f3047; font-size: .8rem; }
@@ -1055,22 +1061,20 @@
 
   .faq { gap: 2rem; grid-template-columns: 1fr; padding: 4rem 1rem 4.5rem; }
 
-  .finalSky { min-height: 680px; padding: 4rem 1rem 0; }
+  .finalSky { padding: 4rem 1rem 0; }
   .finalCopy h2 { font-size: 2.75rem; }
-  .finalScene { height: 360px; margin-top: 1rem; }
-  .finalMaiaWrap { bottom: -1.6rem; height: 330px; transform: translateX(-50%); width: 360px; }
-  .finalHorizon { bottom: -6rem; height: 10rem; left: -35%; right: -35%; }
-  .finalCloudLeft { left: -10rem; transform: scale(1.45); }
-  .finalCloudRight { right: -10rem; transform: scale(1.5); }
+  .finalScene { height: 380px; margin: 1rem -1rem 0; overflow: hidden; }
+  .finalSceneImage { bottom: 0; height: auto; left: 50%; max-width: none; position: absolute; transform: translateX(-50%); width: 680px; }
   .footerAccentCloudBlue { right: -1.8rem; top: 30%; width: 7rem; }
   .footerAccentCloudWhite { left: -1.2rem; top: 38%; width: 5rem; }
   .landingFooter {
     gap: 1.5rem;
     grid-template-columns: 1fr;
-    min-height: 260px;
+    min-height: 230px;
     padding: 2.5rem 1rem;
     text-align: center;
   }
+  .footerBrand { display: none; }
   .footerBrand, .landingFooter nav { justify-self: center; }
 }
 
@@ -1107,8 +1111,7 @@
   .heroCloudRight .cloudImage,
   .packCloudRight .cloudImage,
   .manifestoCloudRight .cloudImage,
-  .methodCloudTwo .cloudImage,
-  .finalCloudRight .cloudImage { animation-delay: -4s; }
+  .methodCloudTwo .cloudImage { animation-delay: -4s; }
   .heroSourceAsset { animation: source-float 6.4s var(--ease-in-out) infinite; }
   .heroDocument { animation-delay: -1.7s; }
   .heroTranscript { animation-delay: -3.1s; }
@@ -1125,7 +1128,6 @@
   .methodStarTwo { animation: float-b 7s ease-in-out infinite; }
   .footerAccentCloud { animation: footer-cloud-drift 7.4s var(--ease-in-out) infinite; }
   .footerAccentCloudWhite { animation-delay: -3.7s; }
-  .finalMaia { animation: final-maia-breathe 5.8s var(--ease-in-out) infinite; transform-origin: 50% 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1200,11 +1202,6 @@
 @keyframes source-float {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--asset-rotate)); }
   50% { transform: translate3d(0, -10px, 0) rotate(calc(var(--asset-rotate) + 2deg)); }
-}
-
-@keyframes final-maia-breathe {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(0, -5px, 0) scale(1.008); }
 }
 
 @keyframes footer-cloud-drift {
