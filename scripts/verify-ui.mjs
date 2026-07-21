@@ -490,8 +490,8 @@ async function desktopFlow() {
   await expectVisible(page.getByText("Nothing needs correction yet", { exact: true }), "dashboard misconception empty state");
   await expectVisible(page.getByText("No source has been compiled", { exact: true }), "dashboard source empty state");
   await page.goto(`${baseURL}/`);
-  await expectVisible(page.getByRole("heading", { name: /AI can solve the problem/ }), "landing heading");
-  await expectVisible(page.getByText("The better the assistant, the easier it is to stop thinking."), "product contract");
+  await expectVisible(page.getByRole("heading", { name: /Sources.*don.t have to stay passive/ }), "landing heading");
+  await expectVisible(page.getByRole("heading", { name: "A lesson that waits for your move." }), "product contract");
   await expectVisible(page.getByRole("link", { name: "Open Museion", exact: true }), "workspace entry");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(150);
@@ -829,7 +829,7 @@ async function mobileFlow() {
   await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
   await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "mobile onboarding dashboard destination");
   await page.goto(`${baseURL}/`);
-  await expectVisible(page.getByRole("heading", { name: /AI can solve the problem/ }), "mobile redesigned home");
+  await expectVisible(page.getByRole("heading", { name: /Sources.*don.t have to stay passive/ }), "mobile redesigned home");
   const homeOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   if (homeOverflow) failures.push("mobile homepage: horizontal overflow");
   await page.screenshot({ path: path.join(outputDir, "mobile-home.png"), fullPage: true });

@@ -65,8 +65,7 @@ export default async function CoursePage({ params }: Props) {
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Link
                 href={`/lessons/${firstUnfinished}?course=${course.id}`}
-                className="inline-flex min-h-12 items-center rounded-xl px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5"
-                style={{ backgroundColor: accent }}
+                className="inline-flex min-h-12 items-center rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark"
               >
                 {started ? "Continue the path" : "Start the path"} <span className="ml-2" aria-hidden="true">→</span>
               </Link>
