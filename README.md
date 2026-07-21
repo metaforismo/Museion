@@ -186,7 +186,7 @@ npm run screenshots            # regenerate all 20 README/product screenshots fr
 
 Optional local ChatGPT/Codex mode: set `MUSEION_LOCAL_AI=1`, then connect in `/settings` via the official device flow. Hosted deployments keep local AI disabled; ChatGPT plan usage and API billing are never mixed silently.
 
-Settings also includes a short **Copy setup prompt** for Codex. The flow needs no Museion account, database, or API key: Codex starts the explicitly enabled local runtime, then the user completes the official ChatGPT device login and runs the model check.
+Settings also includes a short **Copy setup prompt** for Codex. It carries the canonical GitHub repository URL, clone/open instructions, the local runtime command, and the complete handoff back to `/settings`, so it can be pasted into a new Codex or coding-agent chat without prior context. The flow needs no Museion account, database, or API key: Codex starts the explicitly enabled local runtime, then the user completes the official ChatGPT device login and runs the model check.
 
 ## Feedback / Session ID
 

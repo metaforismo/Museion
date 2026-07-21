@@ -48,7 +48,7 @@ const STAGE_LABELS: Record<string, string> = {
   repair: "Typed repair",
 };
 
-const CODEX_SETUP_PROMPT = "Open the Museion repository in Codex. Run npm ci, copy .env.example to .env.local, then start Museion with MUSEION_LOCAL_AI=1 npm run dev. Do not add an API key or change the hosted deployment. Tell me when /settings is ready so I can click Connect ChatGPT and complete the official device login.";
+const CODEX_SETUP_PROMPT = "Set up Museion's optional local Codex connection from https://github.com/metaforismo/Museion. If the repository is not already open, clone it and open it in Codex. Run npm ci, copy .env.example to .env.local, then start Museion with MUSEION_LOCAL_AI=1 npm run dev. Do not add an API key, commit .env.local, or change the hosted deployment. When http://localhost:3000/settings is ready, tell me so I can click Connect ChatGPT, complete the official device login, and run Check models.";
 
 function friendlyError(value: unknown, fallback: string): string {
   const code = typeof value === "string" ? value : "";

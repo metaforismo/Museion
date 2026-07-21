@@ -798,8 +798,12 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Copy setup prompt" }).click();
   await expectVisible(page.getByText(/Codex setup prompt copied/), "Codex setup prompt copy");
   const setupPrompt = await page.evaluate(() => navigator.clipboard.readText());
-  if (!setupPrompt.includes("MUSEION_LOCAL_AI=1 npm run dev") || setupPrompt.includes("OPENAI_API_KEY")) {
-    failures.push("settings: Codex setup prompt is missing the local command or asks for an API key");
+  if (
+    !setupPrompt.includes("https://github.com/metaforismo/Museion") ||
+    !setupPrompt.includes("MUSEION_LOCAL_AI=1 npm run dev") ||
+    setupPrompt.includes("OPENAI_API_KEY")
+  ) {
+    failures.push("settings: Codex setup prompt is missing the repository or local command, or asks for an API key");
   }
   await page.getByText("Advanced: models and routing").click();
   await expectVisible(page.getByText("gpt-5.6-luna", { exact: true }), "Luna routing");
