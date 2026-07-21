@@ -119,3 +119,19 @@ Codex did not expose token counts or quota percentages, so none are reported. De
 | `npm run screenshots` | Pass | 17 route-backed product images, including Library, course detail, linked-source Creator, and docked Maia rail |
 
 The Creator records webpage, YouTube video/playlist, and book links only as sanitized hash-bound provenance paired with authorized transcript, excerpt, or notes. It does not fetch protected content, transcribe video automatically, or claim that a URL alone was compiled. The two new course paths are source-informed and Museion-authored; their completion evidence remains bounded to the checked items and one immediate near-transfer observation.
+
+## 2026-07-21 — Premium Maia/sidebar release and submission gate
+
+| Check | Result | Evidence |
+|---|---|---|
+| `npm run typecheck` | Pass | Strict TypeScript after the responsive Maia drawer and icon variants |
+| `npm run lint` | Pass | No ESLint findings |
+| `npm test` | Pass | 42 files and 377 tests passed; 17 explicitly live-gated tests skipped |
+| `npm run build` | Pass | Next 16.2.10 production build; one known non-blocking local-Codex trace warning |
+| `npm run verify:bundle` | Pass | Static 3354.6 / 3430.4 KiB; largest JS 492.3 / 550.0 KiB; PDF worker 1274.3 / 1400.0 KiB |
+| `npm run verify:ui` | Pass | Desktop/mobile flows, keyboard/focus, a11y scans, Maia cancellation/outbox, zero drawer/content intersections, CLS 0 on measured routes, and repeated Judge sessions |
+| `npm run screenshots` | Pass | All 20 canonical route-backed captures regenerated; desktop gallery images are 1440 by 960 |
+| `npm audit --omit=dev` | Pass | 0 vulnerabilities |
+| Local Codex lesson turn | Pass | Codex CLI 0.144.6 authenticated; GPT-5.6 Terra returned a Socratic turn via `openai-codex`, with no repair and no answer leakage |
+
+The public judge experience intentionally remains keyless and deterministic. Local Codex mode is an optional separately enabled path, and no learner account is required or available in the submission flow.

@@ -353,6 +353,52 @@ async function staleMaiaFlow() {
   await context.close();
 }
 
+async function desktopMaiaDockFlow() {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  const page = await context.newPage();
+  watch(page, "desktop-maia-dock");
+  await page.goto(`${baseURL}/lessons/linear-equations-intro`);
+
+  const launcher = page.getByRole("button", { name: "Open Maia chat" });
+  await expectVisible(launcher, "desktop Maia compact launcher");
+  if (await page.getByLabel("Message for Maia").count()) failures.push("desktop Maia: composer is visible before the learner opens chat");
+  if (await page.getByText(/I'm right here with this step/).count()) failures.push("desktop Maia: legacy speech bubble still covers the activity");
+
+  const coveredControls = await launcher.evaluate((button) => {
+    const launcherRect = button.getBoundingClientRect();
+    const intersects = (rect) => rect.width > 0 && rect.height > 0 && !(rect.right <= launcherRect.left || rect.left >= launcherRect.right || rect.bottom <= launcherRect.top || rect.top >= launcherRect.bottom);
+    return [...document.querySelectorAll("main button, main input, main textarea, main label, main p, main h1, main h2")]
+      .filter((element) => element !== button && intersects(element.getBoundingClientRect()))
+      .map((element) => element.textContent?.trim() || element.getAttribute("aria-label") || element.tagName)
+      .filter(Boolean);
+  });
+  if (coveredControls.length) failures.push(`desktop Maia: compact launcher overlaps lesson content (${coveredControls.join(", ")})`);
+
+  await launcher.click();
+  const drawer = page.getByRole("complementary", { name: "Maia chat" });
+  await expectVisible(drawer, "desktop Maia side panel");
+  await expectVisible(page.getByLabel("Message for Maia"), "desktop Maia drawer composer");
+  await page.waitForFunction(() => document.documentElement.hasAttribute("data-maia-drawer-open"));
+  const obscuredContent = await drawer.evaluate((panel) => {
+    const panelRect = panel.getBoundingClientRect();
+    const intersects = (rect) => rect.width > 0 && rect.height > 0 && !(rect.right <= panelRect.left || rect.left >= panelRect.right || rect.bottom <= panelRect.top || rect.top >= panelRect.bottom);
+    return [...document.querySelectorAll("main button, main input, main textarea, main label, main p, main h1, main h2")]
+      .filter((element) => !panel.contains(element) && !element.closest("[aria-controls='maia-desktop-conversation']") && intersects(element.getBoundingClientRect()))
+      .map((element) => element.textContent?.trim() || element.getAttribute("aria-label") || element.tagName)
+      .filter(Boolean);
+  });
+  if (obscuredContent.length) failures.push(`desktop Maia: open sidebar covers lesson content (${obscuredContent.join(", ")})`);
+  await page.waitForFunction(() => document.activeElement?.textContent?.trim() === "Close", null, { timeout: 2_000 })
+    .catch(() => failures.push("desktop Maia: focus did not move to drawer close control"));
+  await page.keyboard.press("Escape");
+  if (await page.getByRole("complementary", { name: "Maia chat" }).count()) failures.push("desktop Maia: Escape did not close the side panel");
+  await page.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Open Maia chat", null, { timeout: 2_000 })
+    .catch(() => failures.push("desktop Maia: focus did not return to launcher"));
+  await page.screenshot({ path: path.join(outputDir, "desktop-maia-dock.png"), fullPage: true });
+  await context.close();
+}
+
 async function queuedMaiaOutboxFlow() {
   const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
   await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
@@ -579,6 +625,7 @@ async function desktopFlow() {
   await page.getByRole("button", { name: "Take a hint" }).click();
   await expectVisible(page.getByText(/^1\./), "first deterministic hint");
 
+  await page.getByRole("button", { name: "Open Maia chat" }).click();
   const maiaInput = page.getByLabel("Message for Maia");
   await maiaInput.fill("x".repeat(2_050));
   if ((await maiaInput.inputValue()).length !== 2_000) {
@@ -748,6 +795,12 @@ async function desktopFlow() {
   await expectVisible(page.getByRole("heading", { name: "Settings" }), "AI settings");
   await expectVisible(page.getByText("Local AI disabled", { exact: true }).first(), "hosted-safe AI state");
   await expectVisible(page.getByRole("list", { name: "Live AI readiness" }), "AI readiness checklist");
+  await page.getByRole("button", { name: "Copy setup prompt" }).click();
+  await expectVisible(page.getByText(/Codex setup prompt copied/), "Codex setup prompt copy");
+  const setupPrompt = await page.evaluate(() => navigator.clipboard.readText());
+  if (!setupPrompt.includes("MUSEION_LOCAL_AI=1 npm run dev") || setupPrompt.includes("OPENAI_API_KEY")) {
+    failures.push("settings: Codex setup prompt is missing the local command or asks for an API key");
+  }
   await page.getByText("Advanced: models and routing").click();
   await expectVisible(page.getByText("gpt-5.6-luna", { exact: true }), "Luna routing");
   await expectVisible(page.getByText("gpt-5.6-terra", { exact: true }).first(), "Terra routing");
@@ -1034,6 +1087,7 @@ try {
     await desktopFlow();
     await multipleChoiceConfirmationFlow();
     await learnerRecoveryFlow();
+    await desktopMaiaDockFlow();
     await staleMaiaFlow();
     await queuedMaiaOutboxFlow();
     await staleQueuedOutboxFlow();

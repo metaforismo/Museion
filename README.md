@@ -26,8 +26,12 @@ Museion is our answer: a learning environment where **the deterministic engine o
 
 **No account, no API key, nothing to configure.**
 
+**[Open the live judge experience →](https://museion-beta.vercel.app/judge)**
+
+The hosted path runs the complete verified replay immediately. To run the same path from source:
+
 ```bash
-npm install && cp .env.example .env.local && npm run dev
+npm ci && cp .env.example .env.local && npm run dev
 ```
 
 Then open **http://localhost:3000/judge** — the complete sample lesson: source evidence, a required prediction, deterministic checking, bounded Maia guidance, and a locked independent transfer check at the end. Everything a judge needs to evaluate runs keyless.
@@ -159,7 +163,7 @@ The key inversion versus a chatbot wrapper: Maia doesn't start from an empty pro
 Requires Node.js 20+. Live AI is optional — the whole judge path is keyless.
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local
 npm run dev                    # http://localhost:3000
 ```
@@ -181,6 +185,8 @@ npm run screenshots            # regenerate all 20 README/product screenshots fr
 ```
 
 Optional local ChatGPT/Codex mode: set `MUSEION_LOCAL_AI=1`, then connect in `/settings` via the official device flow. Hosted deployments keep local AI disabled; ChatGPT plan usage and API billing are never mixed silently.
+
+Settings also includes a short **Copy setup prompt** for Codex. The flow needs no Museion account, database, or API key: Codex starts the explicitly enabled local runtime, then the user completes the official ChatGPT device login and runs the model check.
 
 ## Feedback / Session ID
 

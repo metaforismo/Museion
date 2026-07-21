@@ -164,7 +164,10 @@ export default function MaiaPanel({
   const [historyOpen, setHistoryOpen] = useState(false);
   // One rendered variant (spatial vs in-flow) so accessible names stay unique.
   const [isDesktop, setIsDesktop] = useState(false);
+  const isDesktopRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const desktopLauncherRef = useRef<HTMLButtonElement>(null);
+  const desktopCloseRef = useRef<HTMLButtonElement>(null);
   const lastOutboxId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
   const requestScope = useRef(`${sessionId}:${stepId}`);
@@ -217,8 +220,12 @@ export default function MaiaPanel({
 
   useEffect(() => {
     const query = window.matchMedia("(min-width: 1024px)");
-    const frame = requestAnimationFrame(() => setIsDesktop(query.matches));
-    const onChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
+    const apply = (matches: boolean) => {
+      isDesktopRef.current = matches;
+      setIsDesktop(matches);
+    };
+    const frame = requestAnimationFrame(() => apply(query.matches));
+    const onChange = (event: MediaQueryListEvent) => apply(event.matches);
     query.addEventListener("change", onChange);
     return () => {
       cancelAnimationFrame(frame);
@@ -232,12 +239,36 @@ export default function MaiaPanel({
     return () => requestController.current?.abort();
   }, [sessionId, stepId]);
 
+  useLayoutEffect(() => {
+    if (!isDesktop || !historyOpen) return;
+    document.documentElement.dataset.maiaDrawerOpen = "";
+    return () => {
+      delete document.documentElement.dataset.maiaDrawerOpen;
+    };
+  }, [historyOpen, isDesktop]);
+
+  useEffect(() => {
+    if (!isDesktop || !historyOpen) return;
+    const frame = requestAnimationFrame(() => desktopCloseRef.current?.focus());
+    const closeFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setHistoryOpen(false);
+      requestAnimationFrame(() => desktopLauncherRef.current?.focus());
+    };
+    window.addEventListener("keydown", closeFromKeyboard);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", closeFromKeyboard);
+    };
+  }, [historyOpen, isDesktop]);
+
   const send = useCallback(
     (text: string) => {
       const message = text.trim();
       if (!message || sendInFlight.current) return false;
       sendInFlight.current = true;
-      setMobileOpen(true);
+      if (isDesktopRef.current) setHistoryOpen(true);
+      else setMobileOpen(true);
       const scope = `${sessionId}:${stepId}`;
       const assistantId = crypto.randomUUID();
       setStreaming(true);
@@ -351,8 +382,6 @@ export default function MaiaPanel({
   const isRevealing = (id: string) => reveal?.id === id;
   const shown = (m: UiMessage) => (isRevealing(m.id) ? m.content.slice(0, reveal!.count) : m.content);
 
-  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant") ?? null;
-  const assistantPending = streaming && lastAssistant?.content === "";
   const mascotState = streaming ? "thinking" : messages.length === 0 ? "curious" : "attentive";
 
   const composer = (
@@ -409,15 +438,6 @@ export default function MaiaPanel({
           <span className="min-w-0 truncate text-[0.64rem] text-ink-soft">{runtimeLabel}</span>
           <span className="ml-auto shrink-0 font-mono text-[0.62rem] tabular-nums text-ink-soft">{input.length}/{MAX_MAIA_MESSAGE_LENGTH}</span>
           {micButton}
-          <button
-            type="button"
-            aria-expanded={historyOpen}
-            aria-label="Conversation history"
-            onClick={() => setHistoryOpen((open) => !open)}
-            className="hidden h-9 w-9 shrink-0 place-items-center rounded-full border border-ink/12 text-sm text-ink-soft transition hover:border-lapis/40 hover:text-lapis-dark lg:grid"
-          >
-            ≡
-          </button>
           {streaming ? (
             <button type="button" onClick={() => requestController.current?.abort()} className="min-h-9 rounded-xl border border-ink/15 bg-surface px-3 text-xs font-semibold">Stop</button>
           ) : (
@@ -429,59 +449,49 @@ export default function MaiaPanel({
     </form>
   );
 
-  // Desktop: Maia is spatial — mascot + latest leak-gated reply as a
-  // floating bubble inside the lesson stage, composer beside her, full
-  // history in an on-demand drawer. Mobile keeps the in-flow panel. One
-  // variant renders at a time so accessible names stay unique.
+  // Desktop: the mascot is a compact launcher in the page margin. The
+  // conversation and composer live together in an explicit side panel, so
+  // Maia never covers the activity the learner is trying to reason about.
+  // Mobile keeps the in-flow panel. One variant renders at a time so
+  // accessible names stay unique.
   if (isDesktop) {
     return (
       <>
-        <div className="pointer-events-none fixed bottom-4 left-4 z-30 flex w-[26rem] max-w-[calc(100vw-2rem)] flex-col">
-          {/* Maia speaks first: a deterministic, authored opener — no model
-              call, nothing to leak — so asking feels lighter (Koji's
-              speak-first finding, done honestly). */}
-          {messages.length === 0 && !streaming && (
-            <div className="pointer-events-auto mb-2.5 ml-16 max-w-[21rem] rounded-2xl rounded-bl-md border border-lapis/15 bg-surface px-4 py-3 text-sm leading-6 text-ink shadow-[var(--shadow-2)] animate-fade-up">
-              I&apos;m right here with this step. Commit to a move — if it breaks, I&apos;ll ask you a smaller question, never hand you the answer.
-            </div>
-          )}
-          {(lastAssistant || assistantPending) && (
-            <div
-              aria-live="polite"
-              className="pointer-events-auto mb-2.5 ml-16 max-w-[21rem] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-lapis/15 bg-surface px-4 py-3 text-sm leading-6 text-ink shadow-[var(--shadow-2)] animate-fade-up"
-            >
-              {assistantPending ? (
-                <span className="inline-flex gap-1 py-1" aria-label="Maia is thinking">
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lapis/50 [animation-delay:-0.3s]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lapis/50 [animation-delay:-0.15s]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-lapis/50" />
-                </span>
-              ) : lastAssistant ? (
-                <>
-                  {shown(lastAssistant)}
-                  {isRevealing(lastAssistant.id) && <span className="ml-0.5 inline-block h-4 w-0.5 -translate-y-0.5 animate-pulse bg-lapis align-middle" aria-hidden="true" />}
-                </>
-              ) : null}
-            </div>
-          )}
-          <div className="flex items-end gap-2.5">
+        <button
+          ref={desktopLauncherRef}
+          type="button"
+          aria-label="Open Maia chat"
+          aria-expanded={historyOpen}
+          aria-controls="maia-desktop-conversation"
+          onClick={() => setHistoryOpen((open) => !open)}
+          className={`group fixed bottom-5 left-5 z-30 grid h-[4.5rem] w-[4.5rem] place-items-center rounded-[1.35rem] border border-ink/10 bg-surface shadow-[var(--shadow-2)] transition duration-200 hover:-translate-y-0.5 hover:border-lapis/25 hover:shadow-[var(--shadow-3)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lapis ${historyOpen ? "pointer-events-none opacity-0" : "opacity-100"}`}
+        >
+          <span aria-hidden="true" className={`absolute right-2 top-2 h-2 w-2 rounded-full ring-2 ring-surface ${streaming ? "animate-pulse bg-gold" : "bg-correct"}`} />
+          <span className="sr-only">Maia asks questions without giving away the answer.</span>
+          <span className="transition duration-200 group-hover:scale-[1.03]">
             <MaiaCharacter
               state={mascotState}
               animated
-              className="pointer-events-auto h-24 w-20 shrink-0 drop-shadow-[0_10px_18px_rgba(24,33,56,0.18)]"
+              className="h-14 w-12 drop-shadow-[0_7px_12px_rgba(24,33,56,0.14)]"
               title="Maia, your tutor"
             />
-            <div className="min-w-0 flex-1">{composer}</div>
-          </div>
-        </div>
+          </span>
+        </button>
 
         {historyOpen && (
           <aside
-            aria-label="Maia conversation history"
-            className="fixed bottom-0 right-0 top-14 z-40 flex w-[25rem] max-w-[92vw] flex-col border-l border-ink/10 bg-surface shadow-[var(--shadow-3)]"
+            id="maia-desktop-conversation"
+            aria-label="Maia chat"
+            className="fixed bottom-0 right-0 top-14 z-40 flex w-[var(--maia-drawer-width)] max-w-[calc(100vw-1rem)] flex-col border-l border-ink/10 bg-surface shadow-[var(--shadow-3)] animate-fade-up"
           >
             <header className="flex min-h-14 items-center gap-3 border-b border-ink/8 px-4">
-              <p className="font-display text-base font-semibold">Conversation with Maia</p>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-paper">
+                <MaiaCharacter state={mascotState} animated className="h-8 w-7" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-display text-base font-semibold leading-tight">Maia</p>
+                <p className="mt-0.5 truncate text-[0.68rem] text-ink-soft">{streaming ? "thinking with you…" : "asks, never tells"}</p>
+              </div>
               <details className="group relative ml-auto">
                 <summary className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-xl text-base tracking-[0.16em] text-ink-soft transition hover:bg-paper hover:text-ink" aria-label="About Maia">•••</summary>
                 <div className="absolute right-0 top-11 z-30 w-64 rounded-xl border border-ink/10 bg-surface p-4 text-xs leading-5 text-ink-soft shadow-[var(--shadow-3)]">
@@ -490,7 +500,7 @@ export default function MaiaPanel({
                   <p className="mt-1">Replies are checked for answer leakage before you see them. Deterministic code still decides correctness.</p>
                 </div>
               </details>
-              <button type="button" onClick={() => setHistoryOpen(false)} className="min-h-9 rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Close</button>
+              <button ref={desktopCloseRef} type="button" onClick={() => { setHistoryOpen(false); requestAnimationFrame(() => desktopLauncherRef.current?.focus()); }} className="min-h-9 rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Close</button>
             </header>
             <div
               ref={scrollRef}
@@ -499,7 +509,13 @@ export default function MaiaPanel({
               aria-label="Conversation with Maia"
               className="relative min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5"
             >
-              {messages.length === 0 && <p className="pt-6 text-center text-sm text-ink-soft">No messages yet — ask Maia from the composer beside her.</p>}
+              {messages.length === 0 && (
+                <div className="mx-auto flex max-w-[19rem] flex-col items-center pt-[10vh] text-center text-sm text-ink-soft">
+                  <MaiaCharacter state="curious" animated className="h-20 w-16" />
+                  <h2 className="mt-4 font-display text-xl font-semibold tracking-tight text-ink">Think it through with Maia</h2>
+                  <p className="mt-2 leading-6">Commit to a move. If it breaks, Maia asks a smaller question without handing you the answer.</p>
+                </div>
+              )}
               {messages.map((message) => {
                 if (message.role === "user") {
                   return (
@@ -527,6 +543,7 @@ export default function MaiaPanel({
                 </button>
               )}
             </div>
+            <div className="border-t border-ink/8 bg-surface p-3">{composer}</div>
           </aside>
         )}
       </>

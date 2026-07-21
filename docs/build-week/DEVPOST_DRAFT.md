@@ -21,9 +21,9 @@ Prepared against the live OpenAI Build Week requirements and announcements on 20
 - **Country:** Italy (confirm before submission)
 - **Category:** Education
 - **Repository:** https://github.com/metaforismo/Museion
-- **Testing path:** Clone the repository, follow the README, then open `/judge` for the complete keyless replay. No account or API key is required.
+- **Testing path:** Open https://museion-beta.vercel.app/judge for the complete keyless replay. No account or API key is required. To run from source, clone the repository, run `npm ci`, copy `.env.example` to `.env.local`, start the app, and open `/judge`.
 - **Video:** `[public YouTube URL required]`
-- **/feedback Session ID:** `[required — retrieve from the primary Museion build task]`
+- **/feedback Session ID:** `[provided privately for the Devpost field; do not commit the value]`
 - **Built with:** Codex, GPT-5.6, Next.js, React, TypeScript, Zod, Playwright, Vitest, Tailwind CSS
 
 ## One-line description
@@ -49,6 +49,7 @@ The repository includes a complete keyless judge path so reviewers can test the 
 - Full Playwright flows passed across desktop and 320 px layouts, including axe/WCAG scans, keyboard flows, file-draft recovery, multi-material Creator Studio, and multi-tab concurrency.
 - All 20 product screenshots were regenerated from the integrated production build.
 - `npm audit` reports zero known vulnerabilities at the release lockfile.
+- A bounded live lesson turn was delivered by the authenticated Codex runtime through GPT-5.6 Terra with no repair and no answer leakage; the hosted judge path remains keyless and deterministic.
 
 ## Claim boundary
 
@@ -58,7 +59,7 @@ Museion records performance on authored interactions and one immediate near-tran
 
 - [ ] Francesco rewrites the description in his own natural voice; the organizers explicitly advise against submitting AI-assisted copy unchanged.
 - [ ] Confirm Individual and Italy.
-- [ ] Retrieve and paste the primary `/feedback` Session ID.
+- [x] Receive the primary `/feedback` Session ID privately; paste it only into Devpost.
 - [ ] Record, edit, and upload the public YouTube demo under three minutes.
 - [ ] Verify the final YouTube URL and audio in a signed-out browser.
 - [ ] Verify `main`, README setup, public repository visibility, and license from a clean browser.
