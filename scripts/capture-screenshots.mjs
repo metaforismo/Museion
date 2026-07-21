@@ -14,7 +14,10 @@ const launchOptions = process.env.MUSEION_BROWSER_PATH
 const browser = await chromium.launch(launchOptions).catch(() => chromium.launch({ headless: true }));
 const errors = [];
 
-async function capture({ name, route, width = 1440, height = 1000, waitFor = "main", prepare, firstVisit = false }) {
+// Devpost recommends a 3:2 gallery. Keep the canonical desktop captures at
+// 1440×960 so the same truthful product images work in both the repository
+// and the submission without post-processing or fabricated UI.
+async function capture({ name, route, width = 1440, height = 960, waitFor = "main", prepare, firstVisit = false }) {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });
   // App-shell routes redirect first-time visitors to onboarding; seed the
   // flag except when capturing onboarding itself.
@@ -114,7 +117,9 @@ try {
     await page.getByRole("button", { name: "ask Maia why" }).click();
     await page.getByText(/Maia is offline/).waitFor({ state: "visible", timeout: 15_000 });
   } });
-  await capture({ name: "evidence-desktop", route: "/progress" });
+  await capture({ name: "evidence-desktop", route: "/progress", prepare: async (page) => {
+    await page.getByRole("heading", { name: "What Museion observed—and no more." }).waitFor({ state: "visible", timeout: 15_000 });
+  } });
   await capture({ name: "settings-desktop", route: "/settings", prepare: async (page) => { await page.getByRole("button", { name: "Refresh status" }).waitFor({ state: "visible", timeout: 15_000 }); } });
   await capture({ name: "search-desktop", route: "/dashboard", prepare: async (page) => {
     await page.getByRole("button", { name: "Search Museion" }).click();
