@@ -393,7 +393,8 @@ async function desktopMaiaDockFlow() {
     .catch(() => failures.push("desktop Maia: focus did not move to drawer close control"));
   await page.keyboard.press("Escape");
   if (await page.getByRole("complementary", { name: "Maia chat" }).count()) failures.push("desktop Maia: Escape did not close the side panel");
-  if (!(await launcher.evaluate((button) => button === document.activeElement))) failures.push("desktop Maia: focus did not return to launcher");
+  await page.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Open Maia chat", null, { timeout: 2_000 })
+    .catch(() => failures.push("desktop Maia: focus did not return to launcher"));
   await page.screenshot({ path: path.join(outputDir, "desktop-maia-dock.png"), fullPage: true });
   await context.close();
 }
