@@ -199,6 +199,10 @@ export default function HomePage() {
                 <span className={styles.subjectName}>{subject.name}</span>
               </div>
             ))}
+            <div className={styles.promiseOutcome} aria-hidden="true">
+              <Image src="/landing/source-pack-folder-v3.webp" alt="" width={640} height={640} sizes="112px" />
+              <span>One evidence-backed course</span>
+            </div>
           </div>
         </div>
       </section>
@@ -449,24 +453,59 @@ export default function HomePage() {
       </section>
 
       <section className={styles.finalCta} aria-labelledby="final-title">
-        <Cloud className={styles.finalCloudLeft} />
-        <Cloud className={styles.finalCloudRight} />
-        <Spark className={styles.finalStarOne}>✦</Spark>
-        <Spark className={styles.finalStarTwo}>+</Spark>
-        <div className={styles.finalCopy}>
-          <h2 id="final-title">Let&apos;s make thinking visible.</h2>
-          <p>Start with a two-minute lesson. No account, no API key.</p>
-          <Link href="/judge" className={styles.primaryButton}>Try Museion <span aria-hidden="true">→</span></Link>
-        </div>
-        <div className={styles.finalMaiaWrap}>
-          <MaiaCharacter state="celebrating" animated className={styles.finalMaia} />
+        <div className={styles.finalSky}>
+          <Cloud className={styles.finalCloudLeft} />
+          <Cloud className={styles.finalCloudRight} />
+          <Image
+            src="/landing/footer-cloud-blue-v1.webp"
+            alt=""
+            aria-hidden="true"
+            width={768}
+            height={768}
+            sizes="144px"
+            className={`${styles.footerAccentCloud} ${styles.footerAccentCloudBlue}`}
+          />
+          <Image
+            src="/landing/footer-cloud-white-v1.webp"
+            alt=""
+            aria-hidden="true"
+            width={768}
+            height={768}
+            sizes="112px"
+            className={`${styles.footerAccentCloud} ${styles.footerAccentCloudWhite}`}
+          />
+          <Spark className={styles.finalStarOne}>✦</Spark>
+          <Spark className={styles.finalStarTwo}>+</Spark>
+          <div className={styles.finalCopy} data-reveal="soft">
+            <p className={styles.sectionKicker}>Ready when curiosity is</p>
+            <h2 id="final-title">Let&apos;s make thinking visible.</h2>
+            <p>Start with a two-minute lesson. No account, no API key.</p>
+            <Link href="/judge" className={styles.primaryButton}>Try Museion <span aria-hidden="true">→</span></Link>
+          </div>
+          <div className={styles.finalScene} data-reveal="soft">
+            <div className={styles.finalMaiaWrap}>
+              <Image
+                src="/landing/maia-peeking-v3.webp"
+                alt="Maia peeking over the cloud horizon"
+                width={768}
+                height={768}
+                sizes="(max-width: 700px) 300px, 480px"
+                className={styles.finalMaia}
+              />
+            </div>
+            <div className={styles.finalHorizon} aria-hidden="true" />
+          </div>
         </div>
         <footer className={styles.landingFooter}>
           <Link href="/" aria-label="Museion home" className={styles.footerBrand}>
             <BrandMark className="h-8 w-8" />
             <span>Museion</span>
           </Link>
-          <p>© 2026 · A house for reasoning from sources.</p>
+          <div className={styles.footerPromise}>
+            <BrandMark className="h-7 w-7" />
+            <strong>A house for reasoning from sources.</strong>
+            <span>© 2026 Museion</span>
+          </div>
           <nav aria-label="Legal">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>

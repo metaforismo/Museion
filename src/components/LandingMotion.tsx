@@ -17,7 +17,7 @@ export default function LandingMotion({ className, children }: { className?: str
       let nextPhase = "";
 
       if (stage.dataset.scrollStage === "promise") {
-        nextPhase = progress < 0.28 ? "cluster" : progress < 0.72 ? "story" : "resolved";
+        nextPhase = progress < 0.25 ? "cluster" : progress < 0.75 ? "story" : "resolved";
       }
 
       if (stage.dataset.scrollStage === "manifesto") {
