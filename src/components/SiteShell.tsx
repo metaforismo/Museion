@@ -74,7 +74,10 @@ export default function SiteShell({ children, courses, lessons }: { children: Re
     return () => { document.body.style.overflow = ""; document.removeEventListener("keydown", handleKeyboard); };
   }, [sidebarOpen]);
 
-  if (publicRoute) return <div className="flex min-h-[100dvh] flex-col"><SiteHeader /><main id="main-content" tabIndex={-1} className="flex-1">{children}</main><PublicFooter /></div>;
+  if (publicRoute) {
+    const landing = pathname === "/";
+    return <div className="flex min-h-[100dvh] flex-col"><SiteHeader landing={landing} /><main id="main-content" tabIndex={-1} className="flex-1">{children}</main>{!landing && <PublicFooter />}</div>;
+  }
   // Focus chrome: the lesson floats as a sheet on a soft color wash.
   if (focusRoute) return <div className="min-h-[100dvh] bg-paper [background-image:radial-gradient(52rem_34rem_at_12%_-4%,rgba(43,74,203,0.07),transparent),radial-gradient(44rem_30rem_at_96%_10%,rgba(199,145,20,0.06),transparent),radial-gradient(40rem_36rem_at_50%_110%,rgba(31,138,76,0.045),transparent)]"><header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/5 bg-surface/80 px-4 backdrop-blur"><Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold"><BrandMark className="h-8 w-8" />Museion</Link><Link href="/dashboard" className="rounded-lg px-3 py-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Leave lesson</Link></header><main id="main-content" tabIndex={-1}>{children}</main></div>;
 
