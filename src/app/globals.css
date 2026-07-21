@@ -47,6 +47,24 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Maia is a real desktop sidebar: opening it reserves layout space instead of
+   covering the lesson canvas. The narrower width protects the 1024px edge. */
+@media (min-width: 1024px) {
+  :root {
+    --maia-drawer-width: 22rem;
+  }
+
+  html[data-maia-drawer-open] body {
+    padding-right: var(--maia-drawer-width);
+  }
+}
+
+@media (min-width: 1200px) {
+  :root {
+    --maia-drawer-width: 25rem;
+  }
+}
+
 ::selection {
   background: var(--color-gold-soft);
   color: var(--color-ink);

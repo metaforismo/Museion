@@ -48,6 +48,8 @@ const STAGE_LABELS: Record<string, string> = {
   repair: "Typed repair",
 };
 
+const CODEX_SETUP_PROMPT = "Open the Museion repository in Codex. Run npm ci, copy .env.example to .env.local, then start Museion with MUSEION_LOCAL_AI=1 npm run dev. Do not add an API key or change the hosted deployment. Tell me when /settings is ready so I can click Connect ChatGPT and complete the official device login.";
+
 function friendlyError(value: unknown, fallback: string): string {
   const code = typeof value === "string" ? value : "";
   const messages: Record<string, string> = {
@@ -270,6 +272,15 @@ export default function AiSettingsPanel() {
     }
   };
 
+  const copySetupPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(CODEX_SETUP_PROMPT);
+      setNotice({ tone: "success", text: "Codex setup prompt copied. It contains no credentials or API key." });
+    } catch {
+      setNotice({ tone: "error", text: "The setup prompt could not be copied. Check browser clipboard permissions and try again." });
+    }
+  };
+
   const refreshStatus = async () => {
     if (!beginAction("refresh")) return;
     setNotice(null);
@@ -384,6 +395,17 @@ export default function AiSettingsPanel() {
               </li>
             ))}
           </ol>
+          <div className="mt-6 rounded-xl border border-ink/10 bg-paper p-4 sm:p-5" aria-labelledby="codex-setup-heading">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="eyebrow">Optional local setup</p>
+                <h3 id="codex-setup-heading" className="mt-1.5 font-semibold">Give Codex this short prompt.</h3>
+              </div>
+              <button type="button" onClick={() => void copySetupPrompt()} className="rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm font-semibold text-lapis-dark transition hover:border-lapis/35">Copy setup prompt</button>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-ink-soft">Codex will prepare the local runtime. Then return here, choose <strong className="font-semibold text-ink">Connect ChatGPT</strong>, finish the official device login, and run <strong className="font-semibold text-ink">Check models</strong>. No Museion account, database, or API key is involved.</p>
+            <p className="mt-3 rounded-lg border-l-2 border-lapis bg-surface px-3 py-2.5 font-mono text-xs leading-5 text-ink">{CODEX_SETUP_PROMPT}</p>
+          </div>
           <div className="mt-6 flex flex-wrap gap-3">
             {!connected && <button type="button" disabled={busyAction === "connect" || !status.enabled} onClick={() => void connect()} className="rounded-lg bg-ink px-5 py-3 font-semibold text-white transition hover:bg-lapis disabled:opacity-45">{busyAction === "connect" ? "Starting connection…" : "Connect ChatGPT"}</button>}
             {connected && !checking && <button type="button" disabled={Boolean(busyAction) || !status.enabled} onClick={() => void check()} className="rounded-lg bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-lapis disabled:opacity-45">Check models</button>}
