@@ -2,6 +2,17 @@
 
 Target: **2:40–2:50**, public on YouTube. Recommended format: Francesco on camera for the opening and optional closing; own voice over real product capture for the main body; restrained motion graphics for chapter cards, callouts, and the Codex/GPT-5.6 architecture. Do not replace the working demo with a cinematic launch reel or a long talking-head segment.
 
+## Devpost run of show
+
+This follows the organizer's recommended sequence from Discord and the live submission rules:
+
+1. **This is the project** — name Museion and the learning problem in one sentence.
+2. **This is what it does** — show the learner committing before explanation and receiving misconception-aware guidance.
+3. **This is how it does that** — show deterministic checking, bounded Maia, independent transfer, evidence, and source-grounded Creator review.
+4. **This is how Codex and GPT-5.6 were used** — distinguish the build collaborator from the runtime model roles and the deterministic gates around both.
+
+The video is a walkthrough, not an inventory. Show the smallest set of connected features that proves the product's central claim; use the gallery and README for breadth.
+
 ## Recording direction
 
 - Record in 16:9 at 1080p or higher.
