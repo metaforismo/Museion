@@ -32,12 +32,12 @@ type Chapter = {
 };
 
 const chapters: Chapter[] = [
-  {from: 180, to: 750, eyebrow: 'THE METHOD', title: 'Seven deliberate moves', caption: 'A clear learning cycle keeps the learner doing the thinking.', zoom: {x: 0, y: 0, scale: 1.02}},
-  {from: 750, to: 1470, eyebrow: 'INTERACTIVE LESSONS', title: 'Commit before reveal', caption: 'Deterministic code checks each real learning move.', zoom: {x: -2, y: -1, scale: 1.04}},
-  {from: 1470, to: 2070, eyebrow: 'MAIA', title: 'Questions, never answers', caption: 'Step-aware guidance passes an answer-leak gate.', zoom: {x: -4, y: 0, scale: 1.06}},
-  {from: 2070, to: 2760, eyebrow: 'SOURCE COURSE ARCHITECT', title: 'Start with a source you trust', caption: 'One Source Pack preserves rights, evidence, and provenance.', zoom: {x: 2, y: 1, scale: 1.045}},
-  {from: 2760, to: 3240, eyebrow: 'EVIDENCE', title: 'Say what the result proves', caption: 'Independent transfer is recorded with honest limits.', zoom: {x: 1, y: 0, scale: 1.05}},
-  {from: 3240, to: 3660, eyebrow: 'BUILT WITH CODEX + GPT-5.6', title: 'Models propose. Gates decide.', caption: 'Luna extracts. Terra teaches. Sol audits.', zoom: {x: -2, y: 0, scale: 1.055}},
+  {from: 180, to: 630, eyebrow: 'THE METHOD', title: 'Seven deliberate moves', caption: 'A clear learning cycle keeps the learner doing the thinking.', zoom: {x: 0, y: 0, scale: 1.02}},
+  {from: 630, to: 1140, eyebrow: 'INTERACTIVE LESSONS', title: 'Commit before reveal', caption: 'Deterministic code checks each real learning move.', zoom: {x: -2, y: -1, scale: 1.04}},
+  {from: 1140, to: 1530, eyebrow: 'MAIA', title: 'Questions, never answers', caption: 'Step-aware guidance passes an answer-leak gate.', zoom: {x: -4, y: 0, scale: 1.06}},
+  {from: 1530, to: 2250, eyebrow: 'SOURCE COURSE ARCHITECT', title: 'Start with a source you trust', caption: 'One Source Pack preserves rights, evidence, and provenance.', zoom: {x: 2, y: 1, scale: 1.045}},
+  {from: 2250, to: 2565, eyebrow: 'EVIDENCE', title: 'Say what the result proves', caption: 'Independent transfer is recorded with honest limits.', zoom: {x: 1, y: 0, scale: 1.05}},
+  {from: 2565, to: 3420, eyebrow: 'BUILT WITH CODEX + GPT-5.6', title: 'Models propose. Gates decide.', caption: 'Luna extracts. Terra teaches. Sol audits.', zoom: {x: -2, y: 0, scale: 1.055}},
 ];
 
 const Brand: React.FC<{inverse?: boolean}> = ({inverse = false}) => (
@@ -85,6 +85,7 @@ const Demo: React.FC = () => {
           <OffthreadVideo
             src={staticFile('source/museion1-720-keyframes.mp4')}
             muted
+            playbackRate={1.3}
             style={{width: '105%', height: '100%', objectFit: 'cover', objectPosition: 'left center', transformOrigin: 'left center', transform: `translate(${chapter.zoom.x}%, ${chapter.zoom.y}%) scale(${chapter.zoom.scale})`}}
           />
         </div>
@@ -94,6 +95,36 @@ const Demo: React.FC = () => {
         </div>
         <div style={{position: 'absolute', left: '50%', bottom: 24, transform: 'translateX(-50%)', width: 'min(1160px, 78%)', padding: '17px 28px', borderRadius: 20, background: 'rgba(20,25,43,.94)', color: '#fff', textAlign: 'center', fontFamily: 'Arial, sans-serif', fontSize: 27, fontWeight: 650, lineHeight: 1.25, opacity: fade, boxShadow: '0 14px 40px rgba(20,25,43,.28)'}}>
           {chapter.caption}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+const SettingsHold: React.FC = () => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const enter = spring({frame, fps, config: {damping: 20, stiffness: 100}});
+  return (
+    <AbsoluteFill style={{background: 'linear-gradient(135deg, #edf1ff 0%, #f7f5f0 48%, #fff7df 100%)', padding: '56px 68px 70px'}}>
+      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30}}>
+        <Brand />
+        <div style={{fontFamily: 'Arial, sans-serif', fontSize: 20, fontWeight: 700, letterSpacing: 2.5, color: C.lapisDark}}>LEARN BY REASONING, NOT BY BEING TOLD.</div>
+      </div>
+      <div style={{position: 'relative', flex: 1, height: 830, borderRadius: 32, overflow: 'hidden', background: C.surface, boxShadow: '0 28px 80px rgba(20,25,43,.18)', border: '1px solid rgba(20,25,43,.08)'}}>
+        <div style={{height: 46, display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px', background: '#f7f7f8', borderBottom: '1px solid rgba(20,25,43,.08)'}}>
+          {['#ef6a5b','#edbd4d','#61c454'].map((color) => <span key={color} style={{width: 13, height: 13, borderRadius: '50%', background: color}} />)}
+          <div style={{marginLeft: 18, color: '#8a90a0', fontFamily: 'Arial, sans-serif', fontSize: 15}}>museion-beta.vercel.app/settings</div>
+        </div>
+        <div style={{position: 'absolute', left: 0, right: 0, top: 46, bottom: 0, overflow: 'hidden'}}>
+          <Img src={staticFile('source/settings-hold.jpg')} style={{width: '105%', height: '100%', objectFit: 'cover', objectPosition: 'left center'}} />
+        </div>
+        <div style={{position: 'absolute', left: 28, top: 74, width: 700, padding: '16px 20px', borderRadius: 18, background: 'rgba(20,25,43,.94)', color: '#fff', opacity: enter, boxShadow: '0 12px 34px rgba(20,25,43,.24)'}}>
+          <div style={{fontFamily: 'Arial, sans-serif', color: '#bbc7ff', fontWeight: 800, fontSize: 15, letterSpacing: 2.3}}>BUILT WITH CODEX + GPT-5.6</div>
+          <div style={{fontFamily: 'Georgia, serif', fontWeight: 700, fontSize: 32, letterSpacing: -1, marginTop: 7}}>Models propose. Gates decide.</div>
+        </div>
+        <div style={{position: 'absolute', left: '50%', bottom: 24, transform: 'translateX(-50%)', width: 'min(1160px, 78%)', padding: '17px 28px', borderRadius: 20, background: 'rgba(20,25,43,.94)', color: '#fff', textAlign: 'center', fontFamily: 'Arial, sans-serif', fontSize: 27, fontWeight: 650, lineHeight: 1.25, opacity: enter, boxShadow: '0 14px 40px rgba(20,25,43,.28)'}}>
+          Luna extracts. Terra teaches. Sol audits. Deterministic gates keep authority.
         </div>
       </div>
     </AbsoluteFill>
@@ -119,8 +150,9 @@ const EndCard: React.FC = () => {
 export const MuseionBuildWeek: React.FC<{voiceoverSrc: string | null}> = ({voiceoverSrc}) => (
   <AbsoluteFill>
     <Sequence from={0} durationInFrames={180}><Hook /></Sequence>
-    <Sequence from={180} durationInFrames={3480}><Demo /></Sequence>
-    <Sequence from={3660} durationInFrames={210}><EndCard /></Sequence>
+    <Sequence from={180} durationInFrames={2677}><Demo /></Sequence>
+    <Sequence from={2857} durationInFrames={563}><SettingsHold /></Sequence>
+    <Sequence from={3420} durationInFrames={450}><EndCard /></Sequence>
     {voiceoverSrc ? <Audio src={staticFile(voiceoverSrc)} /> : null}
   </AbsoluteFill>
 );

@@ -1,5 +1,5 @@
 node_modules/
 out/
 public/source/
-public/voiceover.*
+public/voiceover*.mp3
 .DS_Store
