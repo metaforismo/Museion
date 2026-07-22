@@ -131,6 +131,48 @@ const SettingsHold: React.FC = () => {
   );
 };
 
+const buildPhases = [
+  {label: 'ORCHESTRATE', title: 'Focused Codex threads', body: 'Learning science · UX · edge cases · release audit'},
+  {label: 'VERIFY', title: 'Test the real product', body: 'Unit tests · browser flows · stress tests'},
+  {label: 'CREATE', title: 'ImageGen inside Codex', body: 'Logo · landing assets · final art direction'},
+  {label: 'GOVERN', title: 'AI proposes. Code decides.', body: 'Grading · citations · state · safety · publishing'},
+];
+
+const CodexStory: React.FC = () => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const active = Math.min(buildPhases.length - 1, Math.floor(frame / 270));
+  const enter = spring({frame, fps, config: {damping: 18, stiffness: 95}});
+  return (
+    <AbsoluteFill style={{background: C.ink, color: '#fff', padding: '68px 82px', overflow: 'hidden'}}>
+      <div style={{position: 'absolute', width: 780, height: 780, borderRadius: '50%', background: C.lapis, filter: 'blur(110px)', opacity: .2, right: -230, top: -300}} />
+      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+        <Brand inverse />
+        <div style={{fontFamily: 'Arial, sans-serif', color: '#bfc9ff', fontSize: 20, fontWeight: 800, letterSpacing: 3}}>BUILT END TO END WITH CODEX + GPT 5.6 SOL</div>
+      </div>
+      <div style={{marginTop: 92, opacity: enter, transform: `translateY(${interpolate(enter, [0, 1], [30, 0])}px)`}}>
+        <div style={{fontFamily: 'Georgia, serif', fontSize: 68, fontWeight: 700, letterSpacing: -2.5}}>One idea. A complete, tested product.</div>
+        <div style={{fontFamily: 'Arial, sans-serif', fontSize: 28, color: '#c9cedf', marginTop: 18}}>Mostly medium reasoning. Many focused threads. One verified release.</div>
+      </div>
+      <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginTop: 74}}>
+        {buildPhases.map((phase, index) => {
+          const selected = index === active;
+          return (
+            <div key={phase.label} style={{minHeight: 330, padding: '30px 28px', borderRadius: 24, background: selected ? C.lapis : 'rgba(255,255,255,.07)', border: selected ? '1px solid rgba(255,255,255,.4)' : '1px solid rgba(255,255,255,.12)', boxShadow: selected ? '0 22px 54px rgba(43,74,203,.34)' : 'none', transform: `translateY(${selected ? -14 : 0}px)`, transition: 'none'}}>
+              <div style={{fontFamily: 'Arial, sans-serif', color: selected ? '#fff' : '#9ca7d9', fontSize: 16, fontWeight: 800, letterSpacing: 2.3}}>{phase.label}</div>
+              <div style={{fontFamily: 'Georgia, serif', fontSize: 34, lineHeight: 1.08, fontWeight: 700, marginTop: 28}}>{phase.title}</div>
+              <div style={{fontFamily: 'Arial, sans-serif', color: selected ? '#edf0ff' : '#b8becf', fontSize: 23, lineHeight: 1.45, marginTop: 28}}>{phase.body}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{position: 'absolute', left: 82, right: 82, bottom: 56, height: 6, borderRadius: 99, background: 'rgba(255,255,255,.12)', overflow: 'hidden'}}>
+        <div style={{height: '100%', width: `${interpolate(frame, [0, 1080], [0, 100], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}%`, background: C.gold}} />
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 const EndCard: React.FC = () => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -152,7 +194,8 @@ export const MuseionBuildWeek: React.FC<{voiceoverSrc: string | null}> = ({voice
     <Sequence from={0} durationInFrames={180}><Hook /></Sequence>
     <Sequence from={180} durationInFrames={2677}><Demo /></Sequence>
     <Sequence from={2857} durationInFrames={563}><SettingsHold /></Sequence>
-    <Sequence from={3420} durationInFrames={450}><EndCard /></Sequence>
+    <Sequence from={3420} durationInFrames={1080}><CodexStory /></Sequence>
+    <Sequence from={4500} durationInFrames={300}><EndCard /></Sequence>
     {voiceoverSrc ? <Audio src={staticFile(voiceoverSrc)} /> : null}
   </AbsoluteFill>
 );
