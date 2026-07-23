@@ -1,10 +1,5 @@
 import { MAX_SOURCE_PAGES, SourceIngestionError } from "./limits";
 
-const PDF_WORKER_URL = new URL(
-  "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
-
 export async function extractSelectablePdfPages(
   bytes: Uint8Array,
 ): Promise<string[]> {
@@ -12,7 +7,12 @@ export async function extractSelectablePdfPages(
   try {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     if (typeof window !== "undefined") {
-      pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+      // Resolve the worker only in the browser. Evaluating this package URL at
+      // Worker module startup is invalid in the managed Sites runtime.
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+        import.meta.url,
+      ).toString();
     }
     const loadingTask = pdfjs.getDocument({
       data: bytes.slice(),
