@@ -5,8 +5,9 @@ import { hasPractice } from "@/lib/engine/practice";
 import { listCompilerRuns } from "@/lib/compiler/runs";
 import { listJudgeSessions } from "@/lib/judge/store";
 import { stateBackend } from "@/lib/server/durable-state";
+import { learnerProfile, sessionsFor } from "@/lib/server/session-repository";
 import { planRevisits } from "@/lib/revisit/scheduler";
-import { getProfile, listSessionsForLearner } from "@/lib/store";
+import type { LearnerSession } from "@/lib/engine/session";
 
 import { DashboardSnapshotSchema, type DashboardSnapshot } from "./contracts";
 
@@ -18,7 +19,7 @@ function assistanceLabel(value: "novice" | "developing" | "proficient") {
   return value === "novice" ? "more" as const : value === "developing" ? "some" as const : "light" as const;
 }
 
-function answeredConcepts(sessions: ReturnType<typeof listSessionsForLearner>) {
+function answeredConcepts(sessions: readonly LearnerSession[]) {
   const guided = new Set<string>();
   const practiced = new Set<string>();
 
@@ -35,9 +36,9 @@ function answeredConcepts(sessions: ReturnType<typeof listSessionsForLearner>) {
 }
 
 export async function buildDashboardSnapshot(learnerId: string): Promise<DashboardSnapshot> {
-  const profile = getProfile(learnerId);
-  const authoredSessions = listSessionsForLearner(learnerId);
-  const [generatedSessions, compilerRuns] = await Promise.all([
+  const [profile, authoredSessions, generatedSessions, compilerRuns] = await Promise.all([
+    learnerProfile(learnerId, false),
+    sessionsFor(learnerId),
     listJudgeSessions(learnerId).catch(() => []),
     listCompilerRuns(learnerId).catch(() => []),
   ]);
@@ -219,12 +220,12 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
       label: settings.provider === "codex" ? "ChatGPT via Codex" : settings.provider === "offline" ? "Offline demo" : "OpenAI API",
       // Authored lesson state is process-local today even when generated jobs
       // use Supabase. Never imply that the whole learning record is synced.
-      persistence: stateBackend().kind === "supabase" ? "hybrid" : "process-local",
+      persistence: stateBackend().kind === "d1" ? "synced" : stateBackend().kind === "supabase" ? "hybrid" : "process-local",
     },
     limitations: [
       "Guided work and hint-free practice are session observations, not proof of retained mastery.",
       "Retention is not measured until a delayed check is completed.",
-      stateBackend().kind === "memory" ? "Local learning records expire and are not shared across servers." : "Generated sessions and compiler runs have bounded retention windows.",
+      stateBackend().kind === "memory" ? "Local learning records expire and are not shared across servers." : stateBackend().kind === "d1" ? "Signed-in learning records remain until you delete your account data." : "Generated sessions and compiler runs have bounded retention windows.",
     ],
     generatedAt: new Date().toISOString(),
   });

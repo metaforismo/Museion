@@ -8,12 +8,15 @@ import {
   verifySourceDocumentIntegrity,
   verifySourcePackIntegrity,
 } from "@/lib/source";
-import { resolveLearnerId, setLearnerCookie } from "@/lib/server/learner";
+import { requireAccountActor } from "@/lib/server/actor";
+import { consumeUsage } from "@/lib/server/usage";
 
 export async function POST(request: Request) {
+  let actor;
+  try { actor = await requireAccountActor(); } catch { return NextResponse.json({ error: "CHATGPT_SIGN_IN_REQUIRED", signIn: "/signin-with-chatgpt?return_to=/create" }, { status: 401 }); }
   const parsed = CompilerRunRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVALID_COMPILER_REQUEST" }, { status: 400 });
-  const { learnerId, isNew } = await resolveLearnerId();
+  if (!await consumeUsage(actor.ownerId, "compiler")) return NextResponse.json({ error: "DAILY_COMPILER_QUOTA_EXCEEDED", retryable: true }, { status: 429 });
   try {
     let document = parsed.data.document;
     let sourcePackManifest;
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
     }
     const response = NextResponse.json(
       await enqueueCompilerRun(
-        learnerId,
+        actor.ownerId,
         document,
         parsed.data.audience,
         parsed.data.templateId,
@@ -39,7 +42,6 @@ export async function POST(request: Request) {
       { status: 202 },
     );
     response.headers.set("Cache-Control", "no-store");
-    if (isNew) setLearnerCookie(response, learnerId);
     return response;
   } catch (error) {
     const payload = compilerFailurePayload(error);

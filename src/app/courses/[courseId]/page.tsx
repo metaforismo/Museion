@@ -9,8 +9,8 @@ import SubjectIcon from "@/components/SubjectIcon";
 import { getLesson } from "@/lib/content";
 import { coursePaths, getCoursePath } from "@/lib/curriculum";
 import { subjectColor } from "@/lib/curriculum/subjects";
-import { readLearnerId } from "@/lib/server/learner";
-import { getProfile } from "@/lib/store";
+import { currentActor } from "@/lib/server/actor";
+import { learnerProfile } from "@/lib/server/session-repository";
 
 type Props = { params: Promise<{ courseId: string }> };
 
@@ -35,8 +35,8 @@ export default async function CoursePage({ params }: Props) {
   const lessons = course.lessonIds.map((lessonId) => getLesson(lessonId));
   if (lessons.some((lesson) => !lesson)) notFound();
 
-  const learnerId = await readLearnerId();
-  const completed = (learnerId ? getProfile(learnerId)?.completedLessons : undefined) ?? new Set<string>();
+  const learnerId = (await currentActor()).ownerId;
+  const completed = (await learnerProfile(learnerId, false))?.completedLessons ?? new Set<string>();
   const doneCount = course.lessonIds.filter((id) => completed.has(id)).length;
   const accent = subjectColor(course.subject);
   const firstUnfinished = course.lessonIds.find((id) => !completed.has(id)) ?? course.lessonIds[0];

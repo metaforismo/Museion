@@ -19,7 +19,7 @@ export interface StateRecord<T> {
 }
 
 export interface StateBackend {
-  readonly kind: "memory" | "supabase";
+  readonly kind: "memory" | "supabase" | "d1";
   get<T>(namespace: StateNamespace, id: string, ownerId: string): Promise<StateRecord<T> | undefined>;
   put<T>(record: StateRecord<T>): Promise<void>;
   compareAndPut<T>(record: StateRecord<T>, expectedUpdatedAt: string): Promise<boolean>;
@@ -27,6 +27,8 @@ export interface StateBackend {
   delete(namespace: StateNamespace, id: string, ownerId: string): Promise<boolean>;
   prune(namespace: StateNamespace, now?: Date): Promise<void>;
 }
+
+import { sitesDatabase } from "@/lib/sites/database";
 
 type StoredRecord = StateRecord<unknown>;
 
@@ -88,6 +90,47 @@ class MemoryStateBackend implements StateBackend {
     for (const [key, record] of memoryRecords) {
       if (record.namespace === namespace && Date.parse(record.expiresAt) <= now.getTime()) memoryRecords.delete(key);
     }
+  }
+}
+
+interface D1StateRow {
+  namespace: StateNamespace;
+  id: string;
+  owner_id: string;
+  payload: string;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function fromD1Row<T>(row: D1StateRow): StateRecord<T> {
+  return { namespace: row.namespace, id: row.id, ownerId: row.owner_id, payload: JSON.parse(row.payload) as T, expiresAt: row.expires_at, createdAt: row.created_at, updatedAt: row.updated_at };
+}
+
+class D1StateBackend implements StateBackend {
+  readonly kind = "d1" as const;
+  private db() { const db = sitesDatabase(); if (!db) throw new Error("SITES_DATABASE_UNAVAILABLE"); return db; }
+  async get<T>(namespace: StateNamespace, id: string, ownerId: string) {
+    const row = await this.db().prepare("SELECT namespace,id,owner_id,payload,expires_at,created_at,updated_at FROM museion_state WHERE namespace=? AND id=? AND owner_id=? AND expires_at>? LIMIT 1").bind(namespace, id, ownerId, new Date().toISOString()).first<D1StateRow>();
+    return row ? fromD1Row<T>(row) : undefined;
+  }
+  async put<T>(record: StateRecord<T>): Promise<void> {
+    await this.db().prepare("INSERT INTO museion_state(namespace,id,owner_id,payload,expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(namespace,id) DO UPDATE SET owner_id=excluded.owner_id,payload=excluded.payload,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(record.namespace, record.id, record.ownerId, JSON.stringify(record.payload), record.expiresAt, record.createdAt, record.updatedAt).run();
+  }
+  async compareAndPut<T>(record: StateRecord<T>, expectedUpdatedAt: string): Promise<boolean> {
+    const result = await this.db().prepare("UPDATE museion_state SET payload=?,expires_at=?,updated_at=? WHERE namespace=? AND id=? AND owner_id=? AND updated_at=? AND expires_at>?").bind(JSON.stringify(record.payload), record.expiresAt, record.updatedAt, record.namespace, record.id, record.ownerId, expectedUpdatedAt, new Date().toISOString()).run();
+    return Number(result.meta?.changes ?? 0) === 1;
+  }
+  async list<T>(namespace: StateNamespace, ownerId: string): Promise<StateRecord<T>[]> {
+    const result = await this.db().prepare("SELECT namespace,id,owner_id,payload,expires_at,created_at,updated_at FROM museion_state WHERE namespace=? AND owner_id=? AND expires_at>? ORDER BY updated_at DESC").bind(namespace, ownerId, new Date().toISOString()).all<D1StateRow>();
+    return (result.results ?? []).map(fromD1Row<T>);
+  }
+  async delete(namespace: StateNamespace, id: string, ownerId: string): Promise<boolean> {
+    const result = await this.db().prepare("DELETE FROM museion_state WHERE namespace=? AND id=? AND owner_id=?").bind(namespace, id, ownerId).run();
+    return Number(result.meta?.changes ?? 0) > 0;
+  }
+  async prune(namespace: StateNamespace, now = new Date()): Promise<void> {
+    await this.db().prepare("DELETE FROM museion_state WHERE namespace=? AND expires_at<=?").bind(namespace, now.toISOString()).run();
   }
 }
 
@@ -202,8 +245,10 @@ class SupabaseStateBackend implements StateBackend {
 }
 
 const memoryBackend = new MemoryStateBackend();
+const d1Backend = new D1StateBackend();
 
 export function stateBackend(): StateBackend {
+  if (sitesDatabase()) return d1Backend;
   const selected = process.env.MUSEION_STATE_BACKEND?.trim() || "memory";
   if (selected === "memory") return memoryBackend;
   if (selected !== "supabase") throw new Error("INVALID_STATE_BACKEND");

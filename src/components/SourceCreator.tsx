@@ -410,6 +410,18 @@ export default function SourceCreator() {
     setCompiling(true);
     setError(null);
     try {
+      // Raw authorized files are retained in Sites R2 only for the bounded
+      // compilation window. Self-host builds without R2 keep their existing
+      // browser-normalized flow.
+      for (const file of materialFiles.current.values()) {
+        const form = new FormData();
+        form.set("file", file);
+        const upload = await fetchWithTimeout("/api/uploads", { method: "POST", body: form });
+        if (!upload.ok && upload.status !== 503) {
+          const uploadError = await upload.json().catch(() => null);
+          throw new Error(compilerErrorMessage(uploadError?.error ?? "UPLOAD_FAILED"));
+        }
+      }
       compileRequestId.current ??= crypto.randomUUID();
       const response = await fetchWithTimeout("/api/compiler/runs", {
         method: "POST",
@@ -430,6 +442,9 @@ export default function SourceCreator() {
       }
       setJob(payload as CompilerJob);
       sessionStorage.setItem(ACTIVE_RUN_KEY, (payload as CompilerJob).runId);
+      // Sites persists the queued run first. A separate bounded request acquires
+      // its D1 lease, so refreshes can reconnect without duplicating work.
+      void fetch(`/api/compiler/runs/${(payload as CompilerJob).runId}/advance`, { method: "POST" }).catch(() => undefined);
     } catch (cause) {
       setError(
         cause instanceof RequestTimeoutError

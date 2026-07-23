@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getOwnedSession } from "@/lib/server/session-access";
+import { currentActor } from "@/lib/server/actor";
+import { persistSession } from "@/lib/server/session-repository";
 
 const AnswerCommandSchema = z.object({
   answer: z.string().trim().min(1).max(1_000),
@@ -30,6 +32,8 @@ export async function POST(
   }
   const step = session.lesson.steps.find((candidate) => candidate.id === outcome.stepId);
   if (!step) return NextResponse.json({ error: "Session step is unavailable" }, { status: 409 });
+  try { await persistSession(session, (await currentActor()).ownerId, body.data.expectedVersion); }
+  catch { return NextResponse.json({ error: "Session conflict" }, { status: 409 }); }
 
   return NextResponse.json({
     ...outcome,

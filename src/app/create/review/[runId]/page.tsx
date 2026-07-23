@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getCompilerRun } from "@/lib/compiler";
 import { COURSE_TEMPLATES } from "@/lib/compiler/templates";
-import { readLearnerId } from "@/lib/server/learner";
+import { currentActor } from "@/lib/server/actor";
 
 export const metadata: Metadata = { title: "Review compilation run" };
 
@@ -21,8 +21,9 @@ export default async function CompilationRunReview({
 }: {
   params: Promise<{ runId: string }>;
 }) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) notFound();
+  const actor = await currentActor();
+  if (actor.kind !== "account") notFound();
+  const ownerId = actor.ownerId;
 
   let run;
   try {

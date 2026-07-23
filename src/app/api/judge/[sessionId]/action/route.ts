@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { dispatchJudgeAction, JudgeActionRequestSchema } from "@/lib/judge";
-import { readLearnerId } from "@/lib/server/learner";
+import { currentActor } from "@/lib/server/actor";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) return NextResponse.json({ error: "Unknown judge session" }, { status: 404 });
+  const ownerId = (await currentActor()).ownerId;
   const parsed = JudgeActionRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid runtime action" }, { status: 400 });
   try {

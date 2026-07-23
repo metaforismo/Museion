@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { JudgeCreateRequestSchema } from "@/lib/judge";
 import { createJudgeSession } from "@/lib/judge";
 import { getPrivateCompilerRun } from "@/lib/compiler";
-import { readLearnerId } from "@/lib/server/learner";
+import { currentActor } from "@/lib/server/actor";
 
 const SUPPORTED = new Set(["explanation", "prediction-choice", "sequence-builder", "range-explorer", "state-trace"]);
 
 export async function POST(request: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
+  const actor = await currentActor();
+  if (actor.kind !== "account") return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
+  const ownerId = actor.ownerId;
   const parsed = JudgeCreateRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVALID_LAUNCH_REQUEST" }, { status: 400 });
   try {

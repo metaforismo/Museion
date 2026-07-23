@@ -5,9 +5,10 @@ import { buildSessionState } from "@/lib/api-types";
 import { getLesson, toPublicLesson } from "@/lib/content";
 import { buildPracticeLesson, hasPractice } from "@/lib/engine/practice";
 import { LearnerSession, type SessionMode } from "@/lib/engine/session";
+import { currentActor } from "@/lib/server/actor";
 import { resolveLearnerId, setLearnerCookie } from "@/lib/server/learner";
 import { log } from "@/lib/server/log";
-import { getOrCreateProfile, saveSession } from "@/lib/store";
+import { learnerProfile, persistSession } from "@/lib/server/session-repository";
 
 const CreateSessionBodySchema = z.object({
   lessonId: z.string().min(1).max(160),
@@ -32,15 +33,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const { learnerId, isNew } = await resolveLearnerId();
-  const profile = getOrCreateProfile(learnerId);
+  const actor = await currentActor();
+  const guest = actor.kind === "guest" ? await resolveLearnerId() : null;
+  const learnerId = actor.kind === "account" ? actor.ownerId : guest!.learnerId;
+  const isNew = guest?.isNew ?? false;
+  const profile = await learnerProfile(learnerId);
 
   const sessionLesson =
     mode === "practice" ? buildPracticeLesson(lesson) : lesson;
   // The session shares the profile's mastery model, so scaffolding
   // fades across sessions and lessons, not just within one run.
-  const session = new LearnerSession(sessionLesson, mode, profile.mastery);
-  saveSession(session, learnerId);
+  const session = new LearnerSession(sessionLesson, mode, profile!.mastery);
+  await persistSession(session, learnerId);
   log.info("session_created", {
     sessionId: session.sessionId,
     lessonId: lesson.id,

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import "@fontsource-variable/fraunces/wght.css";
+import "@fontsource-variable/inter/wght.css";
 import SiteShell from "@/components/SiteShell";
 import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
@@ -11,22 +12,9 @@ export const metadata: Metadata = {
   description: "Source-grounded interactive learning with deterministic truth and a leak-gated Socratic AI tutor.",
   keywords: ["interactive learning", "Socratic tutor", "deterministic assessment", "source-grounded courses"],
   icons: { icon: [{ url: "/brand/museion-mark.svg", type: "image/svg+xml" }], shortcut: "/brand/museion-mark.svg" },
-  openGraph: { title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions.", siteName: "Museion", type: "website" },
-  twitter: { card: "summary_large_image", title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions." },
+  openGraph: { title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions.", siteName: "Museion", type: "website", images: [{ url: "/og.png", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image", title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions.", images: ["/og.png"] },
 };
-
-const fontDisplay = Fraunces({
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  variable: "--font-fraunces",
-  display: "swap",
-});
-
-const fontSans = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const searchableLessons = allLessons().map(({ id, title, track, description, concepts }) => ({ id, title, track, description, concepts }));
@@ -38,7 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     lessonCount: lessonIds.length,
   }));
   return (
-    <html lang="en" className={`${fontDisplay.variable} ${fontSans.variable} h-full antialiased`} data-scroll-behavior="smooth">
+    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
       <body>
         <a href="#main-content" className="skip-link">Skip to content</a>
         <SiteShell courses={searchableCourses} lessons={searchableLessons}>{children}</SiteShell>

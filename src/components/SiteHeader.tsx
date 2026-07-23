@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import BrandMark from "./BrandMark";
+import AuthButton from "./AuthButton";
 
 export default function SiteHeader({ landing = false }: { landing?: boolean }) {
   return (
@@ -20,6 +21,7 @@ export default function SiteHeader({ landing = false }: { landing?: boolean }) {
           {!landing && <Link href="/create" className="hidden min-h-11 items-center px-3 text-sm font-medium text-ink-soft hover:text-ink sm:inline-flex">
             Create
           </Link>}
+          <AuthButton />
           <Link href="/dashboard" className={`inline-flex min-h-10 items-center bg-ink px-4 font-semibold text-white hover:bg-lapis-dark ${landing ? "rounded-full text-xs shadow-[0_3px_0_rgba(0,0,0,.14)]" : "rounded-lg text-sm"}`}>
             Open Museion
           </Link>

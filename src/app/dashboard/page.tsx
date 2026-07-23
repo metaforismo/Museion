@@ -11,7 +11,7 @@ import SubjectIcon from "@/components/SubjectIcon";
 import { coursePaths } from "@/lib/curriculum";
 import { subjectColor } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
-import { readLearnerId } from "@/lib/server/learner";
+import { currentActor } from "@/lib/server/actor";
 import { readLearnerPreferences } from "@/lib/server/preferences";
 
 export const metadata: Metadata = { title: "Home", description: "Your courses, review queue, evidence and next learning action." };
@@ -62,9 +62,9 @@ function CoursePathCard({ course, progress }: { course: (typeof coursePaths)[num
 }
 
 export default async function DashboardPage() {
-  const learnerId = await readLearnerId();
+  const learnerId = (await currentActor()).ownerId;
   const [snapshot, preferences] = await Promise.all([
-    buildDashboardSnapshot(learnerId ?? "new-learner"),
+    buildDashboardSnapshot(learnerId),
     readLearnerPreferences(),
   ]);
   const hasActivity = snapshot.activeLearning.length > 0;

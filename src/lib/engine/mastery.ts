@@ -31,6 +31,16 @@ const PROFICIENT_THRESHOLD = 0.8;
 export class MasteryModel {
   private scores = new Map<string, number>();
 
+  static fromEntries(entries: readonly (readonly [string, number])[]): MasteryModel {
+    const model = new MasteryModel();
+    for (const [concept, score] of entries) model.scores.set(concept, Math.max(0, Math.min(1, score)));
+    return model;
+  }
+
+  entries(): [string, number][] {
+    return [...this.scores.entries()];
+  }
+
   mastery(concept: string): number {
     return this.scores.get(concept) ?? 0;
   }

@@ -7,7 +7,7 @@ import SubjectIcon from "@/components/SubjectIcon";
 import { subjectColor } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot } from "@/lib/dashboard";
 import { buildConceptMap } from "@/lib/dashboard/concept-map";
-import { readLearnerId } from "@/lib/server/learner";
+import { currentActor } from "@/lib/server/actor";
 
 export const metadata: Metadata = { title: "Evidence", description: "Recorded learning observations and their explicit limits." };
 export const dynamic = "force-dynamic";
@@ -19,9 +19,8 @@ const STATE_COPY = {
 } as const;
 
 export default async function EvidencePage() {
-  const learnerId = await readLearnerId();
-  const snapshot = await buildDashboardSnapshot(learnerId ?? "new-learner");
-  const conceptMap = buildConceptMap(learnerId ?? "new-learner");
+  const learnerId = (await currentActor()).ownerId;
+  const [snapshot, conceptMap] = await Promise.all([buildDashboardSnapshot(learnerId), buildConceptMap(learnerId)]);
   return <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
     <header className="grid gap-5 border-b border-ink/10 pb-8 lg:grid-cols-[1fr_auto] lg:items-end"><div><p className="text-sm font-medium text-lapis-dark">Evidence</p><h1 className="mt-2 title-page">What Museion observed—and no more.</h1><p className="mt-3 max-w-3xl leading-7 text-ink-soft">The record separates guided work, hint-free practice and immediate near transfer. None of these alone establishes retained mastery.</p></div><Link href="/review" className="inline-flex min-h-11 items-center rounded-xl bg-ink px-5 text-sm font-semibold text-white">Review next</Link></header>
 

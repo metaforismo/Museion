@@ -6,6 +6,11 @@ import { BoundedTtlCache } from "@/lib/server/bounded-cache";
 import { log } from "@/lib/server/log";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import { getOwnedSession } from "@/lib/server/session-access";
+import { currentActor } from "@/lib/server/actor";
+import { consumeUsage } from "@/lib/server/usage";
+import { maiaAvailable } from "@/lib/maia/tutor";
+import { runtimeValue } from "@/lib/sites/runtime";
+import { persistSession } from "@/lib/server/session-repository";
 
 /** Max learner turns per session — past this, more talk is avoidance. */
 const MAX_LEARNER_TURNS = 30;
@@ -103,12 +108,17 @@ export async function POST(
     );
   }
 
-  log.info("maia_turn_started", { sessionId, learnerTurns });
-  const pending = maiaRespond(session, body.data.message, undefined, request.signal, body.data.activity ?? null)
+  const actor = await currentActor();
+  const liveAllowed = actor.kind === "account" && runtimeValue("MUSEION_LIVE_AI_ENABLED") !== "0" && maiaAvailable() && await consumeUsage(actor.ownerId, "maia");
+  const deterministicProvider = { id: "deterministic" as const, available: () => false, generate: async () => { throw new Error("Deterministic provider does not call a model"); } };
+  log.info("maia_turn_started", { sessionId, learnerTurns, liveAllowed });
+  const pending = maiaRespond(session, body.data.message, liveAllowed ? undefined : deterministicProvider, request.signal, body.data.activity ?? null)
     .then((delivery) => ({ ...delivery, sessionVersion: session.version }));
   maiaCommands.set(commandKey, pending);
   try {
-    return NextResponse.json(await pending, { headers: { "Cache-Control": "no-store" } });
+    const result = await pending;
+    await persistSession(session, actor.ownerId, body.data.expectedVersion);
+    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     maiaCommands.delete(commandKey);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Maia request failed" }, { status: 409 });

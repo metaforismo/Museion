@@ -95,6 +95,22 @@ export interface SessionSnapshot {
 
 export type SessionMode = "lesson" | "practice";
 
+export interface LearnerSessionState {
+  sessionId: string;
+  lesson: Lesson;
+  mode: SessionMode;
+  mastery: [string, number][];
+  events: SessionEvent[];
+  chatHistory: ChatMessage[];
+  stepIndex: number;
+  awaitingAdvance: boolean;
+  version: number;
+  records: [string, StepRecord][];
+  answerResults: [string, StepOutcome][];
+  advanceResults: [string, AdvanceOutcome][];
+  hintResults: [string, HintOutcome][];
+}
+
 export class LearnerSession {
   readonly sessionId: string;
   readonly lesson: Lesson;
@@ -115,11 +131,45 @@ export class LearnerSession {
     lesson: Lesson,
     mode: SessionMode = "lesson",
     mastery: MasteryModel = new MasteryModel(),
+    restored?: LearnerSessionState,
   ) {
-    this.sessionId = crypto.randomUUID();
+    this.sessionId = restored?.sessionId ?? crypto.randomUUID();
     this.lesson = lesson;
     this.mode = mode;
     this.mastery = mastery;
+    if (restored) {
+      this.events.push(...restored.events);
+      this.chatHistory.push(...restored.chatHistory);
+      this.stepIndex = restored.stepIndex;
+      this.awaitingAdvance = restored.awaitingAdvance;
+      this.version = restored.version;
+      this.records = new Map(restored.records);
+      this.answerResults = new Map(restored.answerResults);
+      this.advanceResults = new Map(restored.advanceResults);
+      this.hintResults = new Map(restored.hintResults);
+    }
+  }
+
+  static fromState(state: LearnerSessionState): LearnerSession {
+    return new LearnerSession(state.lesson, state.mode, MasteryModel.fromEntries(state.mastery), state);
+  }
+
+  toState(): LearnerSessionState {
+    return {
+      sessionId: this.sessionId,
+      lesson: this.lesson,
+      mode: this.mode,
+      mastery: this.mastery.entries(),
+      events: [...this.events],
+      chatHistory: [...this.chatHistory],
+      stepIndex: this.stepIndex,
+      awaitingAdvance: this.awaitingAdvance,
+      version: this.version,
+      records: [...this.records.entries()],
+      answerResults: [...this.answerResults.entries()],
+      advanceResults: [...this.advanceResults.entries()],
+      hintResults: [...this.hintResults.entries()],
+    };
   }
 
   get complete(): boolean {

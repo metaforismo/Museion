@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { cancelCompilerRun, getCompilerRunStatus } from "@/lib/compiler";
-import { readLearnerId } from "@/lib/server/learner";
+import { currentActor } from "@/lib/server/actor";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
+  const actor = await currentActor();
+  if (actor.kind !== "account") return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
+  const ownerId = actor.ownerId;
   try {
     const { runId } = await params;
     return NextResponse.json(await getCompilerRunStatus(runId, ownerId), { headers: { "Cache-Control": "no-store" } });
@@ -15,9 +16,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ run
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
-  return cancelCompilerRun((await params).runId, ownerId)
+  const actor = await currentActor();
+  if (actor.kind !== "account") return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
+  const ownerId = actor.ownerId;
+  return await cancelCompilerRun((await params).runId, ownerId)
     ? new NextResponse(null, { status: 204 })
     : NextResponse.json({ error: "COMPILER_RUN_NOT_CANCELLABLE" }, { status: 409 });
 }
