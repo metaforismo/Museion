@@ -9,10 +9,10 @@ export default function SiteHeader({ landing = false }: { landing?: boolean }) {
       {/* The gaps tighten below sm because brand + sign-in + Open Museion is a
           319px row at their full values, and a 320px viewport then scrolls
           sideways. Above sm the row has room and the spacing is unchanged. */}
-      <div className={`mx-auto flex w-full items-center justify-between gap-3 sm:gap-6 ${landing ? "min-h-14 max-w-5xl rounded-full border border-ink/[.06] bg-white/90 px-4 shadow-[0_12px_35px_rgba(46,89,137,.08)] sm:px-5" : "min-h-18 max-w-7xl px-4 sm:px-6 lg:px-8"}`}>
+      <div className={`mx-auto flex w-full items-center justify-between gap-3 sm:gap-6 ${landing ? "min-h-14 max-w-5xl rounded-full border border-ink/[.06] bg-white/90 px-4 shadow-[var(--shadow-2)] sm:px-5" : "min-h-18 max-w-7xl px-4 sm:px-6 lg:px-8"}`}>
         <Link href="/" aria-label="Museion home" className="flex shrink-0 items-center gap-2 sm:gap-3">
           <BrandMark className={landing ? "h-8 w-8 shrink-0" : "h-10 w-10 shrink-0"} />
-          <span className={landing ? "text-body font-bold tracking-[-0.02em]" : "text-lg font-semibold tracking-tight"}>Museion</span>
+          <span className={landing ? "text-body font-bold tracking-title" : "text-lg font-semibold tracking-title"}>Museion</span>
         </Link>
         {/* One size for the whole nav row. Library and About used to sit a step
             below Create for no reason anyone could name, which read as a
@@ -28,7 +28,7 @@ export default function SiteHeader({ landing = false }: { landing?: boolean }) {
             Create
           </Link>}
           <AuthButton />
-          <Link href="/dashboard" className={`inline-flex min-h-10 items-center bg-ink px-4 text-body-sm font-semibold text-white hover:bg-lapis-dark ${landing ? "rounded-full shadow-[0_3px_0_rgba(0,0,0,.14)]" : "rounded-lg"}`}>
+          <Link href="/dashboard" className={`inline-flex min-h-10 items-center bg-ink px-4 text-body-sm font-semibold text-white hover:bg-lapis-dark ${landing ? "rounded-full shadow-[0_3px_0_rgba(0,0,0,.14)]" /* a hard 3px offset, not elevation — the landing's chunky-button device. Deliberately outside the --shadow-1/2/3 ladder, which governs depth. */ : "rounded-lg"}`}>
             Open Museion
           </Link>
         </nav>

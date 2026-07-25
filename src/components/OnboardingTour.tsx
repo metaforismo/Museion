@@ -140,7 +140,9 @@ export default function OnboardingTour() {
               aria-label={`Go to slide ${i + 1}`}
               aria-current={i === index ? "step" : undefined}
               onClick={() => setIndex(i)}
-              className="group flex min-h-6 min-w-6 items-center justify-center rounded-full"
+              // The dot stays 8px; the hit area does not. 24x24 met WCAG 2.5.8
+              // but sat under the 44px the rest of the app holds to.
+              className="group flex min-h-11 min-w-8 items-center justify-center rounded-full"
             >
               <span aria-hidden="true" className={`h-2 rounded-full transition-all ${
                 i === index ? "w-5 bg-lapis" : "w-2 bg-ink/25 group-hover:bg-ink/40"
@@ -152,7 +154,7 @@ export default function OnboardingTour() {
           {!isLast && (
             <button
               onClick={finish}
-              className="text-body text-ink-soft underline-offset-2 hover:underline"
+              className="inline-flex min-h-11 items-center rounded-lg px-3 text-body text-ink-soft underline-offset-2 hover:underline"
             >
               Skip
             </button>
@@ -160,14 +162,14 @@ export default function OnboardingTour() {
           {index > 0 && (
             <button
               onClick={() => setIndex((i) => i - 1)}
-              className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-body font-medium transition hover:border-lapis"
+              className="inline-flex min-h-11 items-center rounded-lg border border-ink/15 bg-surface px-4 text-body font-medium transition hover:border-lapis"
             >
               Back
             </button>
           )}
           <button
             onClick={isLast ? finish : () => setIndex((i) => i + 1)}
-            className="rounded-lg bg-lapis px-5 py-2 text-body font-medium text-white transition hover:bg-lapis-dark"
+            className="inline-flex min-h-11 items-center rounded-lg bg-lapis px-5 text-body font-medium text-white transition hover:bg-lapis-dark"
           >
             {isLast ? "Start learning →" : "Next"}
           </button>
