@@ -812,12 +812,22 @@ function CompletionScreen({
 }) {
   const practiceDone = mode === "practice";
   const courseQuery = courseContext ? `?course=${courseContext.courseId}` : "";
-  const backHref = courseContext ? `/courses/${courseContext.courseId}` : "/library";
+  // The return to the course carries the completed lesson id — lesson mode
+  // only, since practice does not complete a lesson — so the trail can play
+  // the arrival. The course page re-validates the param against the real
+  // learner record before animating anything.
+  const backHref = courseContext
+    ? `/courses/${courseContext.courseId}${practiceDone ? "" : `?completed=${lesson.id}`}`
+    : "/library";
   const backLabel = courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
+  // The one full-fill press on this screen takes the subject's own accent,
+  // standing on its deep edge from the palette.
+  const accent = subjectColor(lesson.track);
+  const accentEdge = subjectDeep(lesson.track);
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:py-20">
       <div className="flex items-end gap-5">
-        <MaiaCharacter state="celebrating" animated className="h-28 w-24 shrink-0 animate-pop-in" title="Maia celebrating" />
+        <MaiaCharacter state="celebrating" animated size="moment" className="shrink-0 animate-pop-in" title="Maia celebrating" />
         <div>
           <p className="eyebrow">{practiceDone ? "Hint-free practice recorded" : "Lesson path completed"}</p>
           <h1 className="mt-2 tracking-display text-4xl font-semibold sm:text-5xl">
@@ -825,90 +835,97 @@ function CompletionScreen({
           </h1>
         </div>
       </div>
-      <p className="mt-4 max-w-[62ch] text-lg leading-8 text-ink-soft">
-        {practiceDone
-          ? `You completed a hint-free retrieval run on “${lesson.title}”.`
-          : `You worked through every step of “${lesson.title}”. The real test is what stays with you — come back in a few days and try it without Maia.`}
-      </p>
 
-      <div className="mt-6 border-l-2 border-gold pl-4 text-body-sm leading-6 text-ink-soft">
+      {/* The observation leads. These numbers are what the engine actually
+          recorded this session, and they arrive before any prose about what
+          completion might mean. */}
+      {stats && (
+        <dl className="mt-8 grid border-y border-ink/10 sm:grid-cols-3 sm:divide-x sm:divide-ink/10">
+          {[
+            { label: "First-try steps", value: `${stats.firstTryCorrect}/${stats.steps}` },
+            { label: "Total attempts", value: String(stats.totalAttempts) },
+            { label: "Hints used", value: String(stats.hintsUsed) },
+          ].map((item) => (
+            <div key={item.label} className="border-b border-ink/10 py-5 last:border-b-0 sm:border-b-0 sm:px-6 sm:first:pl-0">
+              <dt className="text-body-sm text-ink-soft">{item.label}</dt>
+              <dd className="mt-1 font-mono text-2xl font-semibold tabular-nums text-lapis-dark">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      <div className="mt-5 border-l-2 border-gold pl-4 text-body-sm leading-6 text-ink-soft">
         {practiceDone
           ? "This records one completed hint-free practice run. Maia remained available, so this is not an unassisted transfer observation."
           : "This records completion of the assisted lesson path. Completion is not the same as proven mastery."}
       </div>
 
-      {stats && (
-        <>
-          <dl className="mt-10 grid border-y border-ink/10 sm:grid-cols-3 sm:divide-x sm:divide-ink/10">
-            {[{ label: "First-try steps", value: `${stats.firstTryCorrect}/${stats.steps}` }, { label: "Total attempts", value: String(stats.totalAttempts) }, { label: "Hints used", value: String(stats.hintsUsed) }].map((item) => <div key={item.label} className="border-b border-ink/10 py-5 last:border-b-0 sm:border-b-0 sm:px-6 sm:first:pl-0"><dt className="text-body-sm text-ink-soft">{item.label}</dt><dd className="mt-1 font-mono text-2xl font-semibold tabular-nums text-lapis-dark">{item.value}</dd></div>)}
-          </dl>
+      <p className="mt-5 max-w-[62ch] text-body leading-7 text-ink-soft">
+        {practiceDone
+          ? `You completed a hint-free retrieval run on “${lesson.title}”.`
+          : `You worked through every step of “${lesson.title}”. The real test is what stays with you — come back in a few days and try it without Maia.`}
+      </p>
 
-          <div className="mt-10 rounded-[1.4rem] bg-surface p-6 shadow-[0_18px_60px_rgba(35,53,91,0.08)] sm:p-8">
-            <h2 className="text-label font-semibold uppercase tracking-wide text-ink-soft">
-              Adaptive support estimate
-            </h2>
-            <p className="mb-5 mt-2 max-w-xl text-body-sm leading-6 text-ink-soft">
-              This tunes future scaffolding. It is not a grade or proof of retained learning.
-            </p>
-            {Object.entries(stats.conceptMastery).map(([concept, mastery]) => (
-              <div key={concept} className="mb-3 last:mb-0">
-                <div className="mb-1 flex justify-between text-body-sm">
-                  <span>{concept}</span>
-                  <span className="text-ink-soft">
-                    {(mastery * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <div
-                  role="progressbar"
-                  aria-label={`${concept} adaptive support estimate`}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(mastery * 100)}
-                  className="h-2 overflow-hidden rounded-full bg-ink/10"
-                >
-                  <div
-                    className="h-2 origin-left rounded-full bg-gold transition-transform duration-500 motion-reduce:transition-none"
-                    style={{ transform: `scaleX(${Math.max(mastery, 0.02)})` }}
-                  />
-                </div>
+      {stats && (
+        <div className="mt-8 rounded-[1.4rem] bg-surface p-6 shadow-[0_18px_60px_rgba(35,53,91,0.08)] sm:p-8">
+          <h2 className="text-label font-semibold uppercase tracking-wide text-ink-soft">
+            Adaptive support estimate
+          </h2>
+          <p className="mb-5 mt-2 max-w-xl text-body-sm leading-6 text-ink-soft">
+            This tunes future scaffolding. It is not a grade or proof of retained learning.
+          </p>
+          {Object.entries(stats.conceptMastery).map(([concept, mastery]) => (
+            <div key={concept} className="mb-3 last:mb-0">
+              <div className="mb-1 flex justify-between text-body-sm">
+                <span>{concept}</span>
+                <span className="text-ink-soft">
+                  {(mastery * 100).toFixed(0)}%
+                </span>
               </div>
-            ))}
-          </div>
-        </>
+              <div
+                role="progressbar"
+                aria-label={`${concept} adaptive support estimate`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(mastery * 100)}
+                className="h-2 overflow-hidden rounded-full bg-ink/10"
+              >
+                <div
+                  className="h-2 origin-left rounded-full bg-gold transition-transform duration-500 motion-reduce:transition-none"
+                  style={{ transform: `scaleX(${Math.max(mastery, 0.02)})` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
+      {/* Exactly one full-fill press. In lesson mode it returns to the course
+          so the trail can show the ground actually moving — the next lesson's
+          own press is waiting at the trail's current node, which is why there
+          is no separate "continue" shortcut competing with the loop. */}
       <div className="mt-8 flex flex-wrap items-center gap-3">
-        {!practiceDone && courseContext?.nextLessonId && (
-          <Link
-            href={`/lessons/${courseContext.nextLessonId}?course=${courseContext.courseId}`}
-            className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
-          >
-            Continue course <span aria-hidden="true">→</span>
-          </Link>
-        )}
         {practiceDone ? (
-          <button
-            onClick={onRestartPractice}
-            className="rounded-lg bg-lapis px-5 py-2.5 font-medium text-white transition hover:bg-lapis-dark"
-          >
-            Practice again
-          </button>
+          <>
+            <Pressable onClick={onRestartPractice} accent={accent} edge={accentEdge} className="min-h-12 px-7">
+              Practice again
+            </Pressable>
+            <Pressable href={backHref} variant="secondary">
+              {backLabel}
+            </Pressable>
+          </>
         ) : (
-          lesson.practiceAvailable && (
-            <Link
-              href={`/lessons/${lesson.id}/practice${courseQuery}`}
-              className={`${courseContext?.nextLessonId ? "border border-ink/15 bg-surface text-ink hover:border-lapis" : "bg-lapis text-white hover:bg-lapis-dark"} rounded-lg px-5 py-2.5 font-medium transition`}
-            >
-              Try practice mode
-            </Link>
-          )
+          <>
+            <Pressable href={backHref} accent={accent} edge={accentEdge} className="min-h-12 px-7">
+              {backLabel} <span aria-hidden="true">→</span>
+            </Pressable>
+            {lesson.practiceAvailable && (
+              <Pressable href={`/lessons/${lesson.id}/practice${courseQuery}`} variant="secondary">
+                Try practice mode
+              </Pressable>
+            )}
+          </>
         )}
-        <Link
-          href={backHref}
-          className="rounded-lg border border-ink/15 bg-surface px-5 py-2.5 font-medium text-ink transition hover:border-lapis"
-        >
-          {backLabel}
-        </Link>
       </div>
     </section>
   );
