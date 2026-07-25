@@ -112,16 +112,21 @@ enforces that in three parts:
   allowlist, which holds the lesson canvas and the marketing landing.
 - Tailwind's **named sizes below lead** — `text-xs` 12, `text-sm` 14,
   `text-base` 16 — are banned outside a second shrinking allowlist, seeded
-  from what the tree already carried. Most of it is the lesson canvas, the
-  Judge canvas and the landing; the app-shell chrome still on it (SiteHeader,
-  AppCommandPalette, AuthButton, LessonCatalog, OnboardingTour,
-  CourseArchitectPanel, SourceLearningDesign, SourcePackEditor) is the debt to
-  clear first.
+  from what the tree already carried. The app-shell chrome it was seeded with
+  is gone; what remains is the lesson canvas, the Judge canvas and the
+  landing, which are out of scope by design rather than un-swept.
 
 Both allowlists may only get shorter, and a staleness assertion forces a file
 off its list the moment it is clean. Adding an entry is a review failure, not a
 fix. The rule originally covered only the rem form, which is how a whole Studio
 surface built out of `text-sm` stayed invisible through fifteen tasks.
+
+**Form controls take `lead`, and that is not a hierarchy decision.** iOS zooms
+the viewport when a field below 16px takes focus, so every `input`, `textarea`
+and `select` in the app needs a size above that floor; `lead` at 17px is the
+smallest step on the scale that clears it. A field therefore sits two steps
+above its own `body-sm` label, which looks larger than a designer would choose
+and is correct anyway. Sizing one down to `body` reintroduces the zoom.
 
 Tracking is tokenised, not typed by hand: `tracking-display` (-0.045em) for
 large headlines, `tracking-title` (-0.01em) for panel and card titles,

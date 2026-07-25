@@ -174,8 +174,10 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
               aria-expanded="true"
               aria-controls="global-search-results"
               aria-activedescendant={activeItem ? `command-${activeItem.id}` : undefined}
-              /* text-base at every width: iOS zooms the viewport on a focused input below 16px. */
-              className="min-h-14 min-w-0 flex-1 bg-transparent text-base text-ink !outline-none placeholder:text-ink-soft/65 focus-visible:!outline-none"
+              /* lead at every width: iOS zooms the viewport on a focused input
+                 below 16px, and lead is the smallest scale step above that
+                 floor. Do not "correct" this down to body. */
+              className="min-h-14 min-w-0 flex-1 bg-transparent text-lead text-ink !outline-none placeholder:text-ink-soft/65 focus-visible:!outline-none"
             />
             {query ? <button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="min-h-9 rounded-lg px-2 text-label font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink">Clear</button> : null}
           </div>

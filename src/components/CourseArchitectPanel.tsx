@@ -170,7 +170,11 @@ export default function CourseArchitectPanel({
               rows={3}
               maxLength={20_000}
               placeholder={mode === "material" ? "Paste authorized material…" : mode === "goal" ? "What should the learner do independently?" : "Ask me to evaluate the current pack, or paste a source link…"}
-              className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-surface px-3 py-3 text-base leading-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
+              /* lead: iOS zooms the viewport on a focused field below 16px, and
+                 lead is the smallest scale step clearing that floor. The panel
+                 is a full-width sheet on mobile, so this compose box is exactly
+                 where that zoom would land. */
+              className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-surface px-3 py-3 text-lead leading-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
             />
             <div className="mt-2 flex items-center justify-between gap-3">
               <button type="button" onClick={evaluate} className="min-h-9 text-label font-semibold text-lapis-dark underline underline-offset-4">Run method check</button>

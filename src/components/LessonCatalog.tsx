@@ -89,8 +89,9 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
               }}
               placeholder="Try fractions, variables, or binary"
               autoComplete="off"
-              /* text-base, not the body step: iOS zooms the viewport on any focused input below 16px. */
-              className="min-h-12 w-full rounded-xl border border-ink/15 bg-surface px-4 pr-20 text-base outline-none transition focus:border-lapis focus:ring-4 focus:ring-lapis-soft"
+              /* lead, not the body step: iOS zooms the viewport on any focused
+                 input below 16px, and lead is the smallest step above it. */
+              className="min-h-12 w-full rounded-xl border border-ink/15 bg-surface px-4 pr-20 text-lead outline-none transition focus:border-lapis focus:ring-4 focus:ring-lapis-soft"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-ink/15 bg-paper px-2 py-1 font-mono text-micro text-ink-soft sm:block" aria-hidden="true">
               /

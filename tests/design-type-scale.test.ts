@@ -46,30 +46,31 @@ const ARBITRARY_REM_DEBT = [
  * holding immediately instead of waiting on a sweep it would have to block on.
  *
  * Same contract as the list above: it may only get shorter, and the staleness
- * test below forces an entry out the moment its file is clean. Roughly two
- * thirds of the remaining occurrences are the lesson canvas, the Judge canvas
- * and the marketing landing, which are out of scope by design. The rest —
- * SiteHeader, AppCommandPalette, AuthButton, LessonCatalog, OnboardingTour,
- * CourseArchitectPanel, SourceLearningDesign, SourcePackEditor — are app-shell
- * chrome that the surface sweep did not reach, and they are the entries a
- * future task should be clearing first.
+ * test below forces an entry out the moment its file is clean.
+ *
+ * The app-shell chrome this list was seeded with — SiteHeader, AuthButton,
+ * AppCommandPalette, LessonCatalog, OnboardingTour, CourseArchitectPanel,
+ * SourceLearningDesign, SourcePackEditor and the About page — is gone. What
+ * remains is the lesson canvas, the Judge canvas and the marketing landing,
+ * which are out of scope by design rather than un-swept: clearing them is a
+ * content decision about those surfaces, not a sweep of chrome.
+ *
+ * One thing the sweep could not delete: a focused form field under 16px makes
+ * iOS zoom the viewport, so the app's inputs, selects and textareas take lead
+ * (17px) rather than body (15px). That is the smallest step on the scale above
+ * the floor, and it is why those files are clean without their fields shrinking.
  */
 const NAMED_OFF_SCALE_DEBT = [
-  "src/components/AppCommandPalette.tsx",
-  "src/components/CourseArchitectPanel.tsx",
   "src/components/GraphTransformLab.tsx",
   "src/components/JudgeDeferredPanels.tsx",
   "src/components/JudgeExperience.tsx",
   "src/components/LandingCoursePreview.tsx",
-  "src/components/LessonCatalog.tsx",
   "src/components/LessonPlayer.tsx",
   "src/components/MaiaPanel.tsx",
   "src/components/MethodTraceDemo.tsx",
   "src/components/RecursionCodeLab.tsx",
   "src/components/ScientificMethodDiagram.tsx",
-  "src/components/SourceLearningDesign.tsx",
   "src/components/blocks/InteractiveBlock.tsx",
-  "src/components/source-creator/SourcePackEditor.tsx",
 ];
 
 /**
