@@ -36,11 +36,18 @@ export default function CoursePathCard({
     // A pressable card, not a floating one: the 2px hairline takes the
     // subject's accent as the pointer arrives and stands up on the deep edge,
     // then presses flat on click. The 3px top accent stays inline, so it holds
-    // through every state.
+    // through every state. A started course warms to its subject tint — the
+    // one card state the record can justify, and the grid's way of saying
+    // "this door is already open" without a chip or a claim.
     <Link
       href={`/courses/${course.id}`}
       className="pressable-card group flex min-h-40 flex-col overflow-hidden"
-      style={{ borderTop: `3px solid ${accent}`, "--pressable-accent": accent, "--pressable-edge": deep } as CSSProperties}
+      style={{
+        borderTop: `3px solid ${accent}`,
+        "--pressable-accent": accent,
+        "--pressable-edge": deep,
+        ...(started ? { backgroundColor: tint } : null),
+      } as CSSProperties}
     >
       {/* Progress is shown when there is progress. A "Not started" chip on every
           unstarted card states the absence of a fact ten times over, and the
