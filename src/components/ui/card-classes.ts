@@ -17,6 +17,9 @@ export function cardClasses(tone: CardTone, interactive = false): string {
     tone === "quiet" ? "surface-card-quiet" :
     "rounded-[var(--radius-card)] border border-ink/8";
   const raised = tone === "solid" ? "hover:shadow-[var(--shadow-2)]" : "hover:shadow-[var(--shadow-1)]";
-  const motion = interactive ? `transition duration-200 hover:-translate-y-0.5 ${raised}` : "";
+  // The press must answer within the click, not only after it: dropping the
+  // hover lift and its elevation on :active is the sub-100ms response that
+  // separates "reacted" from "navigated eventually".
+  const motion = interactive ? `transition duration-200 hover:-translate-y-0.5 ${raised} active:translate-y-px active:shadow-none` : "";
   return `${base} ${motion}`.trim();
 }

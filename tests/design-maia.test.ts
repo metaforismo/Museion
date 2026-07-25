@@ -104,7 +104,7 @@ describe("Maia accessible names", () => {
 
 describe("Maia size ladder", () => {
   it("exposes exactly three sizes", () => {
-    expect(Object.values(MAIA_SIZES)).toEqual([28, 96, 144]);
+    expect(Object.values(MAIA_SIZES)).toEqual([28, 128, 144]);
   });
 });
 

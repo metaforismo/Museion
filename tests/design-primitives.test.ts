@@ -38,6 +38,13 @@ describe("cardClasses", () => {
     expect(cardClasses("quiet", false)).not.toContain("hover:-translate-y-0.5");
   });
 
+  it("responds inside the click — an interactive card presses down on :active", () => {
+    const emitted = tokens(cardClasses("quiet", true));
+    expect(emitted).toContain("active:translate-y-px");
+    expect(emitted).toContain("active:shadow-none");
+    expect(cardClasses("quiet", false)).not.toContain("active:translate-y-px");
+  });
+
   it("raises a solid card past the elevation it already rests at", () => {
     // surface-card ships --shadow-1; hovering to --shadow-1 would lift the card
     // without changing its elevation.

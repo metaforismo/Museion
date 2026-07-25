@@ -1,9 +1,10 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import ProgressRing from "@/components/ProgressRing";
-import { SubjectBadge, cardClasses } from "@/components/ui";
+import { SubjectBadge } from "@/components/ui";
 import type { CoursePath } from "@/lib/curriculum";
-import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
+import { subjectColor, subjectDeep, subjectTint } from "@/lib/curriculum/subjects";
 
 /**
  * One course card for every grid that lists courses. It used to live inline in
@@ -26,15 +27,20 @@ export default function CoursePathCard({
 }) {
   const accent = subjectColor(course.subject);
   const tint = subjectTint(course.subject);
+  const deep = subjectDeep(course.subject);
   const started = (progress?.completed ?? 0) > 0;
   // Without a record we cannot say "Start": a learner half-way through would be
   // told to begin. "Open" states only what the link does.
   const cta = progress === undefined ? "Open" : started ? "Continue" : "Start";
   return (
+    // A pressable card, not a floating one: the 2px hairline takes the
+    // subject's accent as the pointer arrives and stands up on the deep edge,
+    // then presses flat on click. The 3px top accent stays inline, so it holds
+    // through every state.
     <Link
       href={`/courses/${course.id}`}
-      className={`${cardClasses("quiet", true)} group flex min-h-40 flex-col overflow-hidden`}
-      style={{ borderTop: `3px solid ${accent}` }}
+      className="pressable-card group flex min-h-40 flex-col overflow-hidden"
+      style={{ borderTop: `3px solid ${accent}`, "--pressable-accent": accent, "--pressable-edge": deep } as CSSProperties}
     >
       {/* Progress is shown when there is progress. A "Not started" chip on every
           unstarted card states the absence of a fact ten times over, and the

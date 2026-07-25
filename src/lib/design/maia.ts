@@ -36,8 +36,13 @@ export const MAIA_STATE_TITLE: Record<MaiaState, string> = {
   redirecting: "Maia, pointing at a detected misconception",
 };
 
-/** 28px inline avatar, 96px page figure, 144px verified moment. Nothing else. */
-export const MAIA_SIZES = { inline: 28, hero: 96, moment: 144 } as const;
+/**
+ * 28px inline avatar, 128px page figure, 144px verified moment. Nothing else.
+ * The hero rung was 96 through the unification pass; the energy pass raised
+ * it so her hero placements read as presence rather than ornament — one rung
+ * for every hero, not a bespoke size per page.
+ */
+export const MAIA_SIZES = { inline: 28, hero: 128, moment: 144 } as const;
 export type MaiaSize = keyof typeof MAIA_SIZES;
 
 /**

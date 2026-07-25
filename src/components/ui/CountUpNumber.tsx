@@ -17,14 +17,13 @@ export default function CountUpNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    if (value <= 0 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setDisplay(value);
-      return;
-    }
+    // Reduced motion collapses the duration to 0: the first frame is already
+    // the real value. Everything runs through the same rAF tick either way.
+    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : COUNT_UP_DURATION_MS;
     let frame = 0;
     const start = performance.now();
     const tick = (now: number) => {
-      const next = countUpValue(value, now - start);
+      const next = countUpValue(value, now - start, duration);
       setDisplay(next);
       if (next < value) frame = requestAnimationFrame(tick);
     };

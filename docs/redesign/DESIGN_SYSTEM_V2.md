@@ -190,6 +190,60 @@ rendering glitch. `tests/design-primitives.test.ts` fails on any bespoke
 Radius: `--radius-control` (0.75rem) for controls, `--radius-card` (1.25rem) for
 surfaces. Do not nest one rounded box inside another of the same radius.
 
+## Pressable depth: blur floats, edge presses
+
+The system has exactly two depth devices, and they answer different questions.
+The blur ladder answers *"is this above the page?"*. The hard same-hue bottom
+edge answers *"can I press this?"*. They never appear on the same element — a
+button with a blur shadow claims to float, and a card with a hard edge claims
+to be a key.
+
+Every accent owns a `deep` shade for its edge: the accent at ~72%, computed
+once and stored as a literal — in `SUBJECT_PALETTE` as a third field, in
+`@theme static` as `--color-subject-*-deep` plus `--color-lapis-deep`,
+`--color-gold-deep` and `--color-correct-deep`. Reach it through
+`subjectDeep()`, beside `subjectColor()` and `subjectTint()`. Deep shades are
+decorative edges: no text ever sits on one, so they carry a darker-than-accent
+guarantee (`tests/design-palette.test.ts`, by relative luminance) rather than
+a contrast ratio. Components never darken a colour themselves — that is the
+entire reason the literals exist. Note the `static`: these tokens reach the
+page only as inline custom properties, which Tailwind's scanner cannot see,
+and a plain `@theme` block would silently tree-shake them out.
+
+`Pressable` in `src/components/ui` is the treatment's one implementation,
+as `<button>` or as link. The physics live in `globals.css`: rest on a 4px
+deep edge, hover lifts 1px, press travels down 2px and collapses the edge —
+all behind the reduced-motion switch, all inside 150ms. Three variants, which
+are the three *checked* text/fill pairs and nothing more:
+
+- **primary** — full accent fill, white text, `subjectColor()`/`subjectDeep()`
+  from the caller. All six subject accents clear 4.5:1 under white (worst
+  case algebra, 5.44:1; pinned).
+- **attention** — the review queue's warm gold, **ink** text: white on gold is
+  2.80:1 and fails. The pair is baked into the variant so no call site can
+  re-decide it.
+- **secondary** — surface fill, ink text, ink/12 edge, for the quieter action
+  beside a primary.
+
+**Full saturation is a moment, not a mode.** Tints remain the resting language
+of every surface; the page's *primary action* takes the full accent fill, and
+one full-fill element per view is the target density. The dashboard hero CTA
+is that element. Chips, rails and washes stay tinted. The review queue, when
+it is non-empty, is the one sanctioned second press — gold, with the real
+count — and when the queue is empty it is simply absent: no zero, no urgency.
+
+Cards that navigate take the card form, `.pressable-card`: a resting 2px
+hairline that takes the subject's accent as the pointer arrives, stands up on
+a 3px deep edge, and presses flat on click. Interactive `cardClasses()`
+surfaces keep their blur-hover but also answer inside the click
+(`active:translate-y-px`); everything clickable responds visually within
+100ms.
+
+One more piece of honest juice: the journey tiles' counts arrive by counting
+up from 0 to the real recorded value (~400ms, reduced motion: instant).
+`countUpValue()` is pinned to never print a frame above the record — the
+animation approaches the truth from below, and lands on it exactly.
+
 Shared primitives live in `src/components/ui`: `Card`, `Chip`, `ProgressRail`,
 `SectionHeader`, `StatTile`, `SubjectBadge`. Build the new surface out of these
 before you build a new one — the dashboard and the library drifted into two

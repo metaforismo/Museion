@@ -18,13 +18,10 @@
   --color-lapis: #2b5ee7;
   --color-lapis-dark: #20379b;
   --color-lapis-soft: #e8edfc;
-  --color-lapis-deep: #1f44a6;
   --color-gold: #c79114;
   --color-gold-soft: #faf3dd;
-  --color-gold-deep: #8f680e;
   --color-correct: #137638;
   --color-correct-soft: #e7f6ec;
-  --color-correct-deep: #0e5528;
   --color-wrong: #b42318;
   --color-wrong-soft: #fdecea;
 
@@ -38,31 +35,21 @@
   --color-yellow: #fff2ad;
   --color-coral: #ffeee6;
 
-  /* Subject accent + tint + deep triples. Deep is the accent at ~72%,
-     computed once and stored literal: it is the hard bottom edge of a
-     pressable element, never a text colour. tests/design-palette.test.ts
-     asserts every deep is genuinely darker than its accent. */
+  /* Subject accent + tint pairs. */
   --color-subject-algebra: #2b5ee7;
   --color-subject-algebra-tint: #f3f9ff;
-  --color-subject-algebra-deep: #1f44a6;
   --color-subject-arithmetic: #0b656d;
   --color-subject-arithmetic-tint: #fff2ad;
-  --color-subject-arithmetic-deep: #08494e;
   --color-subject-cs: #6d28d9;
   --color-subject-cs-tint: #f7f1ff;
-  --color-subject-cs-deep: #4e1d9c;
   --color-subject-research: #9a470c;
   --color-subject-research-tint: #ffeee6;
-  --color-subject-research-deep: #6f3309;
   --color-subject-physics: #b3341f;
   --color-subject-physics-tint: #fff0e7;
-  --color-subject-physics-deep: #812516;
   --color-subject-biology: #17703d;
   --color-subject-biology-tint: #dff8ea;
-  --color-subject-biology-deep: #11512c;
   --color-subject-default: #2b5ee7;
   --color-subject-default-tint: #f3f9ff;
-  --color-subject-default-deep: #1f44a6;
 
   --font-sans: var(--font-ui);
 
@@ -82,6 +69,26 @@
   --shadow-1: 0 1px 2px rgba(24, 33, 56, 0.05), 0 4px 14px rgba(24, 33, 56, 0.05);
   --shadow-2: 0 2px 4px rgba(24, 33, 56, 0.05), 0 12px 32px rgba(24, 33, 56, 0.09);
   --shadow-3: 0 8px 16px rgba(24, 33, 56, 0.08), 0 28px 70px rgba(24, 33, 56, 0.16);
+}
+
+/* Deep shades — the hard bottom edge of a pressable element, each accent at
+   ~72%, computed once and stored literal (tests/design-palette.test.ts
+   asserts each is genuinely darker than its accent). They are decorative
+   edges: no text ever sits on one. `static`, not plain @theme: these tokens
+   reach the page as inline custom properties set from subjectDeep(), which
+   Tailwind's scanner cannot see, and a plain @theme block would tree-shake
+   them out of the emitted CSS — silently, leaving every press edgeless. */
+@theme static {
+  --color-lapis-deep: #1f44a6;
+  --color-gold-deep: #8f680e;
+  --color-correct-deep: #0e5528;
+  --color-subject-algebra-deep: #1f44a6;
+  --color-subject-arithmetic-deep: #08494e;
+  --color-subject-cs-deep: #4e1d9c;
+  --color-subject-research-deep: #6f3309;
+  --color-subject-physics-deep: #812516;
+  --color-subject-biology-deep: #11512c;
+  --color-subject-default-deep: #1f44a6;
 }
 
 body {
@@ -225,8 +232,16 @@ a[class*="bg-"]:active {
    Hover: the element lifts 1px and the edge stretches to meet the ground.
    Active: the element travels down 2px and the edge collapses — the press
    you feel on a physical key. */
+/* The default edge (the secondary variant's ink/12) lives in the components
+   layer so a variant can override it from the utilities layer — an unlayered
+   declaration would outrank `[--pressable-edge:…]` no matter its specificity. */
+@layer components {
+  .pressable {
+    --pressable-edge: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  }
+}
+
 .pressable {
-  --pressable-edge: color-mix(in srgb, var(--color-ink) 12%, transparent);
   box-shadow: 0 4px 0 0 var(--pressable-edge);
   transition: transform 120ms ease, box-shadow 120ms ease;
 }

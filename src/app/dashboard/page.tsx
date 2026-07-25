@@ -6,10 +6,10 @@ import { GraduationScrollIcon, Idea01Icon, LibraryIcon, RepeatIcon, Target01Icon
 import CoursePathCard from "@/components/CoursePathCard";
 import DashboardEmptyState from "@/components/DashboardEmptyState";
 import MaiaCharacter from "@/components/MaiaCharacter";
-import { Card, Chip, ProgressRail, SectionHeader, StatTile, cardClasses } from "@/components/ui";
+import { Card, Chip, Pressable, ProgressRail, SectionHeader, StatTile, cardClasses } from "@/components/ui";
 import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
-import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
+import { subjectColor, subjectDeep, subjectTint } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
 import { evidenceTone } from "@/lib/design/evidence-tone";
 import { maiaStateForAction, MAIA_STATE_TITLE } from "@/lib/design/maia";
@@ -63,7 +63,11 @@ function subjectForHref(href: string): string | null {
 
 /** Unrecognised subjects collapse to the default palette entry: lapis on sky. */
 function accentFor(subject: string | null) {
-  return { accent: subjectColor(subject ?? "default"), tint: subjectTint(subject ?? "default") };
+  return {
+    accent: subjectColor(subject ?? "default"),
+    tint: subjectTint(subject ?? "default"),
+    deep: subjectDeep(subject ?? "default"),
+  };
 }
 
 function evidenceState(state: DashboardSnapshot["evidence"][number]["state"]) {
@@ -139,7 +143,7 @@ export default async function DashboardPage() {
   const activeMove = activeMethodMove(snapshot.nextAction);
   const heroMaiaState = maiaStateForAction(snapshot.nextAction.kind);
   const heroSubject = subjectForHref(snapshot.nextAction.href);
-  const { accent: heroAccent, tint: heroTint } = accentFor(heroSubject);
+  const { accent: heroAccent, tint: heroTint, deep: heroDeep } = accentFor(heroSubject);
   const greeting = preferences?.goal
     ? `Working toward: ${preferences.goal}.`
     : "Continue from recorded work, review a real signal, or build from a source you trust.";
@@ -180,41 +184,28 @@ export default async function DashboardPage() {
             <p className="mt-1.5 max-w-2xl text-body leading-6 text-ink-soft">
               {snapshot.nextAction.description} {snapshot.nextAction.reason}
             </p>
-            {/* One primary action and, when it is true, one secondary.
-                Everything else that used to crowd this row is gone. The rail
-                could only ever have measured the item the hero recommends, and
-                that item is the card directly below in "Continue learning",
-                which carries its own — two meters for one lesson, a hand's
-                width apart, the upper one reading 0% beside a button that says
-                Begin. The status line chained two unrelated counts with a
-                middot and, on a first run, announced an empty queue and an
-                empty record; the record panels below state both properly, and
-                an empty queue needs no announcement at all. Ink, not lapis: a
-                link inside a subject-tinted card takes the ink, never a second
-                subject's accent. */}
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <Link
-                href={snapshot.nextAction.href}
-                className="group inline-flex min-h-11 items-center rounded-xl px-5 text-body-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
-                style={{ backgroundColor: heroAccent }}
-              >
-                Begin <span aria-hidden="true" className="ml-2 transition-transform duration-200 group-hover:translate-x-1">→</span>
-              </Link>
+            {/* The page's one full-fill element: the hero CTA in the subject's
+                own accent, standing on its deep edge. Beside it, the review
+                queue — when it is real — takes the warm gold press with the
+                actual count and ink text (white on gold fails at 2.80:1). An
+                empty queue gets nothing: no fake urgency, no zero. */}
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Pressable href={snapshot.nextAction.href} accent={heroAccent} edge={heroDeep} className="group min-h-12 px-7">
+                Begin <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Pressable>
               {snapshot.reviewQueue.length > 0 && (
-                <Link
-                  href="/review"
-                  className="inline-flex min-h-11 items-center text-body-sm font-medium text-ink underline decoration-ink/30 underline-offset-4 transition hover:decoration-ink"
-                >
-                  {snapshot.reviewQueue.length} waiting in review
-                </Link>
+                <Pressable href="/review" variant="attention">
+                  {snapshot.reviewQueue.length} to revisit
+                </Pressable>
               )}
             </div>
           </div>
-          <div className="relative hidden items-end pr-6 sm:flex">
+          <div className="relative hidden items-end pr-7 sm:flex">
             {/* Name and pose come from one state: when the recommendation is a
                 review she is drawn thinking, and she must not be announced as
-                ready for a move. */}
-            <MaiaCharacter state={heroMaiaState} size="hero" className="relative -mb-1" title={MAIA_STATE_TITLE[heroMaiaState]} />
+                ready for a move. Her feet cross the method spine's top rule —
+                she stands on the path, rather than floating beside the copy. */}
+            <MaiaCharacter state={heroMaiaState} size="hero" className="relative z-10 -mb-2.5" title={MAIA_STATE_TITLE[heroMaiaState]} />
           </div>
         </div>
 

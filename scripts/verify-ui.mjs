@@ -862,10 +862,10 @@ async function desktopFlow() {
   await page.goto(`${baseURL}/dashboard`);
   await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "dashboard page");
   // The queue used to be reported beside Begin whether or not anything was in
-  // it, chained to the evidence count by a middot. It is a link now, and it is
-  // there only when something is actually waiting — which, after a lesson run
-  // with two wrong answers, it is.
-  await expectVisible(page.getByRole("link", { name: /waiting in review/ }), "dashboard review queue entry");
+  // it, chained to the evidence count by a middot. It is the warm gold
+  // Pressable now — "N to revisit" — and it is there only when something is
+  // actually waiting — which, after a lesson run with two wrong answers, it is.
+  await expectVisible(page.getByRole("link", { name: /\d+ to revisit/ }), "dashboard review queue entry");
   await expectVisible(page.getByText(/not proof of retained mastery/), "truthful dashboard boundary");
   await expectVisible(page.getByRole("heading", { name: "What the record supports" }), "dashboard evidence summary");
   const activeProgress = await page.getByRole("link", { name: "Home", exact: true }).getAttribute("aria-current");
