@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Files02Icon, GraduationScrollIcon, Idea01Icon, LibraryIcon, RepeatIcon, Target01Icon } from "@hugeicons/core-free-icons";
+import { GraduationScrollIcon, Idea01Icon, LibraryIcon, RepeatIcon, Target01Icon, Files02Icon } from "@hugeicons/core-free-icons";
 
 import DashboardEmptyState from "@/components/DashboardEmptyState";
 import MaiaCharacter from "@/components/MaiaCharacter";
 import ProgressRing from "@/components/ProgressRing";
-import SubjectIcon from "@/components/SubjectIcon";
+import { Card, Chip, ProgressRail, SectionHeader, StatTile, SubjectBadge, cardClasses } from "@/components/ui";
+import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
-import { subjectColor } from "@/lib/curriculum/subjects";
+import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
 import { currentActor } from "@/lib/server/actor";
 import { readLearnerPreferences } from "@/lib/server/preferences";
@@ -18,44 +18,147 @@ export const metadata: Metadata = { title: "Home", description: "Your courses, r
 export const dynamic = "force-dynamic";
 
 const METHOD_MOVES = ["Ground", "Predict", "Interact", "Diagnose", "Explain", "Transfer", "Revisit"] as const;
+type MethodMove = (typeof METHOD_MOVES)[number];
+
+/**
+ * The record's own colours. These tiles count recorded work, so they may not
+ * borrow a subject accent — violet here would read as Computer Science. Three
+ * report activity; the unaided transfer is the one observation the learner
+ * produced without help, so it alone carries the verified green.
+ */
+const JOURNEY_TILES = [
+  { key: "lessonsCompleted", label: "Lessons completed", icon: GraduationScrollIcon, accent: "var(--color-lapis)", tint: "var(--color-lapis-soft)" },
+  { key: "coursesCompleted", label: "Courses finished", icon: LibraryIcon, accent: "var(--color-lapis)", tint: "var(--color-lapis-soft)" },
+  { key: "conceptsObserved", label: "Concepts observed", icon: Idea01Icon, accent: "var(--color-lapis)", tint: "var(--color-lapis-soft)" },
+  { key: "unassistedTransfers", label: "Unaided transfers", icon: Target01Icon, accent: "var(--color-correct)", tint: "var(--color-correct-soft)" },
+] as const satisfies readonly { key: keyof DashboardSnapshot["journey"]; label: string; icon: typeof LibraryIcon; accent: string; tint: string }[];
 
 function formatTemplate(value: string) {
   return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 /** Which method move the recommended action actually exercises. */
-function activeMethodMove(action: DashboardSnapshot["nextAction"]): (typeof METHOD_MOVES)[number] {
+function activeMethodMove(action: DashboardSnapshot["nextAction"]): MethodMove {
   if (action.kind === "review") return "Revisit";
   if (action.kind === "resume") return "Interact";
   if (action.kind === "launch") return "Predict";
   return "Ground";
 }
 
+/**
+ * The subject behind an in-app href, or null when it has none. Action hrefs
+ * never carry a course id — they point at lessons, /judge, /review or
+ * /create — so the lesson's own track is the only derivation that is ever
+ * right. Guessing a subject for /judge would paint the page a colour the
+ * recommendation does not have.
+ */
+function subjectForHref(href: string): string | null {
+  const lessonId = /^\/lessons\/([^/?#]+)/.exec(href)?.[1];
+  if (!lessonId) return null;
+  return allLessons().find((lesson) => lesson.id === lessonId)?.track ?? null;
+}
+
+/** Unrecognised subjects collapse to the default palette entry: lapis on sky. */
+function accentFor(subject: string | null) {
+  return { accent: subjectColor(subject ?? "default"), tint: subjectTint(subject ?? "default") };
+}
+
+function evidenceTone(result: DashboardSnapshot["evidence"][number]["result"]) {
+  if (result === "incorrect") return "wrong" as const;
+  if (result === "developing") return "attention" as const;
+  return "correct" as const;
+}
+
+function evidenceState(state: DashboardSnapshot["evidence"][number]["state"]) {
+  if (state === "observed-guided") return "Observed in guided work";
+  if (state === "hint-free-practice") return "Hint-free practice completed";
+  return "Immediate near transfer";
+}
+
+/**
+ * The seven moves, named at every width. Four per row on phones instead of
+ * bare numerals: the method is the product's central claim, and "3" states
+ * none of it.
+ */
+function MethodSpine({ activeMove, accent }: { activeMove: MethodMove; accent: string }) {
+  const activeIndex = METHOD_MOVES.indexOf(activeMove);
+  return (
+    <ol
+      aria-label="The Museion Method"
+      className="flex flex-wrap justify-center border-t border-ink/8 bg-surface/55 sm:grid sm:grid-cols-7"
+    >
+      {METHOD_MOVES.map((move, index) => {
+        const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "upcoming";
+        return (
+          <li
+            key={move}
+            aria-current={state === "active" ? "step" : undefined}
+            className="flex basis-1/4 flex-col items-center gap-1.5 px-1 py-2.5 text-center"
+          >
+            <span
+              aria-hidden="true"
+              className="h-1 w-8 rounded-full bg-ink/10 sm:w-9"
+              style={state === "upcoming" ? undefined : { backgroundColor: accent, opacity: state === "done" ? 0.45 : 1 }}
+            />
+            <span className={`text-micro ${state === "active" ? "font-semibold text-ink" : "font-medium text-ink-soft"}`}>
+              {move}
+              {state === "active" && <span className="sr-only"> — current move</span>}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function CoursePathCard({ course, progress }: { course: (typeof coursePaths)[number]; progress: { completed: number; total: number } }) {
-  const accent = subjectColor(course.subject);
+  const { accent, tint } = accentFor(course.subject);
   const started = progress.completed > 0;
   return (
     <Link
       href={`/courses/${course.id}`}
-      className="surface-card-quiet group relative flex min-h-40 flex-col overflow-hidden p-5 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-1)]"
-      style={{ borderTop: `3px solid color-mix(in srgb, ${accent} 60%, white)` }}
+      className={`${cardClasses("quiet", true)} group flex min-h-40 flex-col overflow-hidden`}
+      style={{ borderTop: `3px solid ${accent}` }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <SubjectIcon subject={course.subject} size={38} iconSize={19} />
-          <span className="text-[0.7rem] font-medium text-ink-soft">{course.subject}<span className="block text-[0.62rem] capitalize text-ink-soft">{course.level}</span></span>
-        </div>
+      <div className="flex items-start justify-between gap-3 px-5 py-4" style={{ backgroundColor: tint }}>
+        <SubjectBadge subject={course.subject} level={course.level} size={40} />
         {started ? (
           <ProgressRing completed={progress.completed} total={progress.total} color={accent} />
         ) : (
-          <span className="rounded-full bg-paper px-2 py-0.5 text-[0.62rem] font-medium text-ink-soft">Not started</span>
+          <Chip tone="neutral">Not started</Chip>
         )}
       </div>
-      <h3 className="mt-3 text-xl font-semibold tracking-[-0.01em] transition group-hover:text-lapis-dark">{course.title}</h3>
-      <p className="mt-1.5 text-sm leading-6 text-ink-soft">{course.tagline}</p>
-      <div className="mt-auto flex items-center justify-between pt-4 text-[0.7rem] text-ink-soft">
-        <span>{course.lessonIds.length} lessons · {course.estimatedMinutes} min</span>
-        <span className="font-semibold opacity-0 transition group-hover:opacity-100" style={{ color: accent }} aria-hidden="true">{started ? "Continue" : "Start"} →</span>
+      <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
+        <h3 className="text-xl font-semibold tracking-title">{course.title}</h3>
+        <p className="mt-1.5 text-body-sm leading-6 text-ink-soft">{course.tagline}</p>
+        <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-label text-ink-soft">
+          <span>{course.lessonIds.length} lessons · {course.estimatedMinutes} min</span>
+          <span
+            aria-hidden="true"
+            className="font-semibold opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100"
+            style={{ color: accent }}
+          >
+            {started ? "Continue" : "Start"} →
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function ActiveLearningCard({ item }: { item: DashboardSnapshot["activeLearning"][number] }) {
+  const subject = subjectForHref(item.href);
+  const { accent } = accentFor(subject);
+  return (
+    <Link href={item.href} className={`${cardClasses("quiet", true)} group flex flex-col p-5`}>
+      <div className="flex items-center justify-between gap-3">
+        <Chip tone="neutral">{item.kind === "generated" ? "From your source" : "Museion Original"}</Chip>
+        {subject && <span className="truncate text-micro font-semibold" style={{ color: accent }}>{subject}</span>}
+      </div>
+      <h3 className="mt-3 text-lg font-semibold tracking-title">{item.title}</h3>
+      <p className="mt-1 text-body-sm text-ink-soft">{item.detail}</p>
+      <div className="mt-4">
+        <ProgressRail ratio={item.progress} accent={accent} label={`${item.title} progress`} />
       </div>
     </Link>
   );
@@ -70,6 +173,9 @@ export default async function DashboardPage() {
   const hasActivity = snapshot.activeLearning.length > 0;
   const activeMove = activeMethodMove(snapshot.nextAction);
   const resumeItem = snapshot.activeLearning.find((item) => snapshot.nextAction.href === item.href) ?? null;
+  const heroSubject = subjectForHref(snapshot.nextAction.href);
+  const { accent: heroAccent, tint: heroTint } = accentFor(heroSubject);
+  const localRecord = snapshot.runtime.persistence === "process-local";
   const greeting = preferences?.goal
     ? `Working toward: ${preferences.goal}.`
     : "Continue from recorded work, review a real signal, or build from a source you trust.";
@@ -79,48 +185,51 @@ export default async function DashboardPage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="title-page">Welcome back.</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">{greeting}</p>
+          <p className="mt-2 max-w-2xl text-body leading-6 text-ink-soft">{greeting}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="rounded-full border border-ink/10 bg-surface px-3 py-1.5 text-ink-soft">
-            {snapshot.runtime.provider === "offline" ? "Offline verified guidance" : "Live guidance connected"}
-          </span>
-          <span className="hidden rounded-full border border-ink/10 bg-surface px-3 py-1.5 text-ink-soft sm:inline">
-            {snapshot.runtime.persistence === "process-local" ? "Learning record on this device" : "Generated work synced"}
-          </span>
-        </div>
+        {/* Guidance status lives in the sidebar footer now; this pill says where
+            the record is kept, and a process-local record is a caveat, not a fact
+            with no valence — so it carries the attention tone. */}
+        {/* self-start keeps the pill at its own width in the mobile column, where
+            the header's stretch would otherwise run it edge to edge. */}
+        <Chip tone={localRecord ? "attention" : "neutral"} className="self-start sm:self-auto">
+          {localRecord ? "Learning record on this device" : "Generated work synced"}
+        </Chip>
       </header>
 
-      {/* Mission — one compact, justified next move */}
-      <section className="surface-card mt-6 overflow-hidden" aria-labelledby="next-action-title">
+      {/* Mission — one compact, justified next move, in the colour of the subject
+          it belongs to. The accent edge carries the subject even for sky, whose
+          tint is close enough to the learn-zone wash to read as white. */}
+      <Card as="section" tone="solid" tint={heroTint} accent={heroAccent} className="mt-6 overflow-hidden" aria-labelledby="next-action-title">
         <div className="flex items-stretch">
           <div className="flex-1 p-5 sm:p-6">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-lapis-dark">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-lapis" />
-              Next move · {activeMove}
+            <p className="flex flex-wrap items-center gap-2 text-label font-semibold uppercase tracking-[0.08em]" style={{ color: heroAccent }}>
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: heroAccent }} />
+              <span>
+                Next move · {activeMove}
+                {heroSubject && <> · <span className="text-ink-soft">{heroSubject}</span></>}
+              </span>
             </p>
-            <h2 id="next-action-title" className="mt-2.5 max-w-2xl tracking-title text-2xl font-semibold sm:text-[1.7rem]">
+            <h2 id="next-action-title" className="mt-2.5 max-w-2xl text-2xl font-semibold tracking-title sm:text-3xl">
               {snapshot.nextAction.title}
             </h2>
-            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-ink-soft">
+            <p className="mt-1.5 max-w-2xl text-body leading-6 text-ink-soft">
               {snapshot.nextAction.description} {snapshot.nextAction.reason}
             </p>
             {resumeItem && (
-              <div className="mt-4 flex max-w-md items-center gap-3">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink/8">
-                  <div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, resumeItem.progress * 100)}%` }} />
-                </div>
-                <span className="font-mono text-xs tabular-nums text-ink-soft">{Math.round(resumeItem.progress * 100)}%</span>
+              <div className="mt-4 max-w-md">
+                <ProgressRail ratio={resumeItem.progress} accent={heroAccent} label={`${resumeItem.title} progress`} />
               </div>
             )}
             <div className="mt-5 flex flex-wrap items-center gap-4">
               <Link
                 href={snapshot.nextAction.href}
-                className="group inline-flex min-h-11 items-center rounded-xl bg-lapis px-5 text-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark"
+                className="group inline-flex min-h-11 items-center rounded-xl px-5 text-body-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
+                style={{ backgroundColor: heroAccent }}
               >
                 Begin <span aria-hidden="true" className="ml-2 transition-transform duration-200 group-hover:translate-x-1">→</span>
               </Link>
-              <p className="text-xs text-ink-soft">
+              <p className="text-label text-ink-soft">
                 <span className="font-medium text-ink">Review queue</span>{" "}
                 {snapshot.reviewQueue.length === 0 ? "empty" : `${snapshot.reviewQueue.length} waiting`} ·{" "}
                 {snapshot.evidence.length === 0
@@ -130,52 +239,25 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="relative hidden items-end pr-6 sm:flex">
-            <span aria-hidden="true" className="absolute bottom-2 right-4 h-24 w-24 rounded-full bg-lapis-soft/80 blur-xl" />
-            <MaiaCharacter state={snapshot.nextAction.kind === "review" ? "thinking" : "curious"} animated className="relative h-36 w-30 -mb-1" title="Maia is ready for the next learning move" />
+            <MaiaCharacter state={snapshot.nextAction.kind === "review" ? "thinking" : "curious"} animated className="relative -mb-1 h-36 w-30" title="Maia is ready for the next learning move" />
           </div>
         </div>
 
         {/* Method strip — the active move is derived from the real recommendation */}
-        <ol className="grid grid-cols-7 border-t border-ink/8 bg-paper/50" aria-label="The Museion Method">
-          {METHOD_MOVES.map((move, index) => {
-            const isActive = move === activeMove;
-            return (
-              <li key={move} className="relative flex flex-col items-center gap-1 px-1 py-2.5 text-center">
-                <span
-                  className={`h-1 w-6 rounded-full transition sm:w-9 ${isActive ? "bg-lapis shadow-[0_0_8px_rgba(43,74,203,0.55)]" : "bg-ink/10"}`}
-                  aria-hidden="true"
-                />
-                <span className={`text-[0.56rem] font-semibold sm:text-[0.66rem] ${isActive ? "text-ink" : "text-ink-soft"}`}>
-                  <span className="hidden sm:inline">{move}</span>
-                  <span className="sm:hidden">{index + 1}</span>
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+        <MethodSpine activeMove={activeMove} accent={heroAccent} />
+      </Card>
 
       {snapshot.journey.lessonsCompleted > 0 && (
         <section aria-label="Your journey so far" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Lessons completed", value: snapshot.journey.lessonsCompleted, icon: GraduationScrollIcon, tint: "var(--color-lapis)" },
-            { label: "Courses finished", value: snapshot.journey.coursesCompleted, icon: LibraryIcon, tint: "var(--color-subject-cs)" },
-            { label: "Concepts observed", value: snapshot.journey.conceptsObserved, icon: Idea01Icon, tint: "var(--color-gold)" },
-            { label: "Unaided transfers", value: snapshot.journey.unassistedTransfers, icon: Target01Icon, tint: "var(--color-subject-biology)" },
-          ].map((stat) => (
-            <div key={stat.label} className="surface-card-quiet flex items-center gap-3 px-4 py-3">
-              <span
-                aria-hidden="true"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                style={{ backgroundColor: `color-mix(in srgb, ${stat.tint} 12%, transparent)`, color: stat.tint }}
-              >
-                <HugeiconsIcon icon={stat.icon} size={20} strokeWidth={1.8} />
-              </span>
-              <div className="min-w-0">
-                <p className="text-2xl font-semibold leading-none tabular-nums">{stat.value}</p>
-                <p className="mt-1 truncate text-[0.7rem] leading-4 text-ink-soft">{stat.label}</p>
-              </div>
-            </div>
+          {JOURNEY_TILES.map((tile) => (
+            <StatTile
+              key={tile.key}
+              label={tile.label}
+              value={snapshot.journey[tile.key]}
+              icon={tile.icon}
+              accent={tile.accent}
+              tint={tile.tint}
+            />
           ))}
         </section>
       )}
@@ -184,33 +266,22 @@ export default async function DashboardPage() {
         <div className="space-y-6">
           {hasActivity && (
             <section aria-labelledby="active-title">
-              <div className="mb-3 flex items-end justify-between">
-                <h2 id="active-title" className="title-panel">Continue learning</h2>
-                <Link href="/library" className="text-sm font-medium text-lapis-dark">View library</Link>
-              </div>
+              <SectionHeader id="active-title" title="Continue learning" actionHref="/library" actionLabel="View library" />
               <div className="grid gap-3 sm:grid-cols-2">
                 {snapshot.activeLearning.map((item) => (
-                  <Link key={item.id} href={item.href} className="surface-card-quiet group p-5 transition hover:border-lapis/30 hover:shadow-[var(--shadow-1)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[0.68rem] font-medium text-ink-soft">{item.kind === "generated" ? "From your source" : "Museion Original"}</span>
-                      <span className="font-mono text-xs tabular-nums text-ink-soft">{Math.round(item.progress * 100)}%</span>
-                    </div>
-                    <h3 className="mt-3 text-lg font-semibold group-hover:text-lapis-dark">{item.title}</h3>
-                    <p className="mt-1 text-sm text-ink-soft">{item.detail}</p>
-                    <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/8">
-                      <div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, item.progress * 100)}%` }} />
-                    </div>
-                  </Link>
+                  <ActiveLearningCard key={item.id} item={item} />
                 ))}
               </div>
             </section>
           )}
 
           <section aria-labelledby="paths-title">
-            <div className="mb-1 flex items-end justify-between">
-              <h2 id="paths-title" className="title-panel">{hasActivity ? "Explore another path" : "Choose a learning path"}</h2>
-              <Link href="/library" className="text-sm font-medium text-lapis-dark">All lessons</Link>
-            </div>
+            <SectionHeader
+              id="paths-title"
+              title={hasActivity ? "Explore another path" : "Choose a learning path"}
+              actionHref="/library"
+              actionLabel="All lessons"
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               {coursePaths.map((course) => (
                 <CoursePathCard key={course.id} course={course} progress={snapshot.courseProgress[course.id] ?? { completed: 0, total: course.lessonIds.length }} />
@@ -219,28 +290,21 @@ export default async function DashboardPage() {
           </section>
 
           <section aria-labelledby="evidence-title">
-            <div className="mb-3 flex items-end justify-between gap-4">
-              <h2 id="evidence-title" className="title-panel">What the record supports</h2>
-              <Link href="/progress" className="text-sm font-medium text-lapis-dark">Full evidence</Link>
-            </div>
+            <SectionHeader id="evidence-title" title="What the record supports" actionHref="/progress" actionLabel="Full evidence" />
             {snapshot.evidence.length ? (
-              <div className="surface-card-quiet grid gap-x-6 gap-y-0 px-5 sm:grid-cols-2">
+              <Card className="grid gap-x-6 gap-y-0 px-5 sm:grid-cols-2">
                 {snapshot.evidence.slice(0, 6).map((item) => (
-                  <div key={`${item.concept}:${item.state}`} className="flex items-center justify-between border-t border-ink/8 py-3 first:border-t-0 sm:[&:nth-child(2)]:border-t-0">
-                    <div>
-                      <p className="text-sm font-medium">{item.concept}</p>
-                      <p className="mt-0.5 text-xs text-ink-soft">
-                        {item.state === "observed-guided" ? "Observed in guided work" : item.state === "hint-free-practice" ? "Hint-free practice completed" : "Immediate near transfer"}
-                      </p>
+                  <div key={`${item.concept}:${item.state}`} className="flex items-center justify-between gap-3 border-t border-ink/8 py-3 first:border-t-0 sm:[&:nth-child(2)]:border-t-0">
+                    <div className="min-w-0">
+                      <p className="text-body-sm font-medium">{item.concept}</p>
+                      <p className="mt-0.5 text-label text-ink-soft">{evidenceState(item.state)}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.result === "incorrect" || item.result === "developing" ? "bg-gold-soft text-ink" : "bg-correct-soft text-correct"}`}>
-                      {item.result}
-                    </span>
+                    <Chip tone={evidenceTone(item.result)}>{item.result}</Chip>
                   </div>
                 ))}
-              </div>
+              </Card>
             ) : (
-              <div className="surface-card-quiet">
+              <Card>
                 <DashboardEmptyState
                   icon="evidence"
                   title="No evidence has been recorded"
@@ -248,34 +312,41 @@ export default async function DashboardPage() {
                   actionHref={snapshot.nextAction.href}
                   actionLabel="Make the first checked move"
                 />
-              </div>
+              </Card>
             )}
           </section>
         </div>
 
         <aside className="space-y-6">
           <section aria-labelledby="misconceptions-title">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 id="misconceptions-title" className="flex items-center gap-2 title-panel"><span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-lg" style={{ backgroundColor: "color-mix(in srgb, var(--color-gold) 14%, transparent)", color: "var(--color-gold)" }}><HugeiconsIcon icon={RepeatIcon} size={15} strokeWidth={2} /></span>Recent misconceptions</h2>
-              <span className="font-mono text-xs tabular-nums text-ink-soft">{snapshot.misconceptions.length}</span>
-            </div>
+            {/* Gold reads as attention. The square is solid gold with an ink
+                glyph (6.6:1): gold on gold-soft is 2.5:1 — under the 3:1 a
+                meaningful graphic needs, and too pale to register as a state. */}
+            <SectionHeader
+              id="misconceptions-title"
+              title="Recent misconceptions"
+              icon={RepeatIcon}
+              accent="var(--color-ink)"
+              tint="var(--color-gold)"
+              meta={String(snapshot.misconceptions.length)}
+            />
             {snapshot.misconceptions.length ? (
-              <div className="surface-card-quiet px-5">
+              <Card className="px-5">
                 <div className="divide-y divide-ink/8">
                   {snapshot.misconceptions.slice(0, 3).map((item) => (
                     <Link key={`${item.id}:${item.observedAt}`} href={item.href} className="block py-3.5">
-                      <p className="text-xs font-medium text-lapis-dark">{item.concept}</p>
-                      <p className="mt-1 line-clamp-2 text-sm leading-5 text-ink">{item.label}</p>
-                      <p className="mt-1 text-xs text-ink-soft">
-                        {item.status === "corrected-in-session" ? "Corrected during the session; worth rechecking" : "Not yet resolved"}
-                      </p>
+                      <p className="text-micro font-semibold uppercase tracking-[0.08em] text-ink-soft">{item.concept}</p>
+                      <p className="mt-1 line-clamp-2 text-body-sm leading-5 text-ink">{item.label}</p>
+                      <Chip tone={item.status === "corrected-in-session" ? "neutral" : "attention"} className="mt-2">
+                        {item.status === "corrected-in-session" ? "Corrected in session · worth rechecking" : "Not yet resolved"}
+                      </Chip>
                     </Link>
                   ))}
                 </div>
-                <Link href="/review" className="mb-4 mt-1 inline-flex text-sm font-semibold text-lapis-dark">Open review</Link>
-              </div>
+                <Link href="/review" className="mb-4 mt-1 inline-flex text-body-sm font-semibold text-lapis-dark hover:underline hover:underline-offset-4">Open review</Link>
+              </Card>
             ) : (
-              <div className="surface-card-quiet">
+              <Card>
                 <DashboardEmptyState
                   icon="review"
                   title="Nothing needs correction yet"
@@ -283,30 +354,37 @@ export default async function DashboardPage() {
                   actionHref="/library"
                   actionLabel="Choose a lesson"
                 />
-              </div>
+              </Card>
             )}
           </section>
 
           <section aria-labelledby="sources-title">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 id="sources-title" className="flex items-center gap-2 title-panel"><span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-lg" style={{ backgroundColor: "color-mix(in srgb, var(--color-lapis) 12%, transparent)", color: "var(--color-lapis)" }}><HugeiconsIcon icon={Files02Icon} size={15} strokeWidth={2} /></span>Recent sources</h2>
-              {snapshot.recentSources.length > 0 && <Link href="/create" className="text-xs font-medium text-lapis-dark">Add source</Link>}
-            </div>
+            {/* Lapis reads as information — the same blue the product uses for
+                navigation and provenance. White on lapis is 5.4:1. */}
+            <SectionHeader
+              id="sources-title"
+              title="Recent sources"
+              icon={Files02Icon}
+              accent="var(--color-surface)"
+              tint="var(--color-lapis)"
+              actionHref={snapshot.recentSources.length > 0 ? "/create" : undefined}
+              actionLabel={snapshot.recentSources.length > 0 ? "Add source" : undefined}
+            />
             {snapshot.recentSources.length ? (
-              <div className="surface-card-quiet px-5">
+              <Card className="px-5">
                 <div className="divide-y divide-ink/8">
                   {snapshot.recentSources.map((source) => (
                     <Link key={source.id} href={source.href} className="block py-3.5">
-                      <p className="truncate text-sm font-medium">{source.title}</p>
-                      <p className="mt-1 text-xs text-ink-soft">
+                      <p className="truncate text-body-sm font-medium">{source.title}</p>
+                      <p className="mt-1 text-label text-ink-soft">
                         {source.pages} {source.pages === 1 ? "page" : "pages"} · {formatTemplate(source.templateId)}
                       </p>
                     </Link>
                   ))}
                 </div>
-              </div>
+              </Card>
             ) : (
-              <div className="surface-card-quiet">
+              <Card>
                 <DashboardEmptyState
                   icon="source"
                   title="No source has been compiled"
@@ -314,13 +392,13 @@ export default async function DashboardPage() {
                   actionHref="/create"
                   actionLabel="Open Source Studio"
                 />
-              </div>
+              </Card>
             )}
           </section>
         </aside>
       </div>
 
-      <p className="mt-10 border-t border-ink/10 pt-4 text-xs leading-5 text-ink-soft">
+      <p className="mt-10 border-t border-ink/10 pt-4 text-label leading-5 text-ink-soft">
         {snapshot.limitations[0]} <Link href="/progress" className="font-medium text-lapis-dark">Read the evidence boundary.</Link>
       </p>
     </div>
