@@ -112,7 +112,8 @@ export default function CourseTrail({
 
   return (
     <Card tone="tinted" tint={tint} accent={accent} className={`p-4 sm:p-6 ${headroom}`.trim()}>
-      <ol className="m-0 list-none p-0">
+      {/* list-none makes Safari/VoiceOver drop the implicit list role; restate it. */}
+      <ol role="list" className="m-0 list-none p-0">
         {lessons.map((lesson, index) => {
           const node = trail[index];
           const crowned = complete && index === total - 1;

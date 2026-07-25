@@ -13,16 +13,28 @@ import { pressableClasses, type PressableVariant } from "./pressable-classes";
  * token with its `-deep` partner. Components never darken a colour themselves;
  * that is the whole reason the deep shades exist as literals.
  */
-type BaseProps = {
-  variant?: PressableVariant;
-  /** Fill for the primary variant — `subjectColor(...)` or a state token. */
-  accent?: string;
-  /** The matching deep edge — `subjectDeep(...)` or the token's `-deep`. */
-  edge?: string;
+type CommonProps = {
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
 };
+
+/**
+ * Primary requires its fill/edge pair at the type level: `variant="primary"`
+ * without an accent renders white text on transparent, and the compiler is the
+ * cheapest place to make that impossible.
+ */
+type BaseProps = CommonProps &
+  (
+    | {
+        variant?: "primary";
+        /** Fill for the primary variant — `subjectColor(...)` or a state token. */
+        accent: string;
+        /** The matching deep edge — `subjectDeep(...)` or the token's `-deep`. */
+        edge: string;
+      }
+    | { variant: Exclude<PressableVariant, "primary">; accent?: undefined; edge?: undefined }
+  );
 
 type PressableLinkProps = BaseProps & { href: string } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "className" | "style" | "children">;
 type PressableButtonProps = BaseProps & { href?: undefined } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className" | "style" | "children">;

@@ -11,8 +11,18 @@
 
 export const COUNT_UP_DURATION_MS = 400;
 
+/**
+ * Below this, counting is theatre: a target of 1 would print "0" for the full
+ * duration and then jump, and a screenshot taken mid-animation shows a number
+ * the surrounding copy contradicts ("0 lessons completed" inside a section
+ * that only renders when the count is at least 1). Small values pop in whole —
+ * the component pairs this with the existing pop-in scale animation.
+ */
+export const COUNT_UP_MIN_TARGET = 5;
+
 export function countUpValue(target: number, elapsedMs: number, durationMs: number = COUNT_UP_DURATION_MS): number {
   if (target <= 0 || durationMs <= 0 || elapsedMs >= durationMs) return target;
+  if (target < COUNT_UP_MIN_TARGET) return target;
   if (elapsedMs <= 0) return 0;
   const progress = elapsedMs / durationMs;
   const eased = 1 - Math.pow(1 - progress, 3);

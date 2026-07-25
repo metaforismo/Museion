@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { COUNT_UP_DURATION_MS, countUpValue } from "@/lib/design/count-up";
+import { COUNT_UP_DURATION_MS, COUNT_UP_MIN_TARGET, countUpValue } from "@/lib/design/count-up";
 
 /**
  * A recorded count that arrives by counting up from 0 on first paint. The
@@ -31,9 +31,12 @@ export default function CountUpNumber({ value }: { value: number }) {
     return () => cancelAnimationFrame(frame);
   }, [value]);
 
+  // Below the counting threshold the number arrives whole; the pop-in scale
+  // gives it its moment instead. (Reduced motion disables pop-in globally.)
+  const pops = value > 0 && value < COUNT_UP_MIN_TARGET;
   return (
     <>
-      <span aria-hidden="true">{display}</span>
+      <span aria-hidden="true" className={pops ? "inline-block animate-pop-in" : undefined}>{display}</span>
       <span className="sr-only">{value}</span>
     </>
   );

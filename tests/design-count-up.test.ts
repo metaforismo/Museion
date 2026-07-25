@@ -37,6 +37,15 @@ describe("countUpValue", () => {
     expect(midpoint).toBeGreaterThan(500);
   });
 
+  it("delivers small targets whole — counting to 1 would print a wrong 0 for the entire duration", () => {
+    for (const target of [1, 2, 3, 4]) {
+      expect(countUpValue(target, 1)).toBe(target);
+      expect(countUpValue(target, COUNT_UP_DURATION_MS / 2)).toBe(target);
+    }
+    // The threshold itself still counts.
+    expect(countUpValue(5, 1)).toBe(0);
+  });
+
   it("returns 0 and negative targets untouched, instantly", () => {
     expect(countUpValue(0, 0)).toBe(0);
     expect(countUpValue(-2, 10)).toBe(-2);
