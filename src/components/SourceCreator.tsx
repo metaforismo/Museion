@@ -567,7 +567,9 @@ export default function SourceCreator() {
           >
             <span
               aria-hidden="true"
-              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-label font-bold ${step.ready ? "bg-correct text-white" : step.current ? "bg-lapis text-white" : "bg-ink/10 text-ink-soft"}`}
+              // A pending step stays quiet through its fill, not through a faded
+              // numeral: ink-soft on a 10% ink pill measured 4.46:1, just under AA.
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-label font-bold ${step.ready ? "bg-correct text-white" : step.current ? "bg-lapis text-white" : "bg-ink/8 text-ink"}`}
             >
               {step.ready ? "✓" : step.label.charAt(0)}
             </span>
