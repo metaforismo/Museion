@@ -28,6 +28,10 @@ async function capture({ name, route, width = 1440, height = 960, waitFor = "mai
   page.on("response", (response) => { if (response.status() >= 500) errors.push(`${name}: HTTP ${response.status()} ${response.url()}`); });
   await page.goto(`${baseURL}${route}`, { waitUntil: "domcontentloaded" });
   await page.locator(waitFor).waitFor({ state: "visible", timeout: 15_000 });
+  // Visible markup is not an interactive page: the Source Pack editor is lazily
+  // loaded, so its handlers attach after its server-rendered fields appear, and
+  // a `prepare` step that fires first is silently ignored.
+  await page.waitForLoadState("networkidle").catch(() => {});
   if (prepare) await prepare(page);
   await page.evaluate(async () => {
     await document.fonts.ready;
