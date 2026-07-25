@@ -9,7 +9,6 @@ import { describe, expect, it } from "vitest";
  */
 const NOT_YET_MIGRATED = [
   "src/app/create/review/[runId]/page.tsx",
-  "src/app/progress/page.tsx",
   "src/components/AppCommandPalette.tsx",
   "src/components/LandingCoursePreview.tsx",
   "src/components/LessonPlayer.tsx",

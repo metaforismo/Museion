@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cardClasses } from "@/components/ui/card-classes";
+import { evidenceTone } from "@/lib/design/evidence-tone";
 
 /**
  * The primitives are presentational and this repo has no component-render
@@ -58,5 +59,20 @@ describe("cardClasses", () => {
     for (const tone of ["solid", "quiet", "tinted"] as const) {
       expect(cardClasses(tone, true)).not.toMatch(/text-\[[0-9.]+rem\]/);
     }
+  });
+});
+
+describe("evidenceTone", () => {
+  it("keeps a wrong answer and unfinished work apart", () => {
+    // The Evidence page used to paint both gold, which reports a wrong answer
+    // the engine never recorded. Pinning it so the merge cannot come back.
+    expect(evidenceTone("incorrect")).toBe("wrong");
+    expect(evidenceTone("developing")).toBe("attention");
+    expect(evidenceTone("incorrect")).not.toBe(evidenceTone("developing"));
+  });
+
+  it("treats every accepted result as verified", () => {
+    expect(evidenceTone("correct")).toBe("correct");
+    expect(evidenceTone("consistent")).toBe("correct");
   });
 });

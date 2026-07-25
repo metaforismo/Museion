@@ -11,6 +11,7 @@ import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
+import { evidenceTone } from "@/lib/design/evidence-tone";
 import { currentActor } from "@/lib/server/actor";
 import { readLearnerPreferences } from "@/lib/server/preferences";
 
@@ -61,12 +62,6 @@ function subjectForHref(href: string): string | null {
 /** Unrecognised subjects collapse to the default palette entry: lapis on sky. */
 function accentFor(subject: string | null) {
   return { accent: subjectColor(subject ?? "default"), tint: subjectTint(subject ?? "default") };
-}
-
-function evidenceTone(result: DashboardSnapshot["evidence"][number]["result"]) {
-  if (result === "incorrect") return "wrong" as const;
-  if (result === "developing") return "attention" as const;
-  return "correct" as const;
 }
 
 function evidenceState(state: DashboardSnapshot["evidence"][number]["state"]) {
