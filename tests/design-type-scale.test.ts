@@ -14,7 +14,6 @@ const NOT_YET_MIGRATED = [
   "src/app/library/page.tsx",
   "src/app/progress/page.tsx",
   "src/components/AppCommandPalette.tsx",
-  "src/components/AppSidebar.tsx",
   "src/components/CoursePathCatalog.tsx",
   "src/components/LandingCoursePreview.tsx",
   "src/components/LessonCatalog.tsx",
