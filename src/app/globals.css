@@ -162,9 +162,11 @@ a[class*="bg-"]:active {
   box-shadow: var(--shadow-soft);
 }
 
+/* The one eyebrow. Its size is a scale step, not a bespoke 0.72rem: the class
+   predates the five-step scale and was the last size in the app outside it. */
 .eyebrow {
   color: var(--color-lapis-dark);
-  font-size: 0.72rem;
+  font-size: var(--text-label);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;

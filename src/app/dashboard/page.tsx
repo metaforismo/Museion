@@ -3,10 +3,10 @@ import Link from "next/link";
 
 import { GraduationScrollIcon, Idea01Icon, LibraryIcon, RepeatIcon, Target01Icon, Files02Icon } from "@hugeicons/core-free-icons";
 
+import CoursePathCard from "@/components/CoursePathCard";
 import DashboardEmptyState from "@/components/DashboardEmptyState";
 import MaiaCharacter from "@/components/MaiaCharacter";
-import ProgressRing from "@/components/ProgressRing";
-import { Card, Chip, ProgressRail, SectionHeader, StatTile, SubjectBadge, cardClasses } from "@/components/ui";
+import { Card, Chip, ProgressRail, SectionHeader, StatTile, cardClasses } from "@/components/ui";
 import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
@@ -108,41 +108,6 @@ function MethodSpine({ activeMove, accent }: { activeMove: MethodMove; accent: s
         );
       })}
     </ol>
-  );
-}
-
-function CoursePathCard({ course, progress }: { course: (typeof coursePaths)[number]; progress: { completed: number; total: number } }) {
-  const { accent, tint } = accentFor(course.subject);
-  const started = progress.completed > 0;
-  return (
-    <Link
-      href={`/courses/${course.id}`}
-      className={`${cardClasses("quiet", true)} group flex min-h-40 flex-col overflow-hidden`}
-      style={{ borderTop: `3px solid ${accent}` }}
-    >
-      <div className="flex items-start justify-between gap-3 px-5 py-4" style={{ backgroundColor: tint }}>
-        <SubjectBadge subject={course.subject} level={course.level} size={40} />
-        {started ? (
-          <ProgressRing completed={progress.completed} total={progress.total} color={accent} />
-        ) : (
-          <Chip tone="neutral">Not started</Chip>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
-        <h3 className="text-xl font-semibold tracking-title">{course.title}</h3>
-        <p className="mt-1.5 text-body-sm leading-6 text-ink-soft">{course.tagline}</p>
-        <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-label text-ink-soft">
-          <span>{course.lessonIds.length} lessons · {course.estimatedMinutes} min</span>
-          <span
-            aria-hidden="true"
-            className="font-semibold opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100"
-            style={{ color: accent }}
-          >
-            {started ? "Continue" : "Start"} →
-          </span>
-        </div>
-      </div>
-    </Link>
   );
 }
 

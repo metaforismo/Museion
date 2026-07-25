@@ -10,12 +10,9 @@ import { describe, expect, it } from "vitest";
 const NOT_YET_MIGRATED = [
   "src/app/courses/[courseId]/page.tsx",
   "src/app/create/review/[runId]/page.tsx",
-  "src/app/library/page.tsx",
   "src/app/progress/page.tsx",
   "src/components/AppCommandPalette.tsx",
-  "src/components/CoursePathCatalog.tsx",
   "src/components/LandingCoursePreview.tsx",
-  "src/components/LessonCatalog.tsx",
   "src/components/LessonPlayer.tsx",
   "src/components/MaiaPanel.tsx",
   "src/components/MethodTraceDemo.tsx",
