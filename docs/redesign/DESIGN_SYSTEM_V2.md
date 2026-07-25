@@ -244,6 +244,42 @@ up from 0 to the real recorded value (~400ms, reduced motion: instant).
 `countUpValue()` is pinned to never print a frame above the record — the
 animation approaches the truth from below, and lands on it exactly.
 
+## The path: course detail is a place
+
+A course is drawn as a vertical snaking trail of lesson nodes on the subject's
+tinted card — `CourseTrail`, with its state logic in
+`src/lib/design/course-trail.ts` and every state derived from the real
+completion record. Three node states and nothing else:
+
+- **Done** — full accent fill, white check, settled at 48px. The learner
+  stood here.
+- **Current** — 72px, full accent fill, a breathing halo, Maia beside it
+  (pose `curious`, hero rung, still) and the page's one full-fill
+  Start/Continue `Pressable` in a white card. The course hero's CTA steps
+  down to the secondary variant so this node is unmistakably the loudest
+  thing on the page.
+- **Ahead** — surface fill, ink/15 border, the lesson number. **Never a
+  padlock**: Museion recommends order, it does not lock content, so an ahead
+  node is a fully clickable link that simply speaks more softly.
+
+The connecting rail is subject accent behind the learner — a segment is
+traversed when the lesson it leaves has a completed record — and ink/10
+ahead. "Current" is the first lesson without a completed record, even when
+later lessons were finished out of order: the path reports the record, it
+does not tidy it up. Course completion crowns the final node, which is legal
+celebration because "every lesson has a completed record" is a fact the
+engine checked; per-lesson milestone flags wait until per-lesson transfer
+evidence actually exists in the record.
+
+The halo is the one licensed ring: a plain accent border breathing by
+opacity and scale (`.path-halo`), so it introduces no unchecked colour and
+no shadow — blur still means "floats", the hard edge still means "presses".
+Under `prefers-reduced-motion` it holds still. The trail reads to a screen
+reader as an ordered list of lessons, each a link naming its position and
+state, with `aria-current="step"` on the current node; done and current
+states are bound by `tests/design-course-trail.test.ts`, including the
+no-padlock scan.
+
 Shared primitives live in `src/components/ui`: `Card`, `Chip`, `ProgressRail`,
 `SectionHeader`, `StatTile`, `SubjectBadge`. Build the new surface out of these
 before you build a new one — the dashboard and the library drifted into two

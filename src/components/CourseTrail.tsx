@@ -104,9 +104,14 @@ export default function CourseTrail({
   const complete = trailComplete(lessons.map(({ id }) => id), completed);
   const started = trail.some(({ state }) => state === "done");
   const total = lessons.length;
+  // Maia stands 56px taller than the node cell she is anchored to. Every row
+  // after the first inherits that headroom from the connector above it; when
+  // the current node IS the first row, the card must supply it or her head
+  // crosses the card edge into the section heading.
+  const headroom = trail[0]?.state === "current" ? "sm:pt-16" : "";
 
   return (
-    <Card tone="tinted" tint={tint} accent={accent} className="p-4 sm:p-6">
+    <Card tone="tinted" tint={tint} accent={accent} className={`p-4 sm:p-6 ${headroom}`.trim()}>
       <ol className="m-0 list-none p-0">
         {lessons.map((lesson, index) => {
           const node = trail[index];

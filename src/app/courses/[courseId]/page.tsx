@@ -121,7 +121,7 @@ export default async function CoursePage({ params }: Props) {
                 variant="secondary"
                 className="group"
               >
-                {started ? "Continue the path" : "Start the path"}
+                {doneCount === total ? "Revisit the path" : started ? "Continue the path" : "Start the path"}
                 <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
               </Pressable>
               <p className="text-label text-ink-soft">{total} lessons · about {course.estimatedMinutes} minutes</p>
