@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import ProgressRing from "@/components/ProgressRing";
-import { Chip, SubjectBadge, cardClasses } from "@/components/ui";
+import { SubjectBadge, cardClasses } from "@/components/ui";
 import type { CoursePath } from "@/lib/curriculum";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
 
@@ -36,11 +36,13 @@ export default function CoursePathCard({
       className={`${cardClasses("quiet", true)} group flex min-h-40 flex-col overflow-hidden`}
       style={{ borderTop: `3px solid ${accent}` }}
     >
-      <div className="flex items-start justify-between gap-3 px-5 py-4" style={{ backgroundColor: tint }}>
-        <SubjectBadge subject={course.subject} level={course.level} size={40} />
-        {progress && (started
-          ? <ProgressRing completed={progress.completed} total={progress.total} color={accent} />
-          : <Chip tone="neutral">Not started</Chip>)}
+      {/* Progress is shown when there is progress. A "Not started" chip on every
+          unstarted card states the absence of a fact ten times over, and the
+          missing ring already says it — the same way the ring's presence, not a
+          second chip, says the opposite. The hover CTA still reads "Start". */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4" style={{ backgroundColor: tint }}>
+        <SubjectBadge subject={course.subject} size={40} />
+        {started && progress && <ProgressRing completed={progress.completed} total={progress.total} color={accent} />}
       </div>
       <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
         <h3 className="text-xl font-semibold tracking-title">{course.title}</h3>
