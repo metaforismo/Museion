@@ -16,16 +16,26 @@ const JOURNEY_TILES = [
   { key: "unassistedTransfers", label: "Unaided transfers", icon: Target01Icon, accent: "var(--color-correct)", tint: "var(--color-correct-soft)" },
 ] as const satisfies readonly { key: keyof DashboardSnapshot["journey"]; label: string; icon: typeof LibraryIcon; accent: string; tint: string }[];
 
+/** Static column classes per visible-tile count — Tailwind cannot see a computed name. */
+const COLUMNS = ["", "sm:grid-cols-1", "sm:grid-cols-2", "sm:grid-cols-3", "sm:grid-cols-4"] as const;
+
 /**
- * The four recorded counts, arriving by count-up (real values only — the
+ * The recorded counts, arriving by count-up (real values only — the
  * animation approaches the record from below and lands on it exactly). One
  * grid for every surface that reports the journey, so the dashboard and the
  * evidence page cannot drift into two different readings of the same record.
+ *
+ * Only counts above zero render. A recorded 0 is honest, but these tiles
+ * report work that happened, and a row of zeros is noise dressed as record —
+ * the surfaces already gate the whole section on any activity, so what this
+ * trims is the tiles the record cannot yet fill.
  */
 export default function JourneyStats({ journey }: { journey: DashboardSnapshot["journey"] }) {
+  const tiles = JOURNEY_TILES.filter((tile) => journey[tile.key] > 0);
+  if (tiles.length === 0) return null;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {JOURNEY_TILES.map((tile) => (
+    <div className={`grid grid-cols-2 gap-3 ${COLUMNS[tiles.length]}`}>
+      {tiles.map((tile) => (
         <StatTile
           key={tile.key}
           label={tile.label}

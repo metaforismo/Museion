@@ -1,5 +1,20 @@
 export type PressableVariant = "primary" | "attention" | "secondary";
 
+export type PressableSize = "regular" | "compact";
+
+/**
+ * Two sizes only. `compact` subordinates a press that stands beside a louder
+ * one — same physics, same honesty, smaller scale — and it keeps the 44px
+ * floor: subordination is scale, never reachability. The sizes live here as
+ * whole strings because Tailwind resolves conflicting utilities by stylesheet
+ * order, not class order, so a call site cannot reliably shrink the regular
+ * paddings by appending its own.
+ */
+const SIZE: Record<PressableSize, string> = {
+  regular: "min-h-11 gap-2 rounded-2xl px-5 text-body",
+  compact: "min-h-11 gap-1.5 rounded-2xl px-4 text-body-sm",
+};
+
 /**
  * Single source of truth for the pressable treatment — the hard-edge depth
  * device that marks "you can press this" the way the blur ladder marks "this
@@ -21,9 +36,9 @@ export type PressableVariant = "primary" | "attention" | "secondary";
  *
  * No variant carries a blur shadow: edge = presses, blur = floats, never both.
  */
-export function pressableClasses(variant: PressableVariant = "primary"): string {
+export function pressableClasses(variant: PressableVariant = "primary", size: PressableSize = "regular"): string {
   const base =
-    "pressable inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-2xl px-5 text-body font-semibold";
+    `pressable inline-flex select-none items-center justify-center font-semibold ${SIZE[size]}`;
   const look =
     variant === "primary" ? "text-white" :
     variant === "attention" ? "bg-gold text-ink [--pressable-edge:var(--color-gold-deep)]" :

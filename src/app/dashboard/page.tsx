@@ -175,14 +175,15 @@ export default async function DashboardPage() {
             {/* The page's one full-fill element: the hero CTA in the subject's
                 own accent, standing on its deep edge. Beside it, the review
                 queue — when it is real — takes the warm gold press with the
-                actual count and ink text (white on gold fails at 2.80:1). An
+                actual count and ink text (white on gold fails at 2.80:1),
+                compact so it reads as the second move, not a rival first. An
                 empty queue gets nothing: no fake urgency, no zero. */}
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Pressable href={snapshot.nextAction.href} accent={heroAccent} edge={heroDeep} className="group min-h-12 px-7">
                 Begin <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
               </Pressable>
               {snapshot.reviewQueue.length > 0 && (
-                <Pressable href="/review" variant="attention">
+                <Pressable href="/review" variant="attention" size="compact">
                   {snapshot.reviewQueue.length} to revisit
                 </Pressable>
               )}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 
-import { pressableClasses, type PressableVariant } from "./pressable-classes";
+import { pressableClasses, type PressableSize, type PressableVariant } from "./pressable-classes";
 
 /**
  * The pressable action — flat accent fill standing on a 4px deep edge of the
@@ -17,6 +17,8 @@ type CommonProps = {
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
+  /** `compact` steps a press down beside a louder one; the 44px floor stays. */
+  size?: PressableSize;
 };
 
 /**
@@ -40,8 +42,8 @@ type PressableLinkProps = BaseProps & { href: string } & Omit<AnchorHTMLAttribut
 type PressableButtonProps = BaseProps & { href?: undefined } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className" | "style" | "children">;
 
 export default function Pressable(props: PressableLinkProps | PressableButtonProps) {
-  const { variant = "primary", accent, edge, className = "", style, children, ...rest } = props;
-  const composedClassName = `${pressableClasses(variant)} ${className}`.trim();
+  const { variant = "primary", accent, edge, size = "regular", className = "", style, children, ...rest } = props;
+  const composedClassName = `${pressableClasses(variant, size)} ${className}`.trim();
   const composedStyle: CSSProperties = {
     ...(variant === "primary" && accent ? { backgroundColor: accent } : null),
     ...(variant === "primary" && edge ? ({ "--pressable-edge": edge } as CSSProperties) : null),
