@@ -7,21 +7,17 @@
   repo-relative image paths in PR bodies); v2/sites must be pushed and kept.
 -->
 
-> **Stack: PR 4 of 4** — base `v2/energy`. When PR 3 merges and its branch is deleted, GitHub retargets this PR to `main` automatically. This tip is where the whole stack goes green: it carries the fixes for both long-standing CI blockers. See [the stack map](https://github.com/metaforismo/Museion/blob/v2/sites/docs/pr/README.md) for the whole picture.
+> **Stack: PR 4 of 4** — base `v2/energy`. When PR 3 merges and its branch is deleted, GitHub retargets this PR to `main` automatically. See [the stack map](https://github.com/metaforismo/Museion/blob/v2/sites/docs/pr/README.md) for the whole picture.
 
-The canvas is where Museion's claims are enforced — deterministic checks, misconception surfacing, leak gates, the locked transfer. This PR — 16 commits — brings the energy language (PR 3) inside it as **presentation only**: engine modules, session semantics, evidence recording, and gating logic are untouched, and the diff shows zero changes to the Judge canvas files. It also closes the learning loop (finish a lesson, watch the trail fill), ships the PR tooling behind these bodies, and lands four fixes that deserve to be read on their own.
+The canvas is where Museion's claims are enforced — deterministic checks, misconception surfacing, leak gates, the locked transfer. This PR — 14 commits — brings the energy language (PR 3) inside it as **presentation only**: engine modules, session semantics, evidence recording, and gating logic are untouched, and the diff shows zero changes to the Judge canvas files. It also closes the learning loop (finish a lesson, watch the trail fill), ships the PR tooling behind these bodies, and lands two fixes that deserve to be read on their own.
 
 Spec: [`docs/superpowers/specs/2026-07-25-lesson-canvas-energy-design.md`](https://github.com/metaforismo/Museion/blob/v2/sites/docs/superpowers/specs/2026-07-25-lesson-canvas-energy-design.md)
 
-## Four fixes worth naming
+## Two fixes worth naming
 
-**Multiple-choice answers could never name their misconception (`57b5e4f`).** The UI submits the option *index*; `verify()` accepts an index for correctness on purpose; but `matchMisconception` compared that raw index against the authored trigger *text*. All 63 authored multiple-choice steps carry misconceptions — not one could ever fire. The engine checked the move and then had nothing to name: half of the product's central claim, silently off. The fix resolves the index back to its option text before matching; correctness is untouched; 4 regression tests pin it. Found while seeding the screenshots below — the wrong-answer captures in earlier rounds had to use numeric steps, and now you can see why.
+**Multiple-choice answers could never name their misconception (`6772c3b`).** The UI submits the option *index*; `verify()` accepts an index for correctness on purpose; but `matchMisconception` compared that raw index against the authored trigger *text*. All 63 authored multiple-choice steps carry misconceptions — not one could ever fire. The engine checked the move and then had nothing to name: half of the product's central claim, silently off. The fix resolves the index back to its option text before matching; correctness is untouched; 4 regression tests pin it. Found while seeding the screenshots below — the wrong-answer captures in earlier rounds had to use numeric steps, and now you can see why.
 
-**The dangling `sites-vite-plugin` import (`7a4a456`).** `vite.config.ts` imported `./build/sites-vite-plugin` — gitignored, never committed, contents unrecoverable. Rather than reconstructing it and passing that off as the original, the fix *proves* nothing depended on it: a no-op stand-in build and an import-removed build produce an identical 146-file `dist`. Every job it plausibly held is owned elsewhere (security headers in `worker/index.ts`, OG image as a static asset, D1/R2 bindings from `cloudflare()`, Codex stubbing inline in the same config). Typecheck: 1 error → 0.
-
-**CI Typecheck red on `main` since Build Week (`dd47c0e`).** The root tsconfig swept `video/` into the app project; CI never installs its dependencies, so every run failed on three missing-module errors — invisible locally only because `video/node_modules` happens to exist here. `video/` is a finished deliverable (the Build Week demo, already produced for the submission and YouTube), so it is excluded from the app's type gate. Verified by hiding `video/node_modules` to reproduce CI: 0 errors.
-
-**The flaky `compiler-runs` test (`3c73289`).** Root-caused, not retried into submission: the bounded-jobs test runs 220 sequential golden compiles inside a 30s budget sized for an idle machine; under full-suite CPU contention it cannot fit. Reproduced deterministically with an 8-way load harness (failed on run 1), fixed with condition-based waits and generous backstops, then verified 4/4 under the same harness.
+**The flaky `compiler-runs` test (`49e3081`).** Root-caused, not retried into submission: the bounded-jobs test runs 220 sequential golden compiles inside a 30s budget sized for an idle machine; under full-suite CPU contention it cannot fit. Reproduced deterministically with an 8-way load harness (failed on run 1), fixed with condition-based waits and generous backstops, then verified 4/4 under the same harness.
 
 ## The canvas work
 
@@ -67,7 +63,7 @@ Key decisions:
 - The arrival choreography was verified live: mid-flight frames at 0.12× playback show quiet circle, bloom, then the tracing curve; a hand-typed `?completed=` for an uncompleted lesson renders zero arrival classes; the param strips after one read; reduced-motion computed `animation-name` is `none` on all three.
 - The canvas files leave both type-scale ratchet allowlists in-range; the allowlists now hold only the Judge canvas and `LandingCoursePreview`.
 - Product screenshots regenerated against a production build (19 of 20 — see known-open).
-- CI has not run on any of this (nothing is pushed during the freeze); with both blockers fixed at this tip, CI is *expected* green here, and that expectation is exactly what `docs/pr/EXECUTE.md` gates the merges on.
+- CI has not run on any of this (nothing is pushed during the freeze); with both long-standing blockers fixed back at the tip of PR 1, CI is *expected* green here as on the rest of the stack — see `docs/pr/EXECUTE.md`.
 
 ## Known-open items
 

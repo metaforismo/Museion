@@ -8,7 +8,7 @@
 
 > **Stack: PR 1 of 4** — base `main`. The three PRs above this one (`v2/design-system`, `v2/energy`, `v2/lesson-canvas`) build on it in order; merge this first. See [the stack map](https://github.com/metaforismo/Museion/blob/v2/sites/docs/pr/README.md) for the whole picture.
 
-Museion becomes deployable as a **private ChatGPT Site**: a Worker entry via vinext, D1 for state, R2 for uploads, and a real multi-user story — per-owner isolation, Sign in with ChatGPT as the account boundary, daily quotas, and security headers on every response. Three commits; 66 files; the whole thing sits under the app, so nothing here changes a pixel.
+Museion becomes deployable as a **private ChatGPT Site**: a Worker entry via vinext, D1 for state, R2 for uploads, and a real multi-user story — per-owner isolation, Sign in with ChatGPT as the account boundary, daily quotas, and security headers on every response. Four commits; 67 files; the whole thing sits under the app, so nothing here changes a pixel. The tip commit also clears both long-standing CI Typecheck blockers — written up below — so this PR and everything stacked on it are expected green.
 
 ## What it adds
 
@@ -22,16 +22,19 @@ Museion becomes deployable as a **private ChatGPT Site**: a Worker entry via vin
 
 Plus two small follow-ups: the PDF.js worker URL is resolved lazily so the Sites bundle doesn't pull it at module load, and a dependency security-patch pass (`package.json`/lockfile only).
 
+## Two build fixes at the tip (`508523f`)
+
+One commit, two long-standing Typecheck blockers — placed here because this PR is where `vite.config.ts` comes into existence, so this is the earliest point in history the fixes can live:
+
+**The dangling `sites-vite-plugin` import.** `vite.config.ts` imported `./build/sites-vite-plugin` — gitignored, never committed, contents unrecoverable. Rather than reconstructing it and passing that off as the original, the fix *proves* nothing depended on it: a no-op stand-in build and an import-removed build produce an identical 146-file `dist`. Every job it plausibly held is owned elsewhere (security headers in `worker/index.ts`, OG image as a static asset, D1/R2 bindings from `cloudflare()`, Codex stubbing inline in the same config). Typecheck: 1 error → 0.
+
+**CI Typecheck red on `main` since Build Week.** The root tsconfig swept `video/` into the app project; CI never installs its dependencies, so every run failed on three missing-module errors — invisible locally only because `video/node_modules` happens to exist here. `video/` is a finished deliverable (the Build Week demo, already produced for the submission and YouTube), so it is excluded from the app's type gate. Verified by hiding `video/node_modules` to reproduce CI: 0 errors.
+
 ## Verification
 
 - `npm test` at this tip: **387 passed / 17 skipped** (up from 381 / 17 on `main`). The new `tests/sites-v2.test.ts` pins the persistence contract — every table, `owner_id`, `revision`, `lease_until` and the cascades are asserted against the committed migration SQL — plus quota enforcement to exhaustion and per-owner independence, session round-trips preserving the optimistic revision, upload expiry, and the retryable compiler codes.
-- Lint clean at this tip.
-- `npm run verify:sites` (bundle gate: server-bundle shape, no Node-only Codex imports) passes at the stack tip; at *this* tip it still trips over the dangling `build/sites-vite-plugin` import noted below.
-
-## Known-open at this tip (both fixed later in this stack, in PR 4)
-
-- `vite.config.ts` imports `./build/sites-vite-plugin`, which was never committed (`/build` is gitignored) — in a fresh clone the import dangles and typecheck reports it. PR 4 (`7a4a456`) proves nothing depended on it and removes it.
-- CI Typecheck has been red on `main` since Build Week because the root tsconfig sweeps `video/` (whose deps CI never installs) into the app project. PR 4 (`dd47c0e`) excludes it. Until PR 4 lands, expect this PR's Typecheck check to be red for exactly these two known causes — see `docs/pr/EXECUTE.md`.
+- Lint clean at this tip. **Typecheck: 0 errors** — verified with `video/node_modules` hidden to reproduce CI's environment.
+- `npm run verify:sites` (bundle gate: server-bundle shape, no Node-only Codex imports) passes at the stack tip.
 
 ## No screenshots
 

@@ -38,9 +38,9 @@ Spec: [`docs/superpowers/specs/2026-07-25-museion-visual-unification-design.md`]
 ## Verification
 
 - `npm test` at this tip: **537 passed / 17 skipped** (up from 387 / 17 at the base). Lint clean.
-- Both ratchets (named off-scale sizes, rem literals) green at every commit; allowlists only ever shrank. Two attempted evasions of the type-scale ratchet were found and closed in-range (`08fced6`).
-- The computed-contrast scan ran cold and with a seeded record, at 1440 and 390, across `/dashboard`, `/library`, `/progress`, `/review`, `/create`, `/settings`, two course pages, and a lesson — zero failures. It also caught real defects mid-branch (contrast and overflow, `ca728f5`), which is the point of having it.
-- The dev CSP had to learn to run React's dev build (`8bf4741`) — dev-only, the production header set from PR 1 is untouched.
+- Both ratchets (named off-scale sizes, rem literals) green at every commit; allowlists only ever shrank. Two attempted evasions of the type-scale ratchet were found and closed in-range (`0eb95f3`).
+- The computed-contrast scan ran cold and with a seeded record, at 1440 and 390, across `/dashboard`, `/library`, `/progress`, `/review`, `/create`, `/settings`, two course pages, and a lesson — zero failures. It also caught real defects mid-branch (contrast and overflow, `2553daa`), which is the point of having it.
+- The dev CSP had to learn to run React's dev build (`5668645`) — dev-only, the production header set from PR 1 is untouched.
 - Product screenshots under `docs/assets/screenshots/` regenerated in-range.
 
 ## Known-open (inherited by the rest of the stack)
@@ -48,4 +48,3 @@ Spec: [`docs/superpowers/specs/2026-07-25-museion-visual-unification-design.md`]
 - Algebra's sky tint nearly matches the learn-zone wash; worked around with a 3px accent edge on the course hero. A neutral learn wash is the real fix.
 - The crest wash is invisible for the palest tints (CS violet, algebra sky), and arithmetic's `#fff2ad` is louder than the other five as a full-page wash.
 - Ratchet allowlist survivors, by design at this tip: the Judge canvas files and `LandingCoursePreview` (the canvas files are delisted later, in PR 4).
-- This PR's Typecheck check in CI is expected red for the two pre-existing causes fixed in PR 4 (dangling `build/sites-vite-plugin` import, `video/` swept into the root tsconfig) — see `docs/pr/EXECUTE.md`.

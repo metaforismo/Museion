@@ -44,7 +44,7 @@ Spec: [`docs/superpowers/specs/2026-07-25-museion-energy-design.md`](https://git
 - **The trail is honest ground.** The course page's stacked lesson cards become a snaking path: done / current / ahead derive from the real record; ahead nodes are never padlocked, because Museion recommends order, it does not lock content; course completion crowns the final node from the real completion record. **Known limitation, on purpose: no per-lesson transfer flags** — that evidence is not derivable per-lesson for authored courses, so per the honesty boundary the path ships without them rather than faking them.
 - **Juice with real numbers only.** Count-ups approach the record from below and land on it exactly — `countUpValue()` is pinned to never print a frame above the recorded value (instant under reduced motion; small targets arrive whole with a pop rather than printing a wrong 0). The review press carries the actual queue count in gold with ink text — white on gold fails contrast at 2.80:1, so the pair is baked into the variant and no caller can re-decide it. An empty queue gets nothing: no zero, no urgency.
 - **The record travels.** The library warms a started course's card with its subject tint and marks completed map nodes with the trail's accent check; the evidence page gains the same four count-up tiles as the dashboard via a shared `JourneyStats`, so both surfaces read one record. Every caveat line unchanged.
-- A review pass over the whole range closed its own findings (`3965cfa`): Safari list-role restatement on the trail's `ol`, and `Pressable`'s primary variant now requires its accent/edge pair at the type level.
+- A review pass over the whole range closed its own findings (`b17c580`): Safari list-role restatement on the trail's `ol`, and `Pressable`'s primary variant now requires its accent/edge pair at the type level.
 
 ## Verification
 
@@ -53,4 +53,3 @@ Spec: [`docs/superpowers/specs/2026-07-25-museion-energy-design.md`](https://git
 - Reduced motion verified under emulation: presses, count-ups, and the trail's halo all land instantly in their finished state (unanimated styles *are* the finished state).
 - 44px interactive floors pinned; one tab stop per trail row with full sr-only position/state.
 - `DESIGN_SYSTEM_V2.md` updated in-range with the pressable-depth grammar, the path grammar (node states from the record, the no-padlock rule), and the count-up rule; product screenshots regenerated against a production build.
-- This PR's Typecheck check in CI is expected red for the two pre-existing causes fixed in PR 4 — see `docs/pr/EXECUTE.md`.

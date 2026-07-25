@@ -1,6 +1,8 @@
 # Execution runbook — the v2 stack → main (on or after 2026-08-12)
 
-Everything in this file is **deliberately not executed yet**. The work was prepared during the hackathon judging freeze: nothing reaches `main`, GitHub, Devpost, or Vercel before **2026-08-12**. The 76 commits ship as **four stacked PRs** (see `README.md` in this directory); history is one linear line and must not be rewritten.
+Everything in this file is **deliberately not executed yet**. The work was prepared during the hackathon judging freeze: nothing reaches `main`, GitHub, Devpost, or Vercel before **2026-08-12**. The 75 commits ship as **four stacked PRs** (see `README.md` in this directory); history is one linear line and must not be rewritten once pushed.
+
+**Safety net:** the stack was rebased once during preparation (locally, before any push) to move both CI build fixes to the tip of PR 1. The pre-rebase history is kept at `backup/v2-sites-pre-rebase`; the final tree was verified byte-identical against it. The ref is only a rollback handle — it can be deleted once the stack is merged.
 
 ## 0. The guard — run first, always
 
@@ -13,7 +15,7 @@ git branch --show-current | grep -qx "v2/sites" || { echo "Not on v2/sites"; exi
 
 ## 1. Optional local sanity pass
 
-Both blockers that used to sit in this file are **fixed in the stack itself** (PR 4: `7a4a456` removes the dangling `sites-vite-plugin` import; `dd47c0e` takes `video/` out of the app's typecheck). There is no pre-push decision gate anymore. If you want to re-verify:
+Both blockers that used to sit in this file are **fixed at the tip of PR 1** (`508523f` removes the dangling `sites-vite-plugin` import and takes `video/` out of the app's typecheck), so every tip in the stack typechecks at 0 errors. There is no pre-push decision gate. If you want to re-verify:
 
 ```sh
 npm test           # expect 591 passed / 17 skipped at this tip
@@ -21,7 +23,7 @@ npm run lint
 npm run typecheck  # expect 0 errors
 ```
 
-Per-tip figures, all measured locally during preparation: `main` 381/17 → PR 1 tip 387/17 → PR 2 tip 537/17 → PR 3 tip 587/17 → PR 4 tip 591/17. Lint clean at every tip.
+Per-tip figures, all re-measured locally after the rebase: `main` 381/17 → PR 1 tip 387/17 → PR 2 tip 537/17 → PR 3 tip 587/17 → PR 4 tip 591/17. Lint clean at every tip; typecheck 0 errors at every tip, verified with `video/node_modules` hidden to reproduce CI.
 
 ## 2. Push — the four stack branches, plus `v2/sites` for the images
 
@@ -55,19 +57,15 @@ The bases matter: they make each PR's diff exactly its own range.
 
 ## 4. What to expect from CI, honestly
 
-Nothing here has run in CI (nothing was pushed during the freeze). What was verified locally: tests and lint green at all four tips, typecheck 0 errors at the PR 4 tip — including with `video/node_modules` hidden to reproduce CI's environment.
+Nothing here has run in CI (nothing was pushed during the freeze). What was verified locally, after the rebase: tests and lint green at all four tips, and typecheck 0 errors at all four tips — including with `video/node_modules` hidden to reproduce CI's environment. Both former blockers (the dangling `./build/sites-vite-plugin` import, `video/` swept into the root tsconfig) are fixed at the tip of PR 1, so no tip in the stack carries them.
 
-- **PR 4's checks are expected fully green**, and so is `main` after the final merge — both former blockers are fixed at that tip.
-- **PRs 1–3 are expected to fail the Typecheck step**, for exactly the two known causes fixed in PR 4: `video/` swept into the root tsconfig (red on `main` since Build Week — these tips merely inherit it), and the dangling `./build/sites-vite-plugin` import (PRs 1–3 tips predate its removal). Everything else — lint, tests, audit, golden fixtures, build, bundle budgets, the browser job — is expected green on all four.
+**All four PRs are expected fully green** — Typecheck included — and so is `main` after the final merge. There is no known-red check anywhere in the stack.
 
 ## 5. Merge — strictly in stack order
 
-The standing rule: **merge autonomously once green; stop and ask rather than merge red.** Applied to this stack:
+The standing rule: **merge autonomously once green; stop and ask rather than merge red.** There is no expected red in this stack, so the rule applies plainly: any red check, for any reason, means stop and ask, full stop — do not improvise.
 
-- The intermediate tips' expected-red Typecheck (step 4) is a *known* red with its fix already in the stack — but it is still red. **Present it to Francesco once, before merging PR 1**: the honest options are (a) merge PRs 1–3 acknowledging that one known-red check, since the stack's final state is verified clean, or (b) whatever arrangement he prefers instead. Do not improvise a third option, and do not silently merge a red check without that ack.
-- Any *other* red — a check failing for a reason not named in step 4 — means stop and ask, full stop.
-
-Then, in order, for each PR 1 → 4:
+In order, for each PR 1 → 4:
 
 ```sh
 gh pr checks <n> --watch

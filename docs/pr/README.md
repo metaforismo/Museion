@@ -1,26 +1,26 @@
 # The v2 PR stack
 
-The 76 unpushed commits on `v2/sites` ship as **four stacked PRs** instead of one giant one, so each block can be read — and its diff reviewed — on its own terms. The stacked branches are pointers at existing commits on the one linear history: no rewrites, no cherry-picks, and `v2/lesson-canvas`'s tip is the last product commit, so nothing is orphaned.
+The 75 unpushed commits on `v2/sites` ship as **four stacked PRs** instead of one giant one, so each block can be read — and its diff reviewed — on its own terms. The stacked branches are pointers at existing commits on the one linear history — no cherry-picks, and `v2/lesson-canvas`'s tip is the last product commit, so nothing is orphaned. (The history was rebased once, locally and before any push, to move both CI build fixes to the tip of PR 1 so every tip typechecks clean; the final tree is byte-identical to the pre-rebase tip, kept at `backup/v2-sites-pre-rebase`.)
 
 | # | PR (head → base) | Commits | Diff vs base | Tests at tip | Body |
 |---|---|---|---|---|---|
-| 1 | `v2/sites-runtime` → `main` | 3 | 66 files, +7482/−2427 | 387 / 17 skipped | [`1-sites-runtime/PR_BODY.md`](1-sites-runtime/PR_BODY.md) |
+| 1 | `v2/sites-runtime` → `main` | 4 | 67 files, +7481/−2428 | 387 / 17 skipped | [`1-sites-runtime/PR_BODY.md`](1-sites-runtime/PR_BODY.md) |
 | 2 | `v2/design-system` → `v2/sites-runtime` | 47 | 106 files, +7071/−911 | 537 / 17 skipped | [`2-design-system/PR_BODY.md`](2-design-system/PR_BODY.md) |
 | 3 | `v2/energy` → `v2/design-system` | 10 | 50 files, +1384/−174 | 587 / 17 skipped | [`3-energy/PR_BODY.md`](3-energy/PR_BODY.md) |
-| 4 | `v2/lesson-canvas` → `v2/energy` | 16 | 59 files, +1627/−346 | 591 / 17 skipped | [`4-lesson-canvas/PR_BODY.md`](4-lesson-canvas/PR_BODY.md) |
+| 4 | `v2/lesson-canvas` → `v2/energy` | 14 | 57 files, +1626/−343 | 591 / 17 skipped | [`4-lesson-canvas/PR_BODY.md`](4-lesson-canvas/PR_BODY.md) |
 
 (Test figures measured by checking out each tip and running `npm test`; `main` is at 381 / 17. Lint is clean at every tip.)
 
 What each PR is:
 
-1. **Sites runtime** — Museion as a private ChatGPT Site: Worker target via vinext, D1 + R2, per-owner isolation, Sign in with ChatGPT as the account boundary, daily quotas, security headers. No pixels change.
+1. **Sites runtime** — Museion as a private ChatGPT Site: Worker target via vinext, D1 + R2, per-owner isolation, Sign in with ChatGPT as the account boundary, daily quotas, security headers. No pixels change. Its tip commit clears both long-standing typecheck blockers (the dangling `sites-vite-plugin` import, `video/` swept into the root tsconfig), so CI is expected green from the first PR on.
 2. **One design system** — the landing and app shell ran two palettes, two inks, two blues, two heading typefaces. Merged: contrast-verified subject accent+tint pairs, a five-step Inter scale with Fraunces retired, zone washes, shared primitives, rebuilt sidebar and dashboard, six re-laid surfaces, state-driven Maia.
 3. **Museion Energy** — Duolingo-grade tactility with the honesty boundary intact: pressable depth, full-saturation moments, the snaking course trail, count-ups on real numbers, honest queue urgency. No streaks, no XP, no badges.
-4. **Lesson canvas** — the press grammar inside the canvas (presentation only), the completion loop, the fattened board — plus the four fixes called out individually in its body, two of which un-redden CI.
+4. **Lesson canvas** — the press grammar inside the canvas (presentation only), the completion loop, the fattened board — plus the two fixes called out individually in its body (the multiple-choice misconception match, the flaky `compiler-runs` test).
 
 ## Merge order
 
-Strictly 1 → 2 → 3 → 4, each with a merge commit, each head branch deleted on merge. Deleting a merged head branch makes GitHub retarget the next PR's base to `main` automatically — expected, not an accident. The full runbook, including the freeze-date guard and the check-state expectations per PR, is [`EXECUTE.md`](EXECUTE.md); nothing in this directory executes anything.
+Strictly 1 → 2 → 3 → 4, each with a merge commit, each head branch deleted on merge. Deleting a merged head branch makes GitHub retarget the next PR's base to `main` automatically — expected, not an accident. Every tip typechecks at 0 errors under CI conditions, so all four PRs are expected fully green — merge each once its checks pass. The full runbook, including the freeze-date guard, is [`EXECUTE.md`](EXECUTE.md); nothing in this directory executes anything.
 
 ## The images
 
