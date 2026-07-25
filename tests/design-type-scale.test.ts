@@ -8,7 +8,6 @@ import { describe, expect, it } from "vitest";
  * failure, not a fix.
  */
 const NOT_YET_MIGRATED = [
-  "src/app/courses/[courseId]/page.tsx",
   "src/app/create/review/[runId]/page.tsx",
   "src/app/progress/page.tsx",
   "src/components/AppCommandPalette.tsx",
@@ -19,7 +18,6 @@ const NOT_YET_MIGRATED = [
   "src/components/ProgressRing.tsx",
   "src/components/RecursionCodeLab.tsx",
   "src/components/ScientificMethodDiagram.tsx",
-  "src/components/SiteShell.tsx",
   "src/components/SourceCreator.tsx",
   "src/components/SourceLearningDesign.tsx",
 ];

@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, CheckmarkCircle02Icon, Files02Icon, Target01Icon } from "@hugeicons/core-free-icons";
 
-import ProgressRing from "@/components/ProgressRing";
 import SubjectIcon from "@/components/SubjectIcon";
+import { Card, ProgressRail, SectionHeader, cardClasses } from "@/components/ui";
 import { getLesson } from "@/lib/content";
 import { coursePaths, getCoursePath } from "@/lib/curriculum";
-import { subjectColor } from "@/lib/curriculum/subjects";
+import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
+import { courseArtSrc } from "@/lib/design/assets";
 import { currentActor } from "@/lib/server/actor";
 import { learnerProfile } from "@/lib/server/session-repository";
 
@@ -29,6 +30,43 @@ function countWord(n: number): string {
   return ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"][n] ?? String(n);
 }
 
+/**
+ * Six courses own a bespoke clay illustration; four do not. So there are two
+ * heroes on purpose:
+ *
+ *   art   — flat subject tint, with the course's own object resting on it.
+ *   crest — the same tint poured as a soft wash, with the subject's clay
+ *           object seated in a tint medallion.
+ *
+ * The crest is not the art hero minus the art: it changes the surface as well
+ * as the object, so an artless course reads as the subject's own variant
+ * rather than a card whose image failed to load.
+ */
+function HeroFigure({ subject, art }: { subject: string; art: string | null }) {
+  if (art) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- fixed-size decorative clay asset; next/image adds no value at this scale
+      <img
+        src={art}
+        alt=""
+        aria-hidden="true"
+        width={224}
+        height={224}
+        className="h-32 w-32 shrink-0 object-contain sm:h-52 sm:w-52"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="grid h-32 w-32 shrink-0 place-items-center rounded-full sm:h-44 sm:w-44"
+      style={{ backgroundColor: subjectTint(subject) }}
+    >
+      <SubjectIcon subject={subject} variant="object" size={96} />
+    </span>
+  );
+}
+
 export default async function CoursePage({ params }: Props) {
   const course = getCoursePath((await params).courseId);
   if (!course) notFound();
@@ -37,82 +75,185 @@ export default async function CoursePage({ params }: Props) {
 
   const learnerId = (await currentActor()).ownerId;
   const completed = (await learnerProfile(learnerId, false))?.completedLessons ?? new Set<string>();
+  const total = course.lessonIds.length;
   const doneCount = course.lessonIds.filter((id) => completed.has(id)).length;
   const accent = subjectColor(course.subject);
+  const tint = subjectTint(course.subject);
+  const art = courseArtSrc(course.id);
   const firstUnfinished = course.lessonIds.find((id) => !completed.has(id)) ?? course.lessonIds[0];
   const started = doneCount > 0;
 
-  return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      <nav aria-label="Breadcrumb" className="text-sm text-ink-soft"><Link href="/library" className="hover:text-lapis-dark">Library</Link><span aria-hidden="true"> / </span><span aria-current="page">{course.title}</span></nav>
+  // The crest hero's pools sit left and low so the right of the band stays
+  // near-paper: a flat tint medallion needs somewhere unwashed to read against.
+  const heroSurface = art
+    ? { backgroundColor: tint }
+    : {
+        backgroundColor: "var(--color-surface)",
+        backgroundImage: `radial-gradient(34rem 22rem at 0% -10%, ${tint}, transparent), radial-gradient(26rem 20rem at 40% 140%, ${tint}, transparent)`,
+      };
 
-      {/* Colored hero band */}
-      <header
-        className="mt-5 overflow-hidden rounded-[var(--radius-card)] border border-ink/10 p-6 sm:p-8"
-        style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 10%, white), color-mix(in srgb, ${accent} 4%, white))` }}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-3">
-              <SubjectIcon subject={course.subject} size={44} iconSize={22} />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.1em]" style={{ color: accent }}>Museion Original · {course.subject}</p>
-                <p className="text-[0.7rem] capitalize text-ink-soft">{course.level} · {course.learnerBand}</p>
-              </div>
-            </div>
-            <h1 className="mt-4 tracking-display text-3xl font-semibold sm:text-4xl">{course.title}</h1>
-            <p className="mt-3 max-w-2xl text-lg leading-8 text-ink-soft">{course.tagline}</p>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
+      <nav aria-label="Breadcrumb" className="text-body-sm text-ink-soft">
+        <Link href="/library" className="hover:text-lapis-dark">Library</Link>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page">{course.title}</span>
+      </nav>
+
+      <Card as="section" tone="solid" accent={accent} style={heroSurface} className="mt-4 overflow-hidden" aria-labelledby="course-title">
+        <div className="flex flex-col gap-6 p-6 sm:flex-row-reverse sm:items-center sm:gap-8 sm:p-8">
+          <div className="flex justify-center sm:justify-end">
+            <HeroFigure subject={course.subject} art={art} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-label font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>
+              Museion Original · {course.subject}
+            </p>
+            <p className="mt-1 text-micro capitalize text-ink-soft">{course.level} · {course.learnerBand}</p>
+            <h1 id="course-title" className="mt-3 title-page">{course.title}</h1>
+            <p className="mt-2 max-w-2xl text-lead leading-7 text-ink-soft">{course.tagline}</p>
+            <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
               <Link
                 href={`/lessons/${firstUnfinished}?course=${course.id}`}
-                className="inline-flex min-h-12 items-center rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark"
+                className="group inline-flex min-h-11 items-center rounded-xl px-5 text-body-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
+                style={{ backgroundColor: accent }}
               >
-                {started ? "Continue the path" : "Start the path"} <span className="ml-2" aria-hidden="true">→</span>
+                {started ? "Continue the path" : "Start the path"}
+                <span aria-hidden="true" className="ml-2 transition-transform duration-200 group-hover:translate-x-1">→</span>
               </Link>
-              <span className="text-sm text-ink-soft">{course.lessonIds.length} lessons · about {course.estimatedMinutes} minutes</span>
+              <p className="text-label text-ink-soft">{total} lessons · about {course.estimatedMinutes} minutes</p>
             </div>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <ProgressRing completed={doneCount} total={course.lessonIds.length} color={accent} size={64} stroke={6} />
-            <span className="text-[0.7rem] text-ink-soft">{doneCount === course.lessonIds.length ? "Complete" : "Your progress"}</span>
+            {/* The rail appears only once there is a record to report; "Start the
+                path" already says the rest, so an empty rail would be a claim
+                about nothing. */}
+            {started && (
+              <div className="mt-4 max-w-sm">
+                <ProgressRail ratio={doneCount / total} accent={accent} label={`${course.title} progress`} />
+                <p className="mt-1.5 text-micro text-ink-soft">{doneCount} of {total} lessons completed</p>
+              </div>
+            )}
           </div>
         </div>
-      </header>
+      </Card>
 
-      <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_21rem]">
-        <div>
+      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
+        <div className="min-w-0">
           <section aria-labelledby="sequence-title">
-            <h2 id="sequence-title" className="tracking-title text-2xl font-semibold">{countWord(course.lessonIds.length).replace(/^\w/, (c) => c.toUpperCase())} connected investigations</h2>
-            <ol className="mt-5 space-y-3">
+            <SectionHeader
+              id="sequence-title"
+              title={`${countWord(total).replace(/^\w/, (letter) => letter.toUpperCase())} connected investigations`}
+              meta={started ? `${doneCount}/${total} completed` : undefined}
+            />
+            <ol className="space-y-3">
               {lessons.map((lesson, index) => {
                 if (!lesson) return null;
                 const isDone = completed.has(lesson.id);
                 return (
                   <li key={lesson.id}>
-                    <Link href={`/lessons/${lesson.id}?course=${course.id}`} className="group grid gap-4 rounded-2xl border border-ink/10 bg-surface p-5 shadow-[var(--shadow-tight)] transition hover:-translate-y-0.5 hover:border-lapis/30 sm:grid-cols-[3.2rem_minmax(0,1fr)_auto] sm:items-center">
+                    <Link
+                      href={`/lessons/${lesson.id}?course=${course.id}`}
+                      className={`${cardClasses("solid", true)} group grid gap-4 p-5 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:items-center`}
+                    >
                       <span
-                        className="grid h-12 w-12 place-items-center rounded-xl font-mono text-sm font-semibold"
-                        style={isDone ? { backgroundColor: `color-mix(in srgb, ${accent} 14%, transparent)`, color: accent } : { backgroundColor: "color-mix(in srgb, var(--color-ink) 5%, transparent)", color: "var(--color-ink-soft)" }}
+                        aria-hidden="true"
+                        className="grid h-12 w-12 place-items-center rounded-xl font-mono text-body-sm font-semibold"
+                        style={isDone
+                          ? { backgroundColor: tint, color: accent }
+                          : { backgroundColor: "var(--color-paper)", color: "var(--color-ink-soft)" }}
                       >
                         {isDone ? <HugeiconsIcon icon={CheckmarkCircle02Icon} size={22} strokeWidth={2} /> : String(index + 1).padStart(2, "0")}
                       </span>
-                      <span>
-                        <span className="block text-lg font-semibold group-hover:text-lapis-dark">{lesson.title}</span>
-                        <span className="mt-1 block text-sm leading-6 text-ink-soft">{lesson.description}</span>
+                      <span className="min-w-0">
+                        <span className="block text-lg font-semibold tracking-title transition group-hover:text-lapis-dark">
+                          {lesson.title}
+                          {isDone && <span className="sr-only"> — completed</span>}
+                        </span>
+                        <span className="mt-1 block text-body-sm leading-6 text-ink-soft">{lesson.description}</span>
                       </span>
-                      <span className="text-sm font-semibold" style={{ color: accent }}>{isDone ? "Review" : "Open"} <span aria-hidden="true">→</span></span>
+                      <span className="text-body-sm font-semibold" style={{ color: accent }}>
+                        {isDone ? "Review" : "Open"} <span aria-hidden="true">→</span>
+                      </span>
                     </Link>
                   </li>
                 );
               })}
             </ol>
           </section>
-          <section aria-labelledby="outcomes-title" className="mt-8 rounded-[var(--radius-card)] border border-ink/10 bg-surface p-6"><h2 id="outcomes-title" className="text-xl font-semibold">What this path asks you to reason about</h2><ul className="mt-4 grid gap-3 sm:grid-cols-2">{course.outcomes.map((outcome) => <li key={outcome} className="flex gap-3 text-sm leading-6 text-ink-soft"><span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: accent }} />{outcome}</li>)}</ul></section>
+
+          <section aria-labelledby="outcomes-title" className="mt-8">
+            <SectionHeader id="outcomes-title" title="What this path asks you to reason about" icon={Target01Icon} accent={accent} tint={tint} />
+            <Card className="p-5">
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {course.outcomes.map((outcome) => (
+                  <li key={outcome} className="flex gap-3 text-body-sm leading-6 text-ink-soft">
+                    <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+                    {outcome}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </section>
         </div>
-        <aside className="space-y-4">
-          <section className="rounded-2xl border border-ink/10 bg-surface p-5"><h2 className="font-semibold">Before you begin</h2><ul className="mt-3 space-y-2 text-sm leading-6 text-ink-soft">{course.prerequisites.map((item) => <li key={item}>• {item}</li>)}</ul></section>
-          <section className="rounded-2xl border border-ink/10 bg-surface p-5"><h2 className="font-semibold">Source basis</h2><ul className="mt-3 space-y-2 text-sm leading-6 text-ink-soft">{course.sourceLabels.map((source) => <li key={source}>{source}</li>)}</ul><p className="mt-4 border-t border-ink/8 pt-4 text-xs leading-5 text-ink-soft">Sources inform the facts. The pedagogy, examples, answers, and sequence are authored by Museion; source publishers do not endorse this course.</p></section>
-          <section className="rounded-2xl border border-gold/25 bg-gold-soft p-5"><p className="text-xs font-semibold uppercase tracking-[0.08em] text-ink">Evidence boundary</p><p className="mt-2 text-sm leading-6 text-ink-soft">{course.evidenceBoundary}</p></section>
+
+        <aside className="space-y-6">
+          <section aria-labelledby="prerequisites-title">
+            <SectionHeader
+              id="prerequisites-title"
+              title="Before you begin"
+              icon={CheckmarkCircle02Icon}
+              accent="var(--color-lapis)"
+              tint="var(--color-lapis-soft)"
+            />
+            <Card className="px-5 py-4">
+              <ul className="space-y-2 text-body-sm leading-6 text-ink-soft">
+                {course.prerequisites.map((item) => (
+                  <li key={item} className="flex gap-2.5">
+                    <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-ink/25" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </section>
+
+          <section aria-labelledby="sources-title">
+            {/* Lapis reads as information — the same blue the product uses for
+                navigation and provenance. White on lapis is 5.4:1. */}
+            <SectionHeader
+              id="sources-title"
+              title="Source basis"
+              icon={Files02Icon}
+              accent="var(--color-surface)"
+              tint="var(--color-lapis)"
+            />
+            <Card className="px-5 py-4">
+              <ul className="space-y-2 text-body-sm leading-6 text-ink-soft">
+                {course.sourceLabels.map((source) => <li key={source}>{source}</li>)}
+              </ul>
+              <p className="mt-4 border-t border-ink/8 pt-4 text-label leading-5 text-ink-soft">
+                Sources inform the facts. The pedagogy, examples, answers, and sequence are authored by
+                Museion; source publishers do not endorse this course.
+              </p>
+            </Card>
+          </section>
+
+          {/* Gold reads as attention: this is the caveat on what finishing the
+              path can be said to show, so it keeps the gold surface rather
+              than the neutral one the panels above use. The mark is an ink
+              glyph on solid gold (6.6:1) — gold on gold-soft is 2.5:1, under
+              the 3:1 a meaningful graphic needs. */}
+          <section aria-labelledby="boundary-title">
+            <SectionHeader
+              id="boundary-title"
+              title="Evidence boundary"
+              icon={AlertCircleIcon}
+              accent="var(--color-ink)"
+              tint="var(--color-gold)"
+            />
+            <Card tint="var(--color-gold-soft)" className="border-gold/25 px-5 py-4">
+              <p className="text-body-sm leading-6 text-ink">{course.evidenceBoundary}</p>
+            </Card>
+          </section>
         </aside>
       </div>
     </div>
