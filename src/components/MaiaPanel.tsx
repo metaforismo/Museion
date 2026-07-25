@@ -489,7 +489,7 @@ export default function MaiaPanel({
                 <MaiaCharacter state={mascotState} animated className="h-8 w-7" />
               </span>
               <div className="min-w-0">
-                <p className="font-display text-base font-semibold leading-tight">Maia</p>
+                <p className="text-base font-semibold leading-tight">Maia</p>
                 <p className="mt-0.5 truncate text-[0.68rem] text-ink-soft">{streaming ? "thinking with you…" : "asks, never tells"}</p>
               </div>
               <details className="group relative ml-auto">
@@ -512,7 +512,7 @@ export default function MaiaPanel({
               {messages.length === 0 && (
                 <div className="mx-auto flex max-w-[19rem] flex-col items-center pt-[10vh] text-center text-sm text-ink-soft">
                   <MaiaCharacter state="curious" animated className="h-20 w-16" />
-                  <h2 className="mt-4 font-display text-xl font-semibold tracking-tight text-ink">Think it through with Maia</h2>
+                  <h2 className="mt-4 tracking-title text-xl font-semibold tracking-tight text-ink">Think it through with Maia</h2>
                   <p className="mt-2 leading-6">Commit to a move. If it breaks, Maia asks a smaller question without handing you the answer.</p>
                 </div>
               )}
@@ -561,7 +561,7 @@ export default function MaiaPanel({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="font-display text-base font-semibold leading-tight tracking-tight">Maia</p>
+            <p className="text-base font-semibold leading-tight tracking-tight">Maia</p>
             <span className={`h-1.5 w-1.5 rounded-full ${streaming ? "animate-pulse bg-gold" : "bg-correct"}`} aria-hidden="true" />
           </div>
           <p className="mt-0.5 truncate text-[0.68rem] text-ink-soft">{streaming ? "thinking with you…" : "asks, never tells"}</p>
@@ -584,7 +584,7 @@ export default function MaiaPanel({
                 <span aria-hidden="true" className="absolute -inset-3 rounded-full bg-lapis-soft/70 blur-xl" />
                 <MaiaCharacter state="curious" animated className="relative h-24 w-20" />
               </div>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-ink">Think it through with Maia</h2>
+              <h2 className="tracking-title text-xl font-semibold tracking-tight text-ink">Think it through with Maia</h2>
               <p className="mt-2 leading-6">Tell me where your reasoning feels uncertain. I&apos;ll ask a smaller question — never the answer.</p>
             </div>
           )}

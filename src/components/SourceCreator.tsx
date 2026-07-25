@@ -517,7 +517,7 @@ export default function SourceCreator() {
         <p className="text-sm font-medium text-lapis-dark">
           Source review
         </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.03em]">
+        <h1 className="mt-2 tracking-title text-3xl font-semibold tracking-[-0.03em]">
           Start with a source you trust.
         </h1>
         <p className="mt-4 max-w-[62ch] leading-7 text-ink-soft">
@@ -614,7 +614,7 @@ export default function SourceCreator() {
           aria-busy={busy}
           className="premium-surface min-w-0 rounded-2xl border border-white/80 p-6 sm:p-7"
         >
-          <h2 className="font-display text-xl font-semibold">Normalized record</h2>
+          <h2 className="tracking-title text-xl font-semibold">Normalized record</h2>
           {!document || !page ? (
             <div className="mt-5 grid place-items-center gap-3 rounded-xl bg-paper px-5 py-10 text-center">
               <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-2xl bg-lapis-soft text-lapis">
@@ -728,8 +728,8 @@ export default function SourceCreator() {
         onClick={() => setArchitectOpen(true)}
         className="fixed bottom-20 right-4 z-40 flex items-center gap-3 rounded-2xl border border-lapis/15 bg-surface px-3 py-2.5 shadow-[var(--shadow-2)] transition hover:-translate-y-0.5 hover:border-lapis/35 sm:bottom-5 sm:right-6"
       >
-        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft font-display text-sm font-semibold tracking-[-0.04em] text-lapis-dark">CA</span>
-        <span className="text-left"><span className="block font-display font-semibold">Course Architect</span><span className="block text-xs text-ink-soft">Build from my material</span></span>
+        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft text-sm font-semibold tracking-[-0.04em] text-lapis-dark">CA</span>
+        <span className="text-left"><span className="block font-semibold">Course Architect</span><span className="block text-xs text-ink-soft">Build from my material</span></span>
       </button>
       {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 shadow-xl">Opening Course Architect…</div>}><CourseArchitectPanel
         document={document}

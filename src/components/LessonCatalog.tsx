@@ -132,7 +132,7 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
       <section aria-label="Lesson catalog results">
       {filteredLessons.length === 0 ? (
         <div className="mt-6 border-l-2 border-gold py-4 pl-6" role="status">
-          <h3 className="font-display text-2xl font-semibold">No lesson matches yet</h3>
+          <h3 className="text-2xl font-semibold">No lesson matches yet</h3>
           <p className="mt-2 max-w-xl leading-7 text-ink-soft">
             Try a broader concept or show every subject. The compiler can also turn an authorized source into a new course.
           </p>

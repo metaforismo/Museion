@@ -29,7 +29,7 @@ export default function CoursePathCatalog({ courses }: { courses: readonly Cours
                   <SubjectIcon subject={course.subject} size={38} iconSize={19} />
                   <span className="text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-ink-soft">{course.subject}<span className="block text-[0.6rem] font-medium normal-case tracking-normal text-ink-soft">{course.level} · {course.learnerBand}</span></span>
                 </div>
-                <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.02em] text-ink transition group-hover:text-lapis-dark">{course.title}</h3>
+                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-ink transition group-hover:text-lapis-dark">{course.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-ink-soft">{course.tagline}</p>
                 <div className="mt-auto pt-5">
                   <div className="flex items-center gap-1" aria-label={`${course.lessonIds.length} connected lessons`}>

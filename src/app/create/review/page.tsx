@@ -56,7 +56,7 @@ export default async function CreatorReviewPage() {
 
       <section className="premium-surface mt-8 rounded-[var(--radius-card)] border border-white/80 p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><h2 className="font-display text-2xl font-semibold">Source Graph</h2><p className="mt-1 text-sm text-ink-soft">{graph.concepts.length} concepts · {graph.claims.length} claims · {Object.keys(graph.spans).length} exact spans</p></div>
+          <div><h2 className="tracking-title text-2xl font-semibold">Source Graph</h2><p className="mt-1 text-sm text-ink-soft">{graph.concepts.length} concepts · {graph.claims.length} claims · {Object.keys(graph.spans).length} exact spans</p></div>
           <code className="max-w-full overflow-x-auto text-xs text-ink-soft" title={graphHash}>graph {graphHash.slice(0, 16)}…</code>
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -85,7 +85,7 @@ export default async function CreatorReviewPage() {
       </section>
 
       <section className="premium-surface mt-6 rounded-[var(--radius-card)] border border-white/80 p-6 sm:p-8">
-        <h2 className="font-display text-2xl font-semibold">Blueprint</h2>
+        <h2 className="tracking-title text-2xl font-semibold">Blueprint</h2>
         <p className="mt-2 text-ink-soft">{blueprint.bigQuestion}</p>
         <ol className="mt-5 grid gap-3 sm:grid-cols-2">
           {blueprint.objectives.map((objective, index) => <li key={objective.id} className="rounded-lg bg-paper p-4"><span className="text-xs font-semibold text-lapis">Objective {index + 1} · {objective.evidenceTarget.replaceAll("_", " ")}</span><p className="mt-1 font-medium">{objective.statement}</p></li>)}
@@ -94,7 +94,7 @@ export default async function CreatorReviewPage() {
       </section>
 
       <section className="premium-surface mt-6 rounded-[var(--radius-card)] border border-white/80 p-6 sm:p-8">
-        <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-display text-2xl font-semibold">Published course</h2><p className="mt-1 text-sm text-ink-soft">Private truth is retained server-side; public serialization removes answer specs and misconception internals.</p></div><code className="text-xs text-ink-soft">artifact {artifactHash.slice(0, 16)}…</code></div>
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="tracking-title text-2xl font-semibold">Published course</h2><p className="mt-1 text-sm text-ink-soft">Private truth is retained server-side; public serialization removes answer specs and misconception internals.</p></div><code className="text-xs text-ink-soft">artifact {artifactHash.slice(0, 16)}…</code></div>
         <div className="mt-5 space-y-3">
           {artifact.lessons[0].blockIds.map((id, index) => { const block = artifact.blocks[id]; return <div key={id} className="flex items-center gap-4 rounded-lg border border-ink/10 p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lapis-soft font-semibold text-lapis">{index + 1}</span><div><p className="font-semibold">{block.accessibilityLabel}</p><p className="text-sm text-ink-soft">{block.kind} · {block.citations.map((citation) => citation.spanId).join(", ")}</p></div></div>; })}
           <div className="flex items-center gap-4 rounded-lg border border-gold/30 bg-gold-soft p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold font-semibold text-white">T</span><div><p className="font-semibold">Locked unassisted near transfer</p><p className="text-sm text-ink-soft">One attempt · Maia/hints/solutions unavailable · evidence limitations shown after scoring</p></div></div>

@@ -66,7 +66,7 @@ export default function InteractiveBlock({
       data-runtime-target={`block:${block.id}`}
       className={`rounded-xl border border-ink/10 bg-surface p-5 shadow-sm${emphasis(`block:${block.id}`)}`}
     >
-      <h3 id={`${block.id}-title`} className="font-display text-xl font-semibold">
+      <h3 id={`${block.id}-title`} className="text-xl font-semibold">
         {block.accessibilityLabel}
       </h3>
       <p data-runtime-target={`prompt:${block.id}`} className={`mt-3 leading-relaxed${emphasis(`prompt:${block.id}`)}`}>{block.prompt}</p>

@@ -117,7 +117,7 @@ export default function OnboardingTour() {
         <p className="eyebrow">
           {slide.kicker}
         </p>
-        <h1 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-[-0.035em] sm:text-5xl">
+        <h1 className="mt-4 tracking-title text-4xl font-semibold leading-tight tracking-[-0.035em] sm:text-5xl">
           {slide.title}
         </h1>
         <div className="mt-4 space-y-3 leading-relaxed text-ink-soft">

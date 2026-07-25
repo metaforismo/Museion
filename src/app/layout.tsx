@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/fraunces/wght.css";
 import "@fontsource-variable/inter/wght.css";
 import SiteShell from "@/components/SiteShell";
 import { allLessons } from "@/lib/content";

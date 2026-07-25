@@ -51,7 +51,7 @@ function CoursePathCard({ course, progress }: { course: (typeof coursePaths)[num
           <span className="rounded-full bg-paper px-2 py-0.5 text-[0.62rem] font-medium text-ink-soft">Not started</span>
         )}
       </div>
-      <h3 className="mt-3 font-display text-xl font-semibold tracking-[-0.01em] transition group-hover:text-lapis-dark">{course.title}</h3>
+      <h3 className="mt-3 text-xl font-semibold tracking-[-0.01em] transition group-hover:text-lapis-dark">{course.title}</h3>
       <p className="mt-1.5 text-sm leading-6 text-ink-soft">{course.tagline}</p>
       <div className="mt-auto flex items-center justify-between pt-4 text-[0.7rem] text-ink-soft">
         <span>{course.lessonIds.length} lessons · {course.estimatedMinutes} min</span>
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-lapis" />
               Next move · {activeMove}
             </p>
-            <h2 id="next-action-title" className="mt-2.5 max-w-2xl font-display text-2xl font-semibold tracking-[-0.01em] sm:text-[1.7rem]">
+            <h2 id="next-action-title" className="mt-2.5 max-w-2xl tracking-title text-2xl font-semibold sm:text-[1.7rem]">
               {snapshot.nextAction.title}
             </h2>
             <p className="mt-1.5 max-w-2xl text-sm leading-6 text-ink-soft">
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
                 <HugeiconsIcon icon={stat.icon} size={20} strokeWidth={1.8} />
               </span>
               <div className="min-w-0">
-                <p className="font-display text-2xl font-semibold leading-none tabular-nums">{stat.value}</p>
+                <p className="text-2xl font-semibold leading-none tabular-nums">{stat.value}</p>
                 <p className="mt-1 truncate text-[0.7rem] leading-4 text-ink-soft">{stat.label}</p>
               </div>
             </div>
@@ -195,7 +195,7 @@ export default async function DashboardPage() {
                       <span className="text-[0.68rem] font-medium text-ink-soft">{item.kind === "generated" ? "From your source" : "Museion Original"}</span>
                       <span className="font-mono text-xs tabular-nums text-ink-soft">{Math.round(item.progress * 100)}%</span>
                     </div>
-                    <h3 className="mt-3 font-display text-lg font-semibold group-hover:text-lapis-dark">{item.title}</h3>
+                    <h3 className="mt-3 text-lg font-semibold group-hover:text-lapis-dark">{item.title}</h3>
                     <p className="mt-1 text-sm text-ink-soft">{item.detail}</p>
                     <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink/8">
                       <div className="h-full rounded-full bg-lapis" style={{ width: `${Math.max(4, item.progress * 100)}%` }} />

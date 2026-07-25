@@ -58,7 +58,7 @@ export default function SourcePackEditor({
       <p className="eyebrow">Your material</p>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl font-semibold">Build one Source Pack</h2>
+          <h2 className="tracking-title text-xl font-semibold">Build one Source Pack</h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-ink-soft">Each item keeps its own role and provenance. References document where material came from; only the authorized text or file becomes course evidence.</p>
         </div>
         <span className="rounded-full bg-paper px-3 py-1.5 text-xs font-semibold text-ink-soft">{materials.length}/8 materials</span>

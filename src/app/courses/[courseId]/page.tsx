@@ -60,7 +60,7 @@ export default async function CoursePage({ params }: Props) {
                 <p className="text-[0.7rem] capitalize text-ink-soft">{course.level} · {course.learnerBand}</p>
               </div>
             </div>
-            <h1 className="mt-4 font-display text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">{course.title}</h1>
+            <h1 className="mt-4 tracking-title text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">{course.title}</h1>
             <p className="mt-3 max-w-2xl text-lg leading-8 text-ink-soft">{course.tagline}</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Link
@@ -82,7 +82,7 @@ export default async function CoursePage({ params }: Props) {
       <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_21rem]">
         <div>
           <section aria-labelledby="sequence-title">
-            <h2 id="sequence-title" className="font-display text-2xl font-semibold tracking-[-0.02em]">{countWord(course.lessonIds.length).replace(/^\w/, (c) => c.toUpperCase())} connected investigations</h2>
+            <h2 id="sequence-title" className="tracking-title text-2xl font-semibold tracking-[-0.02em]">{countWord(course.lessonIds.length).replace(/^\w/, (c) => c.toUpperCase())} connected investigations</h2>
             <ol className="mt-5 space-y-3">
               {lessons.map((lesson, index) => {
                 if (!lesson) return null;

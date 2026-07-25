@@ -112,7 +112,7 @@ export default function MethodTraceDemo() {
         <div className="border-b border-ink/8 p-4 sm:border-b-0 sm:border-r sm:p-5">
           <p className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.09em] text-lapis-dark">Source</p>
           <blockquote
-            className={`mt-2.5 border-l-2 pl-3 font-display text-[1.02rem] leading-6 transition-colors duration-300 ${
+            className={`mt-2.5 border-l-2 pl-3 text-[1.02rem] leading-6 transition-colors duration-300 ${
               stage === "ground" ? "border-gold bg-gold-soft/50 text-ink" : "border-ink/15 text-ink-soft"
             }`}
           >

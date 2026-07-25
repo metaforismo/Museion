@@ -103,7 +103,7 @@ export default async function CompilationRunReview({
       <section id="overview" className="mt-7 grid scroll-mt-32 gap-4 md:grid-cols-[1.15fr_.85fr]">
         <div className="premium-surface rounded-[var(--radius-card)] p-6 sm:p-8">
           <p className="eyebrow">Course design</p>
-          <h2 className="mt-3 font-display text-3xl font-semibold">{template.name}</h2>
+          <h2 className="mt-3 tracking-title text-3xl font-semibold">{template.name}</h2>
           <p className="mt-3 max-w-[58ch] leading-7 text-ink-soft">{template.description}</p>
           <dl className="mt-6 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div>
@@ -126,9 +126,9 @@ export default async function CompilationRunReview({
         </div>
         <div className="rounded-[var(--radius-card)] bg-ink p-6 text-white sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold">Grounding record</p>
-          <p className="mt-5 font-display text-4xl font-semibold">{run.sourceGraph.concepts.length}</p>
+          <p className="mt-5 text-4xl font-semibold">{run.sourceGraph.concepts.length}</p>
           <p className="text-sm text-white/60">source-backed concepts</p>
-          <p className="mt-5 font-display text-4xl font-semibold">{Object.keys(run.sourceGraph.spans).length}</p>
+          <p className="mt-5 text-4xl font-semibold">{Object.keys(run.sourceGraph.spans).length}</p>
           <p className="text-sm text-white/60">exact verified quotations</p>
         </div>
       </section>
@@ -137,7 +137,7 @@ export default async function CompilationRunReview({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Source Pack ledger</p>
-            <h2 className="mt-3 font-display text-3xl font-semibold">Coverage by supplied material</h2>
+            <h2 className="mt-3 tracking-title text-3xl font-semibold">Coverage by supplied material</h2>
           </div>
           {run.sourcePack && <p className="font-mono text-xs text-ink-soft">pack {run.sourcePack.packSha256.slice(0, 12)}…</p>}
         </div>
@@ -176,7 +176,7 @@ export default async function CompilationRunReview({
       <section id="sequence" className="premium-surface mt-6 scroll-mt-32 rounded-[var(--radius-card)] p-6 sm:p-8">
         <div className="max-w-2xl">
           <p className="eyebrow">Learning sequence</p>
-          <h2 className="mt-3 font-display text-3xl font-semibold">What the learner will do</h2>
+          <h2 className="mt-3 tracking-title text-3xl font-semibold">What the learner will do</h2>
           <p className="mt-3 leading-7 text-ink-soft">
             Blocks appear in the exact authored order. Generated pedagogy is visible;
             correct answers and evaluator truth stay server-side.
@@ -238,7 +238,7 @@ export default async function CompilationRunReview({
         {transferBlocks.length > 0 && (
           <aside className="mt-7 border-l-2 border-gold pl-5" aria-labelledby="transfer-review-title">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">Locked transfer</p>
-            <h3 id="transfer-review-title" className="mt-2 font-display text-xl font-semibold">
+            <h3 id="transfer-review-title" className="mt-2 text-xl font-semibold">
               Unassisted observation after the lesson
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
@@ -259,7 +259,7 @@ export default async function CompilationRunReview({
 
       <section id="citations" className="mt-6 scroll-mt-32 rounded-[var(--radius-card)] border border-ink/10 bg-surface/65 p-6 sm:p-8">
         <p className="eyebrow">Exact evidence</p>
-        <h2 className="mt-3 font-display text-3xl font-semibold">Source quotations</h2>
+        <h2 className="mt-3 tracking-title text-3xl font-semibold">Source quotations</h2>
         <p className="mt-3 max-w-2xl leading-7 text-ink-soft">
           Every quotation preserves its page and normalized character offsets for deterministic verification.
         </p>
@@ -278,7 +278,7 @@ export default async function CompilationRunReview({
 
       <section id="validation" className="mt-6 scroll-mt-32 rounded-[var(--radius-card)] border border-ink/10 bg-surface/65 p-6 sm:p-8">
         <p className="eyebrow">Publication gate</p>
-        <h2 className="mt-3 font-display text-3xl font-semibold">Deterministic validation</h2>
+        <h2 className="mt-3 tracking-title text-3xl font-semibold">Deterministic validation</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl bg-paper p-4">
             <p className="text-sm text-ink-soft">Status</p>
@@ -304,7 +304,7 @@ export default async function CompilationRunReview({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Provenance</p>
-            <h2 className="mt-3 font-display text-3xl font-semibold">Model and runtime trace</h2>
+            <h2 className="mt-3 tracking-title text-3xl font-semibold">Model and runtime trace</h2>
           </div>
           <p className="font-mono text-xs text-ink-soft">
             {run.mode} · {run.repaired ? "bounded repair used" : "no repair needed"}

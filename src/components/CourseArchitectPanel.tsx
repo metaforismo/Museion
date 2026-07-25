@@ -134,7 +134,7 @@ export default function CourseArchitectPanel({
         >
           <header className="flex items-center gap-3 border-b border-ink/10 px-4 py-3">
             <span className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft"><BrandMark className="h-9 w-9" title="Course Architect" /></span>
-            <div className="min-w-0 flex-1"><p className="font-display text-lg font-semibold">Course Architect</p><p className="text-xs text-ink-soft">Deterministic intake · AI-assisted compilation</p></div>
+            <div className="min-w-0 flex-1"><p className="text-lg font-semibold">Course Architect</p><p className="text-xs text-ink-soft">Deterministic intake · AI-assisted compilation</p></div>
             <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink">Close</button>
           </header>
 

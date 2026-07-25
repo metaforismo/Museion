@@ -37,7 +37,7 @@ export default function AppSidebar({ collapsed = false, courses = [], lessonCoun
       <div className={`flex h-20 shrink-0 items-center border-b border-ink/[0.06] ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <Link href="/dashboard" aria-label="Museion home" onClick={onNavigate} className="flex min-w-0 items-center gap-3">
           <BrandMark className="h-10 w-10 shrink-0" />
-          {!collapsed && <span className="min-w-0"><span className="block font-display text-lg font-semibold leading-none tracking-tight">Museion</span><span className="mt-1 block truncate text-[0.68rem] text-ink-soft">A house for reasoning</span></span>}
+          {!collapsed && <span className="min-w-0"><span className="block text-lg font-semibold leading-none tracking-tight">Museion</span><span className="mt-1 block truncate text-[0.68rem] text-ink-soft">A house for reasoning</span></span>}
         </Link>
       </div>
 
