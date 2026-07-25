@@ -700,8 +700,19 @@ async function desktopFlow() {
   await page.waitForURL((url) => url.pathname === "/dashboard", { waitUntil: "domcontentloaded" });
   await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "onboarding dashboard destination");
   await expectVisible(page.getByText("No evidence has been recorded", { exact: true }), "dashboard evidence empty state");
-  await expectVisible(page.getByText("Nothing needs correction yet", { exact: true }), "dashboard misconception empty state");
   await expectVisible(page.getByText("No source has been compiled", { exact: true }), "dashboard source empty state");
+  // No misconceptions is not a state worth a panel: the empty card explained
+  // the rule for a panel that was not there, offered "Choose a lesson" — which
+  // is the path grid on the same screen — and sat under a 0 counter saying the
+  // same thing in numerals. The panel appears when there is something in it.
+  if (await page.getByRole("heading", { name: "Recent misconceptions" }).isVisible()) {
+    failures.push("dashboard: misconceptions panel rendered with an empty record");
+  }
+  // A home page that lists the whole catalogue has chosen nothing for the
+  // learner. Six of the ten, one per subject, and the link states the total.
+  const dashboardPaths = await page.getByRole("region", { name: /learning path|another path/ })
+    .locator('a[href^="/courses/"]').count();
+  if (dashboardPaths !== 6) failures.push(`dashboard offers ${dashboardPaths} paths, expected 6`);
   await page.goto(`${baseURL}/`);
   await expectVisible(page.getByRole("heading", { name: /Sources.*don.t have to stay passive/ }), "landing heading");
   await expectVisible(page.getByRole("heading", { name: "A lesson that waits for your move." }), "product contract");
@@ -850,7 +861,11 @@ async function desktopFlow() {
 
   await page.goto(`${baseURL}/dashboard`);
   await expectVisible(page.getByRole("heading", { name: "Welcome back." }), "dashboard page");
-  await expectVisible(page.getByText("Review queue", { exact: true }), "dashboard review queue");
+  // The queue used to be reported beside Begin whether or not anything was in
+  // it, chained to the evidence count by a middot. It is a link now, and it is
+  // there only when something is actually waiting — which, after a lesson run
+  // with two wrong answers, it is.
+  await expectVisible(page.getByRole("link", { name: /waiting in review/ }), "dashboard review queue entry");
   await expectVisible(page.getByText(/not proof of retained mastery/), "truthful dashboard boundary");
   await expectVisible(page.getByRole("heading", { name: "What the record supports" }), "dashboard evidence summary");
   const activeProgress = await page.getByRole("link", { name: "Home", exact: true }).getAttribute("aria-current");
