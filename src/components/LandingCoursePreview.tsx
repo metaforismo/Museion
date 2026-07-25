@@ -42,7 +42,7 @@ export default function LandingCoursePreview() {
             ))}
           </div>
           <div className="mt-5 flex items-start gap-3 rounded-xl bg-paper p-3" aria-live="polite">
-            <MaiaCharacter state={answer === null ? "curious" : correct ? "celebrating" : "redirecting"} className="h-14 w-12 shrink-0" />
+            <MaiaCharacter state={answer === null ? "curious" : correct ? "celebrating" : "redirecting"} size="inline" className="shrink-0" />
             <p className="pt-1 text-sm leading-6 text-ink-soft">{answer === null ? "Which term prevents 2x from being isolated? Commit to a move first." : correct ? "That preserves equality. Now explain why the same move belongs on both sides." : "Test that choice: would it isolate 2x while keeping both sides balanced?"}</p>
           </div>
         </section>

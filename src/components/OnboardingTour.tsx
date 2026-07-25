@@ -113,7 +113,7 @@ export default function OnboardingTour() {
         className="premium-surface rounded-[2rem] border border-white/80 p-8 sm:p-10 animate-fade-up"
       >
         {index === 0 && <BrandMark className="mb-7 h-16 w-16" title="Museion" />}
-        {index === 2 && <MaiaCharacter state="curious" className="mb-2 h-28 w-24" title="Maia"/>}
+        {index === 2 && <MaiaCharacter state="curious" size="hero" className="mb-2" title="Maia"/>}
         <p className="eyebrow">
           {slide.kicker}
         </p>

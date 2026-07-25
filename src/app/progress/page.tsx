@@ -156,7 +156,7 @@ export default async function EvidencePage() {
             </Card>
           ) : (
             <Card className="flex flex-wrap items-center gap-6 p-6" style={EMPTY_EDGE}>
-              <MaiaCharacter state="curious" className="h-16 w-14 shrink-0" title="Maia, waiting for checked work" />
+              <MaiaCharacter state="curious" size="hero" className="shrink-0" title="Maia, waiting for checked work" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-body font-semibold">No observations yet.</h3>
                 <p className="mt-2 text-body-sm leading-6 text-ink-soft">

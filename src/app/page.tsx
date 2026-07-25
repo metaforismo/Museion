@@ -175,9 +175,11 @@ export default function HomePage() {
               Build from your material
             </Link>
           </div>
+          {/* `curious` because nothing has been achieved here — a move is
+              available. `celebrating` claimed a verified moment that the top
+              of the marketing page cannot have produced. */}
           <MaiaCharacter
-            state="celebrating"
-            animated
+            state="curious"
             className={styles.heroMaia}
             title="Maia, Museion's learning companion"
           />
@@ -285,17 +287,17 @@ export default function HomePage() {
           <Spark className={styles.manifestoGold}>✓</Spark>
           <div className={`${styles.manifestoWord} ${styles.wordCreate}`}>
             <h2>Create</h2>
-            <MaiaCharacter state="curious" animated className={styles.manifestoMaia} />
+            <MaiaCharacter state="curious" className={styles.manifestoMaia} />
             <p>Turn trusted material into a designed investigation.</p>
           </div>
           <div className={`${styles.manifestoWord} ${styles.wordThink}`}>
             <h2>Think</h2>
-            <MaiaCharacter state="redirecting" animated className={styles.manifestoMaia} />
+            <MaiaCharacter state="redirecting" className={styles.manifestoMaia} />
             <p>Commit, test, and explain before anything is revealed.</p>
           </div>
           <div className={`${styles.manifestoWord} ${styles.wordTransfer}`}>
             <h2>Transfer</h2>
-            <MaiaCharacter state="celebrating" animated className={styles.manifestoMaia} />
+            <MaiaCharacter state="celebrating" className={styles.manifestoMaia} />
             <p>Try the idea once more—this time without Maia.</p>
           </div>
         </div>
@@ -371,7 +373,7 @@ export default function HomePage() {
               <h3>Maia asks about the misconception—not for another generic answer.</h3>
             </div>
             <div className={styles.maiaFeature}>
-              <MaiaCharacter state="redirecting" animated className={styles.featureMaia} />
+              <MaiaCharacter state="redirecting" className={styles.featureMaia} />
               <p>Which term is keeping <strong>2x</strong> from being alone?</p>
             </div>
           </article>

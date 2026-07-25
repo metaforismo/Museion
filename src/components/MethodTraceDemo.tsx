@@ -121,7 +121,7 @@ export default function MethodTraceDemo() {
           <p className="mt-2.5 text-[0.68rem] leading-4 text-ink-soft">Exact text, page and hash stay attached to the lesson.</p>
 
           <div className="mt-4 flex items-start gap-2.5">
-            <MaiaCharacter state={maiaState} className="h-14 w-12 shrink-0" animated={!reducedMotion} />
+            <MaiaCharacter state={maiaState} size="inline" className="shrink-0" />
             <div
               className={`min-h-11 flex-1 rounded-xl rounded-bl-sm border px-3 py-2 text-[0.78rem] leading-5 transition-colors duration-300 ${
                 stage === "maia"

@@ -1,6 +1,8 @@
 import type { ImgHTMLAttributes } from "react";
 
-export type MaiaState = "attentive" | "curious" | "thinking" | "celebrating" | "redirecting";
+import { MAIA_SIZES, type MaiaSize, type MaiaState } from "@/lib/design/maia";
+
+export type { MaiaState };
 
 /**
  * Pixel-accurate poses traced from the Maia character sheet. Each
@@ -26,13 +28,23 @@ const STATIC_SRC: Record<MaiaState, string> = {
   redirecting: "/brand/maia/maia-pointing.svg",
 };
 
+/**
+ * `animated` defaults to `false`: stillness is the norm, and she moves only
+ * where she is genuinely live. `size` is the only sanctioned way to scale her —
+ * it pins the height to a ladder rung and lets the width follow the pose's own
+ * aspect ratio, which differs between poses. It is applied as an inline style
+ * because Tailwind's preflight sets `img { height: auto }`, which would
+ * silently override a height attribute.
+ */
 export default function MaiaCharacter({
   state = "attentive",
+  size,
   className,
   title,
-  animated = true,
+  animated = false,
+  style,
   ...props
-}: { state?: MaiaState; className?: string; title?: string; animated?: boolean } & Omit<
+}: { state?: MaiaState; size?: MaiaSize; className?: string; title?: string; animated?: boolean } & Omit<
   ImgHTMLAttributes<HTMLImageElement>,
   "src" | "alt" | "title"
 >) {
@@ -43,6 +55,7 @@ export default function MaiaCharacter({
       alt={title ?? ""}
       aria-hidden={title ? undefined : true}
       className={className ? `object-contain ${className}` : "object-contain"}
+      style={size ? { height: MAIA_SIZES[size], width: "auto", ...style } : style}
       {...props}
     />
   );

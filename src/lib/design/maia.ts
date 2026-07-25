@@ -1,0 +1,51 @@
+import type { DashboardSnapshot } from "@/lib/dashboard/contracts";
+
+/**
+ * Maia is state, never furniture. Every appearance derives from real data,
+ * and she animates only where she is live — the lesson canvas and verified
+ * moments. A mascot idling on a page where she cannot be spoken to is the
+ * clearest tell that a product is decorated rather than designed.
+ */
+
+export type MaiaState = "attentive" | "curious" | "thinking" | "celebrating" | "redirecting";
+
+/**
+ * One meaning per pose. This is the whole contract: a pose picked for looks
+ * rather than for the meaning listed here teaches people to stop reading her.
+ */
+export const MAIA_STATE_MEANING: Record<MaiaState, string> = {
+  attentive: "idle — nothing is waiting",
+  curious: "a move is available",
+  thinking: "something needs review",
+  celebrating: "a verified moment fired",
+  redirecting: "a misconception was detected",
+};
+
+/** 28px inline avatar, 96px page figure, 144px verified moment. Nothing else. */
+export const MAIA_SIZES = { inline: 28, hero: 96, moment: 144 } as const;
+export type MaiaSize = keyof typeof MAIA_SIZES;
+
+/**
+ * The recommendation kinds the dashboard can actually produce. Taken from the
+ * snapshot contract rather than restated, so adding a seventh kind is a
+ * compile error here instead of a pose that silently falls through.
+ */
+export type MaiaActionKind = DashboardSnapshot["nextAction"]["kind"];
+
+/** Pose derived from the dashboard's real recommendation, never chosen for looks. */
+export function maiaStateForAction(kind: MaiaActionKind): MaiaState {
+  switch (kind) {
+    case "review":
+      // Something in the record needs a second look.
+      return "thinking";
+    case "resume":
+    case "launch":
+    case "practice":
+      // A specific learning move is queued and ready.
+      return "curious";
+    case "create":
+      // Nothing is unfinished and nothing needs review: she is idle, and the
+      // invitation to bring a source is not a learning move to be curious about.
+      return "attentive";
+  }
+}

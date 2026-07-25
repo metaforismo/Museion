@@ -12,6 +12,7 @@ import { coursePaths } from "@/lib/curriculum";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
 import { evidenceTone } from "@/lib/design/evidence-tone";
+import { maiaStateForAction } from "@/lib/design/maia";
 import { currentActor } from "@/lib/server/actor";
 import { readLearnerPreferences } from "@/lib/server/preferences";
 
@@ -199,7 +200,7 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="relative hidden items-end pr-6 sm:flex">
-            <MaiaCharacter state={snapshot.nextAction.kind === "review" ? "thinking" : "curious"} animated className="relative -mb-1 h-36 w-30" title="Maia is ready for the next learning move" />
+            <MaiaCharacter state={maiaStateForAction(snapshot.nextAction.kind)} size="hero" className="relative -mb-1" title="Maia is ready for the next learning move" />
           </div>
         </div>
 
