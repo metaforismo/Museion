@@ -6,9 +6,12 @@ import { describe, expect, it } from "vitest";
  * Files still carrying arbitrary font sizes. This list may only shrink —
  * each surface task deletes its own entry. Adding an entry is a review
  * failure, not a fix.
+ *
+ * What is left is the lesson canvas (LessonPlayer, MaiaPanel and the two
+ * in-lesson interactives) and the marketing landing, both of which are out of
+ * scope for the app-shell surface work. Every app surface is migrated.
  */
 const NOT_YET_MIGRATED = [
-  "src/components/AppCommandPalette.tsx",
   "src/components/LandingCoursePreview.tsx",
   "src/components/LessonPlayer.tsx",
   "src/components/MaiaPanel.tsx",
