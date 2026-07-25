@@ -532,7 +532,19 @@ Example — `src/app/dashboard/page.tsx:102`:
 
 Note this also removes an arbitrary `text-[1.7rem]`, paying down Task 4 early.
 
-Add the tracking utility to `src/app/globals.css` after the `.title-panel` rule so `tracking-title` resolves:
+**First confirm how `tracking-title` resolves — do not define it twice.** Tailwind v4 generates
+letter-spacing utilities from the `--tracking-*` theme namespace, so the tokens added to `@theme` in
+Task 2 should already produce `tracking-title` and `tracking-display` with no extra CSS. Verify:
+
+```bash
+npm run dev
+```
+
+Load any page, inspect an element with `class="tracking-title"` in DevTools, and confirm
+`letter-spacing: -0.01em` is applied.
+
+If it resolves, add nothing. If it does not, add this to `src/app/globals.css` after `.title-panel`
+as a fallback — but only then, and never alongside a working generated utility:
 
 ```css
 .tracking-title {
@@ -2113,6 +2125,7 @@ Create `tests/design-maia.test.ts`:
 
 ```ts
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -2158,9 +2171,16 @@ describe("Maia presence rules", () => {
   });
 
   it("animates only where she is live", () => {
-    const animated = grep("animated").filter((line) => line.includes("<MaiaCharacter") || line.includes("animated\n"));
-    const allowed = ["src/components/MaiaPanel.tsx", "src/components/VerifiedMoment.tsx"];
-    const offenders = animated.filter((line) => !allowed.some((file) => line.startsWith(file)));
+    // A MaiaCharacter element can span several lines, so match per file rather
+    // than per line: any file rendering her AND passing `animated` must be one
+    // of the two places she is genuinely live.
+    const rendering = new Set(
+      grep("<MaiaCharacter").map((line) => line.slice(0, line.indexOf(":"))),
+    );
+    const allowed = new Set(["src/components/MaiaPanel.tsx", "src/components/VerifiedMoment.tsx"]);
+    const offenders = [...rendering]
+      .filter((file) => !allowed.has(file))
+      .filter((file) => /\banimated\b/.test(readFileSync(file, "utf8")));
     expect(offenders).toEqual([]);
   });
 });
