@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, CheckmarkCircle02Icon, Files02Icon, Target01Icon } from "@hugeicons/core-free-icons";
 
+import CourseTrail from "@/components/CourseTrail";
 import SubjectIcon from "@/components/SubjectIcon";
-import { Card, ProgressRail, SectionHeader, cardClasses } from "@/components/ui";
+import { Card, Pressable, ProgressRail, SectionHeader } from "@/components/ui";
 import { getLesson } from "@/lib/content";
 import { coursePaths, getCoursePath } from "@/lib/curriculum";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
@@ -112,15 +112,18 @@ export default async function CoursePage({ params }: Props) {
             <p className="mt-1 text-micro capitalize text-ink-soft">{course.level} · {course.learnerBand}</p>
             <h1 id="course-title" className="mt-3 title-page">{course.title}</h1>
             <p className="mt-2 max-w-2xl text-lead leading-7 text-ink-soft">{course.tagline}</p>
+            {/* Secondary on purpose: the page's one full-fill press lives at
+                the path's current node below. Two loud buttons pointing at the
+                same lesson would make neither of them the obvious one. */}
             <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
-              <Link
+              <Pressable
                 href={`/lessons/${firstUnfinished}?course=${course.id}`}
-                className="group inline-flex min-h-11 items-center rounded-xl px-5 text-body-sm font-semibold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
-                style={{ backgroundColor: accent }}
+                variant="secondary"
+                className="group"
               >
                 {started ? "Continue the path" : "Start the path"}
-                <span aria-hidden="true" className="ml-2 transition-transform duration-200 group-hover:translate-x-1">→</span>
-              </Link>
+                <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Pressable>
               <p className="text-label text-ink-soft">{total} lessons · about {course.estimatedMinutes} minutes</p>
             </div>
             {/* The rail appears only once there is a record to report; "Start the
@@ -144,40 +147,12 @@ export default async function CoursePage({ params }: Props) {
               title={`${countWord(total).replace(/^\w/, (letter) => letter.toUpperCase())} connected investigations`}
               meta={started ? `${doneCount}/${total} completed` : undefined}
             />
-            <ol className="space-y-3">
-              {lessons.map((lesson, index) => {
-                if (!lesson) return null;
-                const isDone = completed.has(lesson.id);
-                return (
-                  <li key={lesson.id}>
-                    <Link
-                      href={`/lessons/${lesson.id}?course=${course.id}`}
-                      className={`${cardClasses("solid", true)} group grid gap-4 p-5 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:items-center`}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="grid h-12 w-12 place-items-center rounded-xl font-mono text-body-sm font-semibold"
-                        style={isDone
-                          ? { backgroundColor: tint, color: accent }
-                          : { backgroundColor: "var(--color-paper)", color: "var(--color-ink-soft)" }}
-                      >
-                        {isDone ? <HugeiconsIcon icon={CheckmarkCircle02Icon} size={22} strokeWidth={2} /> : String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-lg font-semibold tracking-title transition group-hover:text-lapis-dark">
-                          {lesson.title}
-                          {isDone && <span className="sr-only"> — completed</span>}
-                        </span>
-                        <span className="mt-1 block text-body-sm leading-6 text-ink-soft">{lesson.description}</span>
-                      </span>
-                      <span className="text-body-sm font-semibold" style={{ color: accent }}>
-                        {isDone ? "Review" : "Open"} <span aria-hidden="true">→</span>
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ol>
+            <CourseTrail
+              courseId={course.id}
+              subject={course.subject}
+              lessons={lessons.map((lesson) => ({ id: lesson!.id, title: lesson!.title, description: lesson!.description }))}
+              completed={completed}
+            />
           </section>
 
           <section aria-labelledby="outcomes-title" className="mt-8">
