@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { orderSidebarPaths, type SidebarCourse } from "@/lib/design/sidebar-paths";
+import { coursePaths } from "@/lib/curriculum";
+import { orderSidebarPaths, spreadPathsBySubject, type SidebarCourse } from "@/lib/design/path-selection";
 
 const course = (id: string, lessonCount = 3): SidebarCourse => ({
   id,
@@ -58,5 +59,61 @@ describe("orderSidebarPaths", () => {
     const input = [...catalog];
     orderSidebarPaths(input, { h: { completed: 1, total: 3 } }, 6);
     expect(input.map((entry) => entry.id)).toEqual(catalog.map((entry) => entry.id));
+  });
+});
+
+describe("spreadPathsBySubject", () => {
+  const mixed = [
+    { id: "alg-1", subject: "Algebra" },
+    { id: "cs-1", subject: "Computer Science" },
+    { id: "alg-2", subject: "Algebra" },
+    { id: "phy-1", subject: "Physics" },
+    { id: "cs-2", subject: "Computer Science" },
+  ];
+
+  it("deals one subject at a time before repeating one", () => {
+    const picked = spreadPathsBySubject(mixed, {}, 3);
+    expect(picked.map((entry) => entry.subject)).toEqual(["Algebra", "Computer Science", "Physics"]);
+  });
+
+  it("keeps catalog order inside a subject once it comes round again", () => {
+    const picked = spreadPathsBySubject(mixed, {}, 5);
+    expect(picked.map((entry) => entry.id)).toEqual(["alg-1", "cs-1", "phy-1", "alg-2", "cs-2"]);
+  });
+
+  it("floats the learner's own courses above the deal", () => {
+    const picked = spreadPathsBySubject(mixed, { cs2: { completed: 0, total: 3 }, "cs-2": { completed: 1, total: 3 } }, 3);
+    expect(picked[0].id).toBe("cs-2");
+  });
+
+  it("orders in-progress before completed, matching the rail", () => {
+    const progress = {
+      "alg-2": { completed: 3, total: 3 },
+      "phy-1": { completed: 1, total: 3 },
+    };
+    const picked = spreadPathsBySubject(mixed, progress, 4);
+    expect(picked.map((entry) => entry.id).slice(0, 2)).toEqual(["phy-1", "alg-2"]);
+  });
+
+  it("returns everything it has when the limit exceeds the catalog", () => {
+    expect(spreadPathsBySubject(mixed, {}, 99)).toHaveLength(mixed.length);
+  });
+
+  it("never mutates the input array", () => {
+    const input = [...mixed];
+    spreadPathsBySubject(input, { "phy-1": { completed: 1, total: 3 } }, 3);
+    expect(input.map((entry) => entry.id)).toEqual(mixed.map((entry) => entry.id));
+  });
+
+  /**
+   * The dashboard's grid is six. The catalogue has six subjects, so a learner
+   * with no record must be offered each of them exactly once — the whole point
+   * of showing six of ten rather than all ten.
+   */
+  it("gives the real catalogue one path per subject at six", () => {
+    const picked = spreadPathsBySubject(coursePaths, {}, 6);
+    const subjects = picked.map((entry) => entry.subject);
+    expect(picked).toHaveLength(6);
+    expect(new Set(subjects).size).toBe(6);
   });
 });

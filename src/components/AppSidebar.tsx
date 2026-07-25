@@ -11,7 +11,7 @@ import AppIcon from "./AppIcon";
 import BrandMark from "./BrandMark";
 import SubjectIcon from "./SubjectIcon";
 import { subjectColor } from "@/lib/curriculum/subjects";
-import { orderSidebarPaths, type CourseProgress, type SidebarCourse } from "@/lib/design/sidebar-paths";
+import { orderSidebarPaths, type CourseProgress, type SidebarCourse } from "@/lib/design/path-selection";
 
 const GROUPS: { label: string; items: { href: string; label: string; icon: typeof Home09Icon }[] }[] = [
   { label: "Learn", items: [
