@@ -232,6 +232,15 @@ is that element. Chips, rails and washes stay tinted. The review queue, when
 it is non-empty, is the one sanctioned second press — gold, with the real
 count — and when the queue is empty it is simply absent: no zero, no urgency.
 
+On `/review` itself the same rule scales up rather than changing: the head of
+the queue takes the page's one full-fill press — the attention "Review now"
+inside a gold-edged card — every later item is a pressable card in the gold
+family, and the count arrives large in the header by count-up, "3 to revisit",
+because the queue is the product's honest urgency and deserves to be legible
+at a glance. Evidence carries the same press in its header when the queue is
+real. When it is not, both pages go quiet: Maia stays, the way forward is a
+secondary press, and no zero is printed anywhere.
+
 Cards that navigate take the card form, `.pressable-card`: a resting 2px
 hairline that takes the subject's accent as the pointer arrives, stands up on
 a 3px deep edge, and presses flat on click. Interactive `cardClasses()`
@@ -239,10 +248,22 @@ surfaces keep their blur-hover but also answer inside the click
 (`active:translate-y-px`); everything clickable responds visually within
 100ms.
 
+The record is allowed to warm a door. The library consults the real learner
+record, and a course card whose course is underway fills with its subject
+tint beside the record's progress ring — an open door among white fronts,
+stated by fill rather than by a chip, and only when the completion record
+says so. An empty record leaves the catalog exactly as it was.
+
 One more piece of honest juice: the journey tiles' counts arrive by counting
 up from 0 to the real recorded value (~400ms, reduced motion: instant).
 `countUpValue()` is pinned to never print a frame above the record — the
-animation approaches the truth from below, and lands on it exactly.
+animation approaches the truth from below, and lands on it exactly. The tiles
+render through one shared `JourneyStats`, on the dashboard and on Evidence,
+so two surfaces cannot drift into two readings of the same record. Evidence
+is where the record should feel *earned*: each competence-map section also
+takes its subject's accent as a top edge above its tint band — the same
+edge grammar as the subject's course card — while every caveat line on the
+page stays word for word.
 
 ## The path: course detail is a place
 
@@ -279,6 +300,12 @@ reader as an ordered list of lessons, each a link naming its position and
 state, with `aria-current="step"` on the current node; done and current
 states are bound by `tests/design-course-trail.test.ts`, including the
 no-padlock scan.
+
+The library's knowledge map borrows the trail's done grammar at map scale: a
+node whose lesson has a completed record trades its ordinal for the small
+accent-filled check (with "completed" spoken to a screen reader), and every
+other node keeps its number. Walked ground, from the same completion record —
+no other state exists, because the record supports no other claim.
 
 Shared primitives live in `src/components/ui`: `Card`, `Chip`, `ProgressRail`,
 `SectionHeader`, `StatTile`, `SubjectBadge`. Build the new surface out of these
