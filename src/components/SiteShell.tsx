@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { washStyle, zoneForPath } from "@/lib/design/zones";
+
 import AppIcon from "./AppIcon";
 import AppSidebar from "./AppSidebar";
 import AppCommandPalette, { type SearchableCourse, type SearchableLesson } from "./AppCommandPalette";
@@ -85,7 +87,7 @@ export default function SiteShell({ children, courses, lessons }: { children: Re
   // First-time visitors entering the app shell are routed through onboarding.
 
   const toggle = () => setCollapsed((value) => { const next = !value; try { localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0"); } catch { /* storage is optional */ } return next; });
-  return <div className={`min-h-[100dvh] bg-paper lg:grid lg:grid-rows-[auto_minmax(0,1fr)] ${collapsed ? "lg:grid-cols-[5rem_minmax(0,1fr)]" : "lg:grid-cols-[17rem_minmax(0,1fr)]"}`}>
+  return <div style={washStyle(zoneForPath(pathname))} className={`min-h-[100dvh] bg-paper bg-fixed lg:grid lg:grid-rows-[auto_minmax(0,1fr)] ${collapsed ? "lg:grid-cols-[4.5rem_minmax(0,1fr)]" : "lg:grid-cols-[17rem_minmax(0,1fr)]"}`}>
     <OnboardingRedirect />
     <aside aria-label="Application navigation" className="hidden border-r border-ink/10 bg-surface transition-[width] lg:row-span-2 lg:block"><div className="sticky top-0 h-[100dvh]"><AppSidebar collapsed={collapsed} courses={courses} lessonCount={lessons.length} onToggle={toggle} /></div></aside>
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-ink/10 bg-surface/95 px-4 backdrop-blur lg:col-start-2 lg:px-6">
