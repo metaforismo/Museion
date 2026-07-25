@@ -21,7 +21,9 @@
  * same record. The server keeps learner state in memory: restart it for a
  * clean slate before regenerating.
  *
- * Output: docs/pr/v2-sites/annotated/ (override with MUSEION_ANNOTATED_DIR).
+ * Output: docs/pr/annotated/ — a staging area (override with MUSEION_ANNOTATED_DIR).
+ * Captures are then distributed by hand into the per-PR annotated/ directories;
+ * see docs/pr/README.md for the map.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -30,7 +32,7 @@ import path from "node:path";
 import { chromium } from "playwright";
 
 const baseURL = process.env.MUSEION_BASE_URL ?? "http://localhost:3000";
-const outputDir = path.resolve(process.env.MUSEION_ANNOTATED_DIR ?? "docs/pr/v2-sites/annotated");
+const outputDir = path.resolve(process.env.MUSEION_ANNOTATED_DIR ?? "docs/pr/annotated");
 
 /* ---------------------------------------------------------------- lessons */
 
