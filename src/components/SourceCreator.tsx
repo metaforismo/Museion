@@ -515,9 +515,7 @@ export default function SourceCreator() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <div className="max-w-3xl">
-        <p className="text-label font-semibold uppercase tracking-[0.08em] text-lapis-dark">
-          Source review
-        </p>
+        <p className="eyebrow">Source review</p>
         <h1 className="mt-2 title-page">
           Start with a source you trust.
         </h1>
@@ -616,6 +614,7 @@ export default function SourceCreator() {
           as="section"
           aria-live="polite"
           aria-busy={busy}
+          aria-labelledby="normalized-record-title"
           className="min-w-0 p-6 sm:p-7"
         >
           <SectionHeader
@@ -716,7 +715,7 @@ export default function SourceCreator() {
               {activeJob && job && <Card tone="tinted" tint="var(--color-ink)" className="mt-5 p-5 text-white" aria-live="polite">
                 <div className="flex items-center justify-between gap-3"><div><p className="text-label font-semibold uppercase tracking-[0.08em] text-white/60">3. Compile</p><p className="mt-1 text-body font-semibold">Building a grounded course</p><p className="mt-1 text-label text-white/60">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-body-sm tabular-nums">{job.completedStages}/{job.totalStages}</span></div>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${Math.max(7, (job.completedStages / job.totalStages) * 100)}%` }} /></div>
-                <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-body-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/45"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-label">{stage.model}</span></li>; })}</ol>
+                <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-body-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/60"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-label">{stage.model}</span></li>; })}</ol>
                 <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-body-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
               </Card>}
               <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-20 mt-3 min-h-11 w-full rounded-xl bg-ink px-5 text-body-sm font-semibold text-white shadow-[var(--shadow-2)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">

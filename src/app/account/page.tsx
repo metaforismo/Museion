@@ -14,7 +14,7 @@ export default async function AccountPage() {
   const quotas = await quotaView(actor.ownerId);
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 lg:py-10">
-      <p className="text-label font-semibold uppercase tracking-[0.08em] text-lapis-dark">Account and data</p>
+      <p className="eyebrow">Account and data</p>
       <h1 className="mt-2 title-page">Your Museion controls.</h1>
       <p className="mt-3 max-w-2xl text-body leading-6 text-ink-soft">
         Museion stores a pseudonymous account ID, not your raw email or forwarded ChatGPT name. Today

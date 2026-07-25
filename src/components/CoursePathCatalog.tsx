@@ -8,8 +8,8 @@ export default function CoursePathCatalog({ courses }: { courses: readonly Cours
     <section aria-labelledby="museion-courses-title">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-2xl">
-          <p className="text-label font-semibold uppercase tracking-[0.08em] text-lapis-dark">Museion Originals</p>
-          <h2 id="museion-courses-title" className="mt-1.5 text-xl font-semibold tracking-title">Follow a designed reasoning path.</h2>
+          <p className="eyebrow">Museion Originals</p>
+          <h2 id="museion-courses-title" className="title-panel mt-1.5">Follow a designed reasoning path.</h2>
           <p className="mt-2 text-body-sm leading-6 text-ink-soft">
             Museion-authored sequences across math, physics, biology, and computer science — every lesson
             diagnoses specific misconceptions, and the checker&apos;s truth stays private.

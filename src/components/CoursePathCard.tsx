@@ -27,6 +27,9 @@ export default function CoursePathCard({
   const accent = subjectColor(course.subject);
   const tint = subjectTint(course.subject);
   const started = (progress?.completed ?? 0) > 0;
+  // Without a record we cannot say "Start": a learner half-way through would be
+  // told to begin. "Open" states only what the link does.
+  const cta = progress === undefined ? "Open" : started ? "Continue" : "Start";
   return (
     <Link
       href={`/courses/${course.id}`}
@@ -50,7 +53,7 @@ export default function CoursePathCard({
               className="font-semibold opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100"
               style={{ color: accent }}
             >
-              {started ? "Continue" : "Start"} →
+              {cta} →
             </span>
           </div>
           {band && <p className="mt-1 text-micro">{course.learnerBand}</p>}

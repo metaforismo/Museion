@@ -70,7 +70,7 @@ export default function LibraryPage() {
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <header className="max-w-3xl">
-        <p className="text-label font-semibold uppercase tracking-[0.08em] text-lapis-dark">Library</p>
+        <p className="eyebrow">Library</p>
         <h1 className="mt-2 title-page">Learn through designed investigations.</h1>
         <p className="mt-3 max-w-2xl text-body leading-6 text-ink-soft">
           Start with a complete Museion course, then use individual lessons for focused practice. Every

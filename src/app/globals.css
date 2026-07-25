@@ -167,7 +167,7 @@ a[class*="bg-"]:active {
 .eyebrow {
   color: var(--color-lapis-dark);
   font-size: var(--text-label);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

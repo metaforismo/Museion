@@ -347,7 +347,8 @@ export default function AiSettingsPanel() {
           <article className={`rounded-[var(--radius-card)] border p-5 transition ${status.provider === "codex" ? "border-lapis/40 bg-lapis-soft/60 shadow-[var(--shadow-1)]" : "border-ink/10 bg-surface"}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5">
-                <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gold-soft text-gold"><HugeiconsIcon icon={FlashIcon} size={18} strokeWidth={1.8} /></span>
+                {/* Lapis, not gold: this marks a provider option, not an attention state — and gold on gold-soft is 2.53:1. */}
+                <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-lapis-soft text-lapis-dark"><HugeiconsIcon icon={FlashIcon} size={18} strokeWidth={1.8} /></span>
                 <h3 className="min-w-0 text-body font-semibold">Live AI (your ChatGPT account)</h3>
               </div>
               <Chip tone={liveReady ? "correct" : "attention"}>{statusLabel}</Chip>

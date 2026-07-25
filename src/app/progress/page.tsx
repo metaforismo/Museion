@@ -37,7 +37,7 @@ export default async function EvidencePage() {
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <header className="flex flex-col gap-4 border-b border-ink/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-label font-semibold uppercase tracking-[0.08em] text-lapis-dark">Evidence</p>
+          <p className="eyebrow">Evidence</p>
           <h1 className="mt-2 title-page">What Museion observed—and no more.</h1>
           <p className="mt-3 max-w-3xl text-body leading-6 text-ink-soft">
             The record separates guided work, hint-free practice and immediate near transfer. None of
@@ -69,7 +69,11 @@ export default async function EvidencePage() {
               return (
                 <Card key={group.subject} className="overflow-hidden">
                   <div className="flex items-center justify-between gap-3 px-5 py-3.5" style={{ backgroundColor: subjectTint(group.subject) }}>
-                    <SubjectBadge subject={group.subject} size={32} />
+                    {/* The badge is the group's heading, not decoration: without the
+                        h3 there is no way to move between subjects with a screen
+                        reader. Preflight resets heading type, so this renders the
+                        badge unchanged. */}
+                    <h3 className="min-w-0"><SubjectBadge subject={group.subject} size={32} /></h3>
                     <span className="shrink-0 text-label tabular-nums text-ink-soft">
                       {group.entries.length} {group.entries.length === 1 ? "concept" : "concepts"}
                     </span>
@@ -158,8 +162,11 @@ export default async function EvidencePage() {
                 <p className="mt-2 text-body-sm leading-6 text-ink-soft">
                   Museion will not display a readiness score before it has checked work.
                 </p>
-                <Link href="/library" className="mt-3 inline-flex min-h-9 items-center text-body-sm font-semibold text-lapis-dark hover:underline hover:underline-offset-4">
-                  Choose a lesson <span aria-hidden="true" className="ml-1.5">→</span>
+                <Link
+                  href="/library"
+                  className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-ink px-4 text-body-sm font-semibold text-white transition hover:bg-lapis-dark"
+                >
+                  Choose a lesson
                 </Link>
               </div>
             </Card>

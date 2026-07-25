@@ -124,13 +124,13 @@ export default async function CompilationRunReview({
             </div>
           </dl>
         </div>
-        <div className="rounded-[var(--radius-card)] bg-ink p-6 text-white sm:p-8" aria-label="Grounding record">
-          <p className="text-label font-semibold uppercase tracking-[0.08em] text-gold">Grounding record</p>
+        <section className="rounded-[var(--radius-card)] bg-ink p-6 text-white sm:p-8" aria-labelledby="grounding-record-title">
+          <h2 id="grounding-record-title" className="text-label font-semibold uppercase tracking-[0.08em] text-gold">Grounding record</h2>
           <p className="mt-5 text-4xl font-semibold tabular-nums">{run.sourceGraph.concepts.length}</p>
           <p className="text-body-sm text-white/65">source-backed concepts</p>
           <p className="mt-5 text-4xl font-semibold tabular-nums">{Object.keys(run.sourceGraph.spans).length}</p>
           <p className="text-body-sm text-white/65">exact verified quotations</p>
-        </div>
+        </section>
       </section>
 
       <section id="source-pack" className="mt-6 scroll-mt-32 rounded-[var(--radius-card)] border border-ink/10 bg-surface/65 p-6 sm:p-8">

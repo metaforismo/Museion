@@ -150,9 +150,9 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
           <div className="mb-3 flex items-center justify-between gap-3 px-1">
             <div>
               <p className="text-micro font-bold uppercase tracking-[0.12em] text-lapis-dark">Museion search</p>
-              <h2 id="command-title" className="mt-1 text-base font-semibold tracking-[-0.01em] text-ink sm:text-lg">Find your next learning move</h2>
+              <h2 id="command-title" className="mt-1 text-lead font-semibold tracking-title text-ink sm:text-lg">Find your next learning move</h2>
             </div>
-            <button type="button" onClick={close} className="group flex min-h-10 items-center gap-2 rounded-xl px-2.5 text-xs font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink active:bg-ink/8">
+            <button type="button" onClick={close} className="group flex min-h-10 items-center gap-2 rounded-xl px-2.5 text-label font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink active:bg-ink/8">
               <span className="hidden sm:inline">Close</span>
               <kbd className="rounded-md border border-ink/10 bg-paper px-1.5 py-1 font-sans text-micro font-semibold group-hover:bg-surface">Esc</kbd>
             </button>
@@ -177,7 +177,7 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
               /* text-base at every width: iOS zooms the viewport on a focused input below 16px. */
               className="min-h-14 min-w-0 flex-1 bg-transparent text-base text-ink !outline-none placeholder:text-ink-soft/65 focus-visible:!outline-none"
             />
-            {query ? <button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink">Clear</button> : null}
+            {query ? <button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="min-h-9 rounded-lg px-2 text-label font-semibold text-ink-soft transition-colors hover:bg-paper hover:text-ink">Clear</button> : null}
           </div>
         </div>
 
@@ -197,11 +197,11 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
               >
                 {selected ? <span className="absolute inset-y-3 left-0 w-0.5 rounded-r-full bg-lapis" aria-hidden="true" /> : null}
                 <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors ${selected ? "bg-lapis-soft text-lapis-dark" : "bg-paper text-ink-soft"}`}><AppIcon name={item.icon} className="h-[1.1rem] w-[1.1rem]" /></span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold tracking-[-0.005em]">{item.label}</span><span className="mt-0.5 block truncate text-xs text-ink-soft">{item.detail}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-body-sm font-semibold tracking-title">{item.label}</span><span className="mt-0.5 block truncate text-label text-ink-soft">{item.detail}</span></span>
                 <span className="hidden rounded-full bg-paper px-2 py-1 text-micro font-semibold uppercase tracking-[0.08em] text-ink-soft sm:block">{item.group}</span>
               </button>
             );
-          }) : <div className="px-5 py-10 text-center" role="status"><span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-paper text-ink-soft"><AppIcon name="search" className="h-5 w-5" /></span><p className="mt-4 font-semibold">No matching destination</p><p className="mt-2 text-sm leading-6 text-ink-soft">Try a subject such as algebra, arithmetic, or computer science.</p><button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="mt-4 min-h-10 rounded-xl px-3 text-sm font-semibold text-lapis-dark hover:bg-lapis-soft">Clear search</button></div>}
+          }) : <div className="px-5 py-10 text-center" role="status"><span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-paper text-ink-soft"><AppIcon name="search" className="h-5 w-5" /></span><p className="mt-4 text-body font-semibold">No matching destination</p><p className="mt-2 text-body-sm leading-6 text-ink-soft">Try a subject such as algebra, arithmetic, or computer science.</p><button type="button" onClick={() => { setQuery(""); setActiveIndex(0); requestAnimationFrame(() => inputRef.current?.focus()); }} className="mt-4 min-h-10 rounded-xl px-3 text-body-sm font-semibold text-lapis-dark hover:bg-lapis-soft">Clear search</button></div>}
         </div>
         <div className="hidden items-center justify-between border-t border-ink/8 bg-paper/55 px-5 py-3 text-label text-ink-soft sm:flex"><span className="flex items-center gap-2"><span><kbd className="rounded border border-ink/10 bg-surface px-1.5 py-0.5 font-sans">↑↓</kbd> move</span><span><kbd className="rounded border border-ink/10 bg-surface px-1.5 py-0.5 font-sans">Enter</kbd> open</span></span><span>{results.length} {results.length === 1 ? "result" : "results"}</span></div>
       </div>

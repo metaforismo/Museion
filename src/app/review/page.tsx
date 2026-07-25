@@ -36,7 +36,7 @@ export default async function ReviewPage() {
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <header className="flex flex-col gap-4 border-b border-ink/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-label font-semibold uppercase tracking-[0.08em] text-lapis-dark">Review</p>
+          <p className="eyebrow">Review</p>
           <h1 className="mt-2 title-page">Revisit what the record can justify.</h1>
           <p className="mt-3 max-w-2xl text-body leading-6 text-ink-soft">
             Due items come from registered misconceptions, assisted completions, and the spaced schedule —

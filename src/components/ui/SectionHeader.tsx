@@ -43,7 +43,10 @@ export default function SectionHeader({
             <HugeiconsIcon icon={icon} size={15} strokeWidth={2} />
           </span>
         )}
-        <span className="truncate">{title}</span>
+        {/* Not truncated: a clipped heading hides the one thing the section is
+            for. "What this path asks you to reason about" lost its last three
+            words at 375px. It wraps instead, and the row grows. */}
+        <span className="min-w-0">{title}</span>
       </h2>
       {meta && <span className="shrink-0 text-label tabular-nums text-ink-soft">{meta}</span>}
       {actionHref && actionLabel && (
