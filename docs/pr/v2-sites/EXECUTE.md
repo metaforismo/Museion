@@ -23,11 +23,7 @@ problems mean the PR cannot go green without a decision — the standing rule is
 merge-when-green, so resolve these first (both are additive commits on
 `v2/sites`; no history rewriting):
 
-1. **`build/sites-vite-plugin` is missing** (imported by `vite.config.ts:4`,
-   `/build` is gitignored, never committed, contents lost). Typecheck and Build
-   fail on a clean checkout. Either regenerate the real plugin and commit it
-   outside `/build`, or remove/stub the import. This is the blocker flagged in
-   `.superpowers/sdd/progress.md` since Task 15 — Francesco's call.
+1. ~~`build/sites-vite-plugin`~~ — **resolved** (7a4a456): the dangling import is gone, builds and `verify:sites` pass, typecheck is at 0 errors.
 2. **CI Typecheck has been red on `main` since Build Week**: the root
    `tsconfig.json` includes `video/**`, whose dependencies are never installed
    in CI. Candidate one-liner: exclude `video` from the root tsconfig (it has
@@ -36,11 +32,10 @@ merge-when-green, so resolve these first (both are additive commits on
 If the decision is to merge with known-red checks instead, that contradicts the
 standing "autonomously once green" instruction — stop and ask, do not improvise.
 
-Optional sanity pass locally (uses the documented stand-in workaround from the
-header of `scripts/annotate-screenshots.mjs`):
+Optional sanity pass locally:
 
 ```sh
-npm test && npm run lint && npm run typecheck   # expect 587 passed / 17 skipped; 0 src/ errors
+npm test && npm run lint && npm run typecheck   # expect 591 passed / 17 skipped; 0 typecheck errors
 ```
 
 ## 2. Push

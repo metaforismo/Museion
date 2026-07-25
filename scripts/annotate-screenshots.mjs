@@ -9,14 +9,7 @@
  * MUST run against a PRODUCTION server — the Next dev badge stamps itself over
  * the lower-left corner of every dev capture:
  *
- *   1. `npm run build` — note the pre-existing blocker: `vite.config.ts`
- *      imports `./build/sites-vite-plugin`, which lives under the gitignored
- *      `/build` and was never committed, so the type pass inside `next build`
- *      fails on a clean checkout. Workaround (documented in
- *      `.superpowers/sdd/progress.md`): create a one-line stand-in
- *        echo 'export const sites = () => ({ name: "museion-sites-standin" });' > build/sites-vite-plugin.ts
- *      build, then delete it. The stand-in is NOT the real plugin — never
- *      commit it.
+ *   1. `npm run build`
  *   2. `npm start` (any port; export MUSEION_BASE_URL to match).
  *   3. `MUSEION_BASE_URL=http://localhost:3000 node scripts/annotate-screenshots.mjs [shot ...]`
  *      With no arguments every shot is captured; naming shots filters the run.
