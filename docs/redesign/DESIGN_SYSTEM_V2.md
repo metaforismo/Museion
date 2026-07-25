@@ -212,6 +212,10 @@ Rules:
 - **Derive the pose, never choose it.** `maiaStateForAction()` maps the
   dashboard's real recommendation to a pose. A pose picked for looks teaches
   people to stop reading her.
+- **The name comes from the same state as the pose.** `MAIA_STATE_TITLE` is
+  the one accessible name per pose, so the alt text cannot say "ready for the
+  next learning move" while she is drawn thinking. A fixed `title` beside a
+  derived `state` is the same failure as a decorative pose, read aloud.
 - **Stillness is the default.** `animated` is `false` unless she is somewhere
   she is genuinely live: the lesson canvas and a verified moment. Continuous
   idle motion elsewhere is banned, and every animation sits behind

@@ -12,7 +12,7 @@ import { coursePaths } from "@/lib/curriculum";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
 import { evidenceTone } from "@/lib/design/evidence-tone";
-import { maiaStateForAction } from "@/lib/design/maia";
+import { maiaStateForAction, MAIA_STATE_TITLE } from "@/lib/design/maia";
 import { currentActor } from "@/lib/server/actor";
 import { readLearnerPreferences } from "@/lib/server/preferences";
 
@@ -133,6 +133,7 @@ export default async function DashboardPage() {
   ]);
   const hasActivity = snapshot.activeLearning.length > 0;
   const activeMove = activeMethodMove(snapshot.nextAction);
+  const heroMaiaState = maiaStateForAction(snapshot.nextAction.kind);
   const resumeItem = snapshot.activeLearning.find((item) => snapshot.nextAction.href === item.href) ?? null;
   const heroSubject = subjectForHref(snapshot.nextAction.href);
   const { accent: heroAccent, tint: heroTint } = accentFor(heroSubject);
@@ -200,7 +201,10 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="relative hidden items-end pr-6 sm:flex">
-            <MaiaCharacter state={maiaStateForAction(snapshot.nextAction.kind)} size="hero" className="relative -mb-1" title="Maia is ready for the next learning move" />
+            {/* Name and pose come from one state: when the recommendation is a
+                review she is drawn thinking, and she must not be announced as
+                ready for a move. */}
+            <MaiaCharacter state={heroMaiaState} size="hero" className="relative -mb-1" title={MAIA_STATE_TITLE[heroMaiaState]} />
           </div>
         </div>
 

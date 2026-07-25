@@ -21,6 +21,21 @@ export const MAIA_STATE_MEANING: Record<MaiaState, string> = {
   redirecting: "a misconception was detected",
 };
 
+/**
+ * The accessible name for each pose. The alt text has to say what the drawing
+ * says: a hero named "ready for the next learning move" while she is drawn
+ * thinking tells a screen-reader user the opposite of what a sighted learner
+ * is looking at, which breaks the same contract a pose picked for looks does.
+ * Anywhere the pose is derived, the name is derived from the same state.
+ */
+export const MAIA_STATE_TITLE: Record<MaiaState, string> = {
+  attentive: "Maia, waiting — nothing needs attention",
+  curious: "Maia, ready for the next learning move",
+  thinking: "Maia, something in the record needs review",
+  celebrating: "Maia, marking a verified moment",
+  redirecting: "Maia, pointing at a detected misconception",
+};
+
 /** 28px inline avatar, 96px page figure, 144px verified moment. Nothing else. */
 export const MAIA_SIZES = { inline: 28, hero: 96, moment: 144 } as const;
 export type MaiaSize = keyof typeof MAIA_SIZES;

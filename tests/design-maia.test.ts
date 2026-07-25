@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { DashboardActionSchema } from "@/lib/dashboard/contracts";
-import { MAIA_SIZES, MAIA_STATE_MEANING, maiaStateForAction } from "@/lib/design/maia";
+import { MAIA_SIZES, MAIA_STATE_MEANING, MAIA_STATE_TITLE, maiaStateForAction } from "@/lib/design/maia";
 
 /**
  * The lesson and Judge canvas are out of scope for this pass (Global
@@ -74,6 +74,31 @@ describe("Maia state semantics", () => {
       "celebrating",
       "redirecting",
     ]);
+  });
+});
+
+describe("Maia accessible names", () => {
+  it("names all five poses, one name each", () => {
+    expect(Object.keys(MAIA_STATE_TITLE)).toEqual(Object.keys(MAIA_STATE_MEANING));
+    expect(new Set(Object.values(MAIA_STATE_TITLE)).size).toBe(Object.keys(MAIA_STATE_MEANING).length);
+  });
+
+  it("never pairs a derived pose with a fixed name", () => {
+    // A hard-coded title beside `state={…}` is the same failure as a pose
+    // chosen for looks, only worse: the two readings of the page disagree.
+    // The dashboard hero announced "ready for the next learning move" while
+    // being drawn thinking whenever the recommendation was a review.
+    //
+    // The lesson canvas is exempt, and not only because it is out of scope:
+    // there she is a live interlocutor the learner types at, so "Maia, your
+    // tutor" names who is being addressed rather than claiming a state the
+    // pose could contradict.
+    const offenders = RENDERING_FILES.filter((file) => !LESSON_CANVAS.includes(file)).flatMap((file) =>
+      maiaElementsIn(file)
+        .filter((element) => /state=\{/.test(element) && /\btitle="/.test(element))
+        .map((element) => `${file}: ${element.replace(/\s+/g, " ")}`),
+    );
+    expect(offenders).toEqual([]);
   });
 });
 
