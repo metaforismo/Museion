@@ -163,7 +163,13 @@ export default function HomePage() {
               <span>Videos</span>
               <span>Books</span>
             </span>{" "}
-            <InlineCharm src="/landing/hero-spark-charm-v2.png" className={styles.orbGold} /> don&apos;t have
+            {/* The space after the charm has to be explicit: the JSX
+                transform drops the literal one that used to sit here, which
+                is half of why the hero rendered as "Sources✦don't have". The
+                other half is the charm image overflowing its own box; see
+                .wordOrb in landing.module.css. */}
+            <InlineCharm src="/landing/hero-spark-charm-v2.png" className={styles.orbGold} />{" "}
+            don&apos;t have
             <br /> to stay passive
           </h1>
           <p className={styles.heroCopy}>Museion turns material you trust into interactive lessons that make your reasoning visible.</p>

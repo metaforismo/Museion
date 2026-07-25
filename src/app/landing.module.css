@@ -180,7 +180,15 @@
   height: 1.65em;
   justify-content: center;
   letter-spacing: 0;
-  margin: 0 0.08em;
+  /* .inlineCharmImage renders at 155% of this box, so the artwork bleeds
+     past each edge; combined with a JSX transform that ate the space after
+     the hero charm, the title read as "Sources✦don't have". These em are
+     the orb's own 0.42em font-size, so 0.18em is ~0.076em of the title —
+     enough to leave roughly 1.3 word spaces of daylight around a round
+     object, which needs more air than a letter does. vertical-align stays
+     `middle`; the charms are optically centred there and moving it would
+     lift all four off the line. */
+  margin-inline: 0.18em;
   transform: translateY(-0.1em);
   vertical-align: middle;
   width: 1.65em;
