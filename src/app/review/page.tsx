@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import MaiaCharacter from "@/components/MaiaCharacter";
-import { Card, Chip, SectionHeader, cardClasses } from "@/components/ui";
+import { Card, Chip, CountUpNumber, Pressable, SectionHeader } from "@/components/ui";
 import { buildDashboardSnapshot } from "@/lib/dashboard";
 import { buildRevisitPlan, formatDueDate, REVISIT_INTERVALS_DAYS } from "@/lib/revisit/scheduler";
 import { currentActor } from "@/lib/server/actor";
@@ -43,7 +44,18 @@ export default async function ReviewPage() {
             an expanding ladder computed from recorded timestamps, never invented.
           </p>
         </div>
-        <Chip tone="neutral" className="self-start sm:self-auto">{snapshot.reviewQueue.length} ready</Chip>
+        {/* The queue length is the page's one honest urgency, so it is printed
+            large and warm — the real count arriving by count-up — and printed
+            not at all when the queue is empty: a zero would be manufactured
+            urgency wearing a number. */}
+        {snapshot.reviewQueue.length > 0 && (
+          <p className="flex items-baseline gap-2.5 self-start rounded-2xl border border-gold/30 bg-gold-soft px-5 py-3.5 sm:self-auto">
+            <span className="text-3xl font-semibold leading-none tracking-title tabular-nums">
+              <CountUpNumber value={snapshot.reviewQueue.length} />
+            </span>
+            <span className="text-body-sm font-semibold text-ink">to revisit</span>
+          </p>
+        )}
       </header>
 
       <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
@@ -52,29 +64,54 @@ export default async function ReviewPage() {
             <SectionHeader id="queue-title" title="Due now" />
             {snapshot.reviewQueue.length ? (
               <ol className="space-y-3">
+                {/* The head of the queue is the page's next move, so it takes
+                    the page's one full-fill press — the warm gold "Review now"
+                    — inside a gold-edged card rather than being one more row.
+                    Everything after it is a pressable card in the same gold
+                    family: hairline at rest, gold hairline and deep edge as
+                    the pointer arrives, pressed flat on click. */}
                 {snapshot.reviewQueue.map((item, index) => (
                   <li key={item.id}>
-                    <Link
-                      href={item.href}
-                      className={`${cardClasses("solid", true)} grid gap-4 p-5 sm:grid-cols-[2.25rem_minmax(0,1fr)_auto] sm:items-center`}
-                    >
-                      {/* Gold is the attention state: the rank square is the one
-                          mark in this row that is not simply an ordinal. */}
-                      <span
-                        aria-hidden="true"
-                        className={`grid h-9 w-9 place-items-center rounded-xl text-body-sm font-semibold tabular-nums ${item.priority === "high" ? "bg-gold-soft text-ink" : "bg-paper text-ink-soft"}`}
+                    {index === 0 ? (
+                      <Card tone="solid" accent="var(--color-gold)" className="p-5 sm:p-6">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                          <div className="min-w-0 flex-1 basis-64">
+                            <p className="text-label font-semibold uppercase tracking-[0.08em] text-ink-soft">Next to revisit</p>
+                            <h3 className="mt-1.5 text-xl font-semibold tracking-title">
+                              {item.concept}
+                              {item.priority === "high" && <span className="sr-only"> — highest priority</span>}
+                            </h3>
+                            <p className="mt-1 text-body-sm leading-5 text-ink-soft">{item.reason}</p>
+                          </div>
+                          <Pressable href={item.href} variant="attention" className="min-h-12 px-6">
+                            Review now<span className="sr-only"> — {item.concept}</span> <span aria-hidden="true">→</span>
+                          </Pressable>
+                        </div>
+                      </Card>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        className="pressable-card grid gap-4 p-5 sm:grid-cols-[2.25rem_minmax(0,1fr)_auto] sm:items-center"
+                        style={{ "--pressable-accent": "var(--color-gold)", "--pressable-edge": "var(--color-gold-deep)" } as CSSProperties}
                       >
-                        {index + 1}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-body font-semibold">
-                          {item.concept}
-                          {item.priority === "high" && <span className="sr-only"> — highest priority</span>}
+                        {/* Gold is the attention state: the rank square is the one
+                            mark in this row that is not simply an ordinal. */}
+                        <span
+                          aria-hidden="true"
+                          className={`grid h-9 w-9 place-items-center rounded-xl text-body-sm font-semibold tabular-nums ${item.priority === "high" ? "bg-gold-soft text-ink" : "bg-paper text-ink-soft"}`}
+                        >
+                          {index + 1}
                         </span>
-                        <span className="mt-1 block text-body-sm leading-5 text-ink-soft">{item.reason}</span>
-                      </span>
-                      <span className="text-body-sm font-semibold text-lapis-dark">Review <span aria-hidden="true">→</span></span>
-                    </Link>
+                        <span className="min-w-0">
+                          <span className="block text-body font-semibold">
+                            {item.concept}
+                            {item.priority === "high" && <span className="sr-only"> — highest priority</span>}
+                          </span>
+                          <span className="mt-1 block text-body-sm leading-5 text-ink-soft">{item.reason}</span>
+                        </span>
+                        <span className="text-body-sm font-semibold text-lapis-dark">Review <span aria-hidden="true">→</span></span>
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -86,12 +123,11 @@ export default async function ReviewPage() {
                   <p className="mt-2 text-body-sm leading-6 text-ink-soft">
                     Complete checked work first. Your queue will stay empty rather than guessing.
                   </p>
-                  <Link
-                    href="/library"
-                    className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-ink px-4 text-body-sm font-semibold text-white transition hover:bg-lapis-dark"
-                  >
+                  {/* Quiet on purpose: an empty queue is a good state, so the
+                      move out of it is a secondary press, not an urgent one. */}
+                  <Pressable href="/library" variant="secondary" className="mt-4">
                     Choose a lesson
-                  </Link>
+                  </Pressable>
                 </div>
               </Card>
             )}
