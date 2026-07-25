@@ -18,10 +18,13 @@
   --color-lapis: #2b5ee7;
   --color-lapis-dark: #20379b;
   --color-lapis-soft: #e8edfc;
+  --color-lapis-deep: #1f44a6;
   --color-gold: #c79114;
   --color-gold-soft: #faf3dd;
+  --color-gold-deep: #8f680e;
   --color-correct: #137638;
   --color-correct-soft: #e7f6ec;
+  --color-correct-deep: #0e5528;
   --color-wrong: #b42318;
   --color-wrong-soft: #fdecea;
 
@@ -35,21 +38,31 @@
   --color-yellow: #fff2ad;
   --color-coral: #ffeee6;
 
-  /* Subject accent + tint pairs. */
+  /* Subject accent + tint + deep triples. Deep is the accent at ~72%,
+     computed once and stored literal: it is the hard bottom edge of a
+     pressable element, never a text colour. tests/design-palette.test.ts
+     asserts every deep is genuinely darker than its accent. */
   --color-subject-algebra: #2b5ee7;
   --color-subject-algebra-tint: #f3f9ff;
+  --color-subject-algebra-deep: #1f44a6;
   --color-subject-arithmetic: #0b656d;
   --color-subject-arithmetic-tint: #fff2ad;
+  --color-subject-arithmetic-deep: #08494e;
   --color-subject-cs: #6d28d9;
   --color-subject-cs-tint: #f7f1ff;
+  --color-subject-cs-deep: #4e1d9c;
   --color-subject-research: #9a470c;
   --color-subject-research-tint: #ffeee6;
+  --color-subject-research-deep: #6f3309;
   --color-subject-physics: #b3341f;
   --color-subject-physics-tint: #fff0e7;
+  --color-subject-physics-deep: #812516;
   --color-subject-biology: #17703d;
   --color-subject-biology-tint: #dff8ea;
+  --color-subject-biology-deep: #11512c;
   --color-subject-default: #2b5ee7;
   --color-subject-default-tint: #f3f9ff;
+  --color-subject-default-deep: #1f44a6;
 
   --font-sans: var(--font-ui);
 
@@ -201,6 +214,62 @@ a[class*="bg-"]:active {
   background: var(--color-surface);
   border: 1px solid color-mix(in srgb, var(--color-ink) 9%, transparent);
   border-radius: var(--radius-card);
+}
+
+/* Pressable depth — the system's second and last depth device. Blur shadows
+   (--shadow-1..3) answer "is this above the page?"; the hard same-hue edge
+   answers "can I press this?". The two never mix on one element.
+
+   The edge colour arrives through --pressable-edge, set by the component from
+   subjectDeep() or a state deep token — never computed here. Rest: 4px edge.
+   Hover: the element lifts 1px and the edge stretches to meet the ground.
+   Active: the element travels down 2px and the edge collapses — the press
+   you feel on a physical key. */
+.pressable {
+  --pressable-edge: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  box-shadow: 0 4px 0 0 var(--pressable-edge);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.pressable:hover {
+  box-shadow: 0 5px 0 0 var(--pressable-edge);
+  transform: translateY(-1px);
+}
+
+/* :not(:disabled) also outranks the generic button/link :active transform
+   above, which would otherwise add its own scale on top of the press. */
+.pressable:not(:disabled):active {
+  box-shadow: 0 0 0 0 var(--pressable-edge);
+  transform: translateY(2px);
+}
+
+.pressable:disabled {
+  box-shadow: 0 4px 0 0 var(--pressable-edge);
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+/* The card form of the same device: a resting 2px hairline that takes the
+   subject's accent as the pointer arrives, stands up on its deep edge, and
+   presses flat. Cards keep their blur shadow OFF while carrying the hard
+   edge — one depth grammar per element. */
+.pressable-card {
+  background: var(--color-surface);
+  border: 2px solid color-mix(in srgb, var(--color-ink) 9%, transparent);
+  border-radius: var(--radius-card);
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.pressable-card:hover {
+  border-color: var(--pressable-accent, var(--color-lapis));
+  box-shadow: 0 3px 0 0 var(--pressable-edge, var(--color-lapis-deep));
+  transform: translateY(-1px);
+}
+
+.pressable-card:active {
+  box-shadow: 0 0 0 0 var(--pressable-edge, var(--color-lapis-deep));
+  transform: translateY(1px);
 }
 
 @keyframes shake {

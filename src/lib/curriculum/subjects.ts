@@ -35,3 +35,13 @@ export function subjectColor(subject: string): string {
 export function subjectTint(subject: string): string {
   return SUBJECT_PALETTE[subjectKey(subject)].tintVar;
 }
+
+/**
+ * Deep — the hard bottom edge of a pressable element in this subject's hue:
+ * the accent darkened once, stored literal, never computed by a component.
+ * It is a decorative edge. No text sits on it, so it carries no contrast
+ * guarantee — putting a label on a deep is a review failure.
+ */
+export function subjectDeep(subject: string): string {
+  return SUBJECT_PALETTE[subjectKey(subject)].deepVar;
+}

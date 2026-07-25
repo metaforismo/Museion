@@ -7,6 +7,11 @@
  *          tint: every accent clears 4.5:1 there by construction, and
  *          `tests/design-palette.test.ts` pins it.
  * tint   — the surface fill for cards, washes and badges
+ * deep   — the hard bottom edge of a pressable element: the accent darkened
+ *          to ~72% once, stored as a literal so nothing computes colour at
+ *          runtime. Deep shades are decorative edges — no text ever sits on
+ *          one, so they carry a darker-than-accent guarantee (pinned by
+ *          `tests/design-palette.test.ts`) rather than a contrast ratio.
  *
  * There is deliberately no second per-subject text colour. Algebra is the one
  * subject where a stronger option exists — `--color-lapis-dark` #20379b
@@ -26,8 +31,10 @@ export type SubjectKey = "algebra" | "arithmetic" | "cs" | "research" | "physics
 export type SubjectPalette = {
   accent: string;
   tint: string;
+  deep: string;
   accentVar: string;
   tintVar: string;
+  deepVar: string;
 };
 
 export const TINTS = {
@@ -39,21 +46,33 @@ export const TINTS = {
   coral: "#ffeee6",
 } as const;
 
-function entry(key: SubjectKey, accent: string, tint: string): SubjectPalette {
+function entry(key: SubjectKey, accent: string, tint: string, deep: string): SubjectPalette {
   return {
     accent,
     tint,
+    deep,
     accentVar: `var(--color-subject-${key})`,
     tintVar: `var(--color-subject-${key}-tint)`,
+    deepVar: `var(--color-subject-${key}-deep)`,
   };
 }
 
 export const SUBJECT_PALETTE: Record<SubjectKey, SubjectPalette> = {
-  algebra: entry("algebra", "#2b5ee7", TINTS.sky),
-  physics: entry("physics", "#b3341f", TINTS.peach),
-  biology: entry("biology", "#17703d", TINTS.mint),
-  cs: entry("cs", "#6d28d9", TINTS.violet),
-  arithmetic: entry("arithmetic", "#0b656d", TINTS.yellow),
-  research: entry("research", "#9a470c", TINTS.coral),
-  default: entry("default", "#2b5ee7", TINTS.sky),
+  algebra: entry("algebra", "#2b5ee7", TINTS.sky, "#1f44a6"),
+  physics: entry("physics", "#b3341f", TINTS.peach, "#812516"),
+  biology: entry("biology", "#17703d", TINTS.mint, "#11512c"),
+  cs: entry("cs", "#6d28d9", TINTS.violet, "#4e1d9c"),
+  arithmetic: entry("arithmetic", "#0b656d", TINTS.yellow, "#08494e"),
+  research: entry("research", "#9a470c", TINTS.coral, "#6f3309"),
+  default: entry("default", "#2b5ee7", TINTS.sky, "#1f44a6"),
 };
+
+/**
+ * The non-subject accents that can also be pressed: information (lapis),
+ * attention (gold) and the verified green. Same construction, same guarantee.
+ */
+export const STATE_DEEPS = {
+  lapis: "#1f44a6",
+  gold: "#8f680e",
+  correct: "#0e5528",
+} as const;

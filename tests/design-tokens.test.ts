@@ -3,15 +3,20 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { SUBJECT_PALETTE, TINTS } from "@/lib/design/palette";
+import { STATE_DEEPS, SUBJECT_PALETTE, TINTS } from "@/lib/design/palette";
 
 const globals = readFileSync(path.resolve("src/app/globals.css"), "utf8");
 const landing = readFileSync(path.resolve("src/app/landing.module.css"), "utf8");
 
 describe("globals.css", () => {
-  it.each(Object.entries(SUBJECT_PALETTE))("declares the %s accent and tint with the palette's exact values", (key, entry) => {
+  it.each(Object.entries(SUBJECT_PALETTE))("declares the %s accent, tint and deep with the palette's exact values", (key, entry) => {
     expect(globals).toContain(`--color-subject-${key}: ${entry.accent};`);
     expect(globals).toContain(`--color-subject-${key}-tint: ${entry.tint};`);
+    expect(globals).toContain(`--color-subject-${key}-deep: ${entry.deep};`);
+  });
+
+  it.each(Object.entries(STATE_DEEPS))("declares the %s deep edge with the palette's exact value", (name, value) => {
+    expect(globals).toContain(`--color-${name}-deep: ${value};`);
   });
 
   it.each(Object.entries(TINTS))("declares the %s tint token", (name, value) => {

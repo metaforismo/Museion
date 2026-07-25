@@ -1,11 +1,16 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { Atom01Icon } from "@hugeicons/core-free-icons";
 
+import CountUpNumber from "./CountUpNumber";
+
 /**
  * One recorded count. The accent/tint pair is passed in rather than derived,
  * but it must still mean something: these tiles report the learning record,
  * so they take the record's own colours (information, verified) — never a
  * subject colour, which would claim a subject the count does not belong to.
+ *
+ * The value counts up from 0 on first paint (real number only, ~400ms,
+ * reduced motion: instant) — the record arriving, not the record inflating.
  */
 export default function StatTile({
   label,
@@ -30,7 +35,7 @@ export default function StatTile({
         <HugeiconsIcon icon={icon} size={20} strokeWidth={1.8} />
       </span>
       <div className="min-w-0">
-        <p className="text-2xl font-semibold leading-none tracking-title tabular-nums">{value}</p>
+        <p className="text-2xl font-semibold leading-none tracking-title tabular-nums"><CountUpNumber value={value} /></p>
         <p className="mt-1 truncate text-label leading-4 text-ink-soft">{label}</p>
       </div>
     </div>

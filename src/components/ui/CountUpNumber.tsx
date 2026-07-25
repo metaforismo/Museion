@@ -1,0 +1,41 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { COUNT_UP_DURATION_MS, countUpValue } from "@/lib/design/count-up";
+
+/**
+ * A recorded count that arrives by counting up from 0 on first paint. The
+ * number it lands on is the real value and nothing else — the maths lives in
+ * `countUpValue`, which is pinned to never print a frame above the target.
+ *
+ * Reduced motion (and no-JS, via the sr-only copy) gets the real value with
+ * no animation. The animated span is aria-hidden throughout so assistive tech
+ * only ever reads the true number.
+ */
+export default function CountUpNumber({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    if (value <= 0 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplay(value);
+      return;
+    }
+    let frame = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const next = countUpValue(value, now - start);
+      setDisplay(next);
+      if (next < value) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  return (
+    <>
+      <span aria-hidden="true">{display}</span>
+      <span className="sr-only">{value}</span>
+    </>
+  );
+}

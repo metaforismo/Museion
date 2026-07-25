@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { contrastRatio, relativeLuminance } from "@/lib/design/contrast";
-import { SUBJECT_PALETTE, TINTS } from "@/lib/design/palette";
+import { STATE_DEEPS, SUBJECT_PALETTE, TINTS } from "@/lib/design/palette";
 
 describe("contrastRatio", () => {
   it("returns 21 for black on white", () => {
@@ -35,7 +35,40 @@ describe("SUBJECT_PALETTE", () => {
   });
 
   it("keeps one colour per role — a second per-subject text colour is one nobody checks", () => {
-    expect(Object.keys(SUBJECT_PALETTE.algebra).sort()).toEqual(["accent", "accentVar", "tint", "tintVar"]);
+    expect(Object.keys(SUBJECT_PALETTE.algebra).sort()).toEqual(["accent", "accentVar", "deep", "deepVar", "tint", "tintVar"]);
+  });
+
+  // The deep shade is the hard bottom edge of a pressable element. Its whole
+  // job is to read as the same hue in shadow, so the property that matters —
+  // and the one a wrong literal would break — is that it is actually darker
+  // than the accent it sits under. Asserted on relative luminance, not on the
+  // hex strings, so a re-derivation cannot pass by matching the old numbers.
+  it.each(subjects)("%s deep edge is genuinely darker than its accent", (key) => {
+    const entry = SUBJECT_PALETTE[key];
+    expect(relativeLuminance(entry.deep)).toBeLessThan(relativeLuminance(entry.accent) * 0.8);
+  });
+
+  it("keeps the state deeps darker than the accents they press", () => {
+    const pairs = [
+      [STATE_DEEPS.lapis, "#2b5ee7"],
+      [STATE_DEEPS.gold, "#c79114"],
+      [STATE_DEEPS.correct, "#137638"],
+    ] as const;
+    for (const [deep, accent] of pairs) {
+      expect(relativeLuminance(deep)).toBeLessThan(relativeLuminance(accent) * 0.8);
+    }
+  });
+
+  // Pressable primary puts white text on the full accent fill. Legal for all
+  // six subjects (worst case algebra at 5.44:1) — and *only* for them: gold
+  // fails at 2.80:1, which is why the attention Pressable takes ink instead.
+  it.each(subjects)("%s accent carries white Pressable text at 4.5:1 or better", (key) => {
+    expect(contrastRatio("#ffffff", SUBJECT_PALETTE[key].accent)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps the gold Pressable honest — ink on gold, because white on gold fails", () => {
+    expect(contrastRatio("#ffffff", "#c79114")).toBeLessThan(4.5);
+    expect(contrastRatio("#10131b", "#c79114")).toBeGreaterThanOrEqual(4.5);
   });
 
   // The one documented exception, and the only reason algebra needs no second
