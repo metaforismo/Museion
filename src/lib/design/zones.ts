@@ -36,6 +36,10 @@ export function zoneForPath(pathname: string): Zone {
 }
 
 export function washStyle(zone: Zone, subjectTint?: string): CSSProperties {
+  // The account zone is deliberately unwashed. Checking it before resolving the
+  // tint keeps that true even when a caller passes an explicit subject tint —
+  // otherwise a subject-scoped settings page would silently acquire a wash.
+  if (!ZONE_TINT[zone]) return {};
   const tint = subjectTint ?? ZONE_TINT[zone];
   if (!tint) return {};
   return {

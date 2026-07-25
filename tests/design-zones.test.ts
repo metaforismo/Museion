@@ -39,4 +39,8 @@ describe("washStyle", () => {
     const style = washStyle("learn", "#fff0e7");
     expect(style.backgroundImage).toContain("#fff0e7");
   });
+
+  it("keeps the account zone unwashed even when given an explicit tint", () => {
+    expect(washStyle("account", "#dff8ea")).toEqual({});
+  });
 });
