@@ -41,7 +41,7 @@ export default function ProgressRing({
           className="transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <span className="absolute text-[0.6rem] font-semibold tabular-nums" style={{ color: done ? color : undefined }}>
+      <span className="absolute text-micro font-semibold tabular-nums" style={{ color: done ? color : undefined }}>
         {centerLabel ?? (done ? "✓" : `${completed}/${total}`)}
       </span>
     </span>

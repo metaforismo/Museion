@@ -130,23 +130,23 @@ export default function CourseArchitectPanel({
           role="dialog"
           aria-modal="true"
           aria-label="Course Architect"
-          className="absolute inset-x-2 bottom-2 flex max-h-[88vh] flex-col overflow-hidden rounded-2xl border border-white/80 bg-surface shadow-[var(--shadow-2)] sm:inset-y-3 sm:left-auto sm:right-3 sm:max-h-none sm:w-[28rem]"
+          className="absolute inset-x-2 bottom-2 flex max-h-[88vh] flex-col overflow-hidden rounded-[var(--radius-card)] border border-ink/10 bg-surface shadow-[var(--shadow-3)] sm:inset-y-3 sm:left-auto sm:right-3 sm:max-h-none sm:w-[28rem]"
         >
           <header className="flex items-center gap-3 border-b border-ink/10 px-4 py-3">
             <span className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft"><BrandMark className="h-9 w-9" title="Course Architect" /></span>
-            <div className="min-w-0 flex-1"><p className="text-lg font-semibold">Course Architect</p><p className="text-xs text-ink-soft">Deterministic intake · AI-assisted compilation</p></div>
-            <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink">Close</button>
+            <div className="min-w-0 flex-1"><p className="text-lead font-semibold tracking-title">Course Architect</p><p className="text-label text-ink-soft">Deterministic intake · AI-assisted compilation</p></div>
+            <button type="button" onClick={onClose} className="min-h-11 rounded-lg px-3 text-body-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink">Close</button>
           </header>
 
-          <div className="border-b border-ink/10 bg-lapis-soft/45 px-4 py-3 text-xs leading-5 text-ink-soft">
+          <div className="border-b border-ink/10 bg-lapis-soft/45 px-4 py-3 text-label leading-5 text-ink-soft">
             <strong className="text-ink">Method gate:</strong> source coverage, prerequisites, misconception opportunities, feasible interactions, independent transfer, accessibility, and answer-leak risk.
           </div>
 
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4" role="log" aria-live="polite">
             {messages.map((message) => message.role === "marker" ? (
-              <p key={message.id} className="rounded-lg border border-gold/20 bg-gold-soft px-3 py-2 text-xs leading-5 text-ink-soft">{message.text}</p>
+              <p key={message.id} className="rounded-lg border border-gold/20 bg-gold-soft px-3 py-2 text-label leading-5 text-ink">{message.text}</p>
             ) : (
-              <div key={message.id} className={`max-w-[90%] rounded-2xl px-3.5 py-3 text-sm leading-6 ${message.role === "creator" ? "ml-auto bg-lapis text-white" : "bg-paper text-ink"}`}>
+              <div key={message.id} className={`max-w-[90%] rounded-2xl px-3.5 py-3 text-body-sm leading-6 ${message.role === "creator" ? "ml-auto bg-lapis text-white" : "bg-paper text-ink"}`}>
                 {message.text}
               </div>
             ))}
@@ -156,8 +156,8 @@ export default function CourseArchitectPanel({
             <div className="flex flex-wrap gap-2" aria-label="Course Architect message type">
               {([[
                 "ask", "Evaluate pack"], ["material", "Add material"], ["goal", "Set learner goal"],
-              ] as Array<[ArchitectMode, string]>).map(([value, label]) => <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${mode === value ? "bg-lapis-soft text-lapis-dark" : "bg-paper text-ink-soft"}`}>{label}</button>)}
-              <button type="button" onClick={() => fileRef.current?.click()} className="rounded-lg bg-paper px-3 py-2 text-xs font-semibold text-ink-soft">Add files</button>
+              ] as Array<[ArchitectMode, string]>).map(([value, label]) => <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={`min-h-9 rounded-lg px-3 text-label font-semibold ${mode === value ? "bg-lapis-soft text-lapis-dark" : "bg-paper text-ink-soft"}`}>{label}</button>)}
+              <button type="button" onClick={() => fileRef.current?.click()} className="min-h-9 rounded-lg bg-paper px-3 text-label font-semibold text-ink-soft">Add files</button>
               <input ref={fileRef} type="file" multiple accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf" className="sr-only" onChange={(event) => { const files = Array.from(event.currentTarget.files ?? []); if (files.length) { onFiles(files); addArchitectMessage(`I added ${files.length} file${files.length === 1 ? "" : "s"} and started normalization. I will evaluate the canonical record, not the filenames.`); } event.currentTarget.value = ""; }} />
             </div>
             <label className="sr-only" htmlFor="course-architect-message">Message Course Architect</label>
@@ -170,11 +170,11 @@ export default function CourseArchitectPanel({
               rows={3}
               maxLength={20_000}
               placeholder={mode === "material" ? "Paste authorized material…" : mode === "goal" ? "What should the learner do independently?" : "Ask me to evaluate the current pack, or paste a source link…"}
-              className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-surface px-3 py-3 text-sm leading-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
+              className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-surface px-3 py-3 text-body-sm leading-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
             />
             <div className="mt-2 flex items-center justify-between gap-3">
-              <button type="button" onClick={evaluate} className="text-xs font-semibold text-lapis-dark underline underline-offset-4">Run method check</button>
-              <button type="button" disabled={!input.trim()} onClick={send} className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">Send</button>
+              <button type="button" onClick={evaluate} className="text-label font-semibold text-lapis-dark underline underline-offset-4">Run method check</button>
+              <button type="button" disabled={!input.trim()} onClick={send} className="min-h-11 rounded-xl bg-ink px-4 text-body-sm font-semibold text-white transition hover:bg-lapis-dark disabled:opacity-40">Send</button>
             </div>
           </div>
         </aside>

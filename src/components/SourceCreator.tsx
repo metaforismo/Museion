@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
+import { Card, SectionHeader } from "@/components/ui";
 import { parseCreatorDraft, serializeCreatorDraft, type CreatorMaterialDraft } from "@/lib/client/creator-draft";
 import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
 import type { SourceDocument } from "@/lib/source/contracts";
@@ -512,24 +513,24 @@ export default function SourceCreator() {
           : "Saved on this device";
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <div className="max-w-3xl">
-        <p className="text-sm font-medium text-lapis-dark">
+        <p className="text-label font-semibold uppercase tracking-[0.08em] text-lapis-dark">
           Source review
         </p>
-        <h1 className="mt-2 tracking-display text-3xl font-semibold">
+        <h1 className="mt-2 title-page">
           Start with a source you trust.
         </h1>
-        <p className="mt-4 max-w-[62ch] leading-7 text-ink-soft">
+        <p className="mt-3 max-w-[62ch] text-body leading-6 text-ink-soft">
           Museion first normalizes the source, fixes page boundaries and hashes
           every page. Nothing is compiled until you can inspect that record.
         </p>
-        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-lapis/15 bg-lapis-soft/55 px-4 py-3 text-sm">
+        <Card tint="var(--color-lapis-soft)" className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-lapis/15 px-4 py-3 text-body-sm">
           <span className="font-semibold text-lapis-dark">Source → validated course</span>
           <span className="text-ink-soft">When live AI is connected, Museion designs the course in staged passes and publishes only after deterministic checks pass.</span>
           <Link href="/settings" className="font-semibold text-lapis-dark underline underline-offset-4">Check connection</Link>
-        </div>
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        </Card>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm">
           <span
             role="status"
             aria-live="polite"
@@ -549,11 +550,13 @@ export default function SourceCreator() {
           ) : (
             <button type="button" disabled={activeJob} onClick={() => setClearConfirmation(true)} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
           )}
-          <span className="text-xs text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
+          <span className="text-label text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
         </div>
       </div>
 
-      <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-2xl border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
+      {/* Green marks a step the runtime has actually satisfied, lapis the step
+          you are on. Neither is decoration: both are read off real state. */}
+      <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-[var(--radius-card)] border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
         {[
           { label: "1. Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", ready: Boolean(document), current: !document },
           { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
@@ -566,20 +569,20 @@ export default function SourceCreator() {
           >
             <span
               aria-hidden="true"
-              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.7rem] font-bold ${step.ready ? "bg-correct text-white" : step.current ? "bg-lapis text-white" : "bg-ink/10 text-ink-soft"}`}
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-label font-bold ${step.ready ? "bg-correct text-white" : step.current ? "bg-lapis text-white" : "bg-ink/10 text-ink-soft"}`}
             >
               {step.ready ? "✓" : step.label.charAt(0)}
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold">{step.label}</span>
-              <span className="mt-0.5 block truncate text-xs text-ink-soft">{step.detail}</span>
+              <span className="block text-body-sm font-semibold">{step.label}</span>
+              <span className="mt-0.5 block truncate text-label text-ink-soft">{step.detail}</span>
             </span>
           </li>
         ))}
       </ol>
 
       {error && (
-        <div role="alert" className="mt-7 flex items-start justify-between gap-4 rounded-xl border border-wrong/20 bg-wrong-soft px-4 py-3 text-sm text-wrong">
+        <div role="alert" className="mt-7 flex items-start justify-between gap-4 rounded-xl border border-wrong/20 bg-wrong-soft px-4 py-3 text-body-sm text-wrong">
           <p>{error}</p>
           <button type="button" onClick={() => setError(null)} className="shrink-0 font-semibold underline underline-offset-4">
             Dismiss
@@ -587,8 +590,8 @@ export default function SourceCreator() {
         </div>
       )}
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Suspense fallback={<section className="premium-surface rounded-[1.6rem] p-7 text-sm text-ink-soft" role="status">Loading Source Pack editor…</section>}>
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Suspense fallback={<section className="surface-card p-6 text-body-sm text-ink-soft" role="status">Loading Source Pack editor…</section>}>
           <SourcePackEditor
             title={title}
             materials={materials}
@@ -609,45 +612,50 @@ export default function SourceCreator() {
           />
         </Suspense>
 
-        <section
+        <Card
+          as="section"
           aria-live="polite"
           aria-busy={busy}
-          className="premium-surface min-w-0 rounded-2xl border border-white/80 p-6 sm:p-7"
+          className="min-w-0 p-6 sm:p-7"
         >
-          <h2 className="tracking-title text-xl font-semibold">Normalized record</h2>
+          <SectionHeader
+            id="normalized-record-title"
+            title="Normalized record"
+            meta={document ? `${document.pages.length} ${document.pages.length === 1 ? "page" : "pages"}` : undefined}
+          />
           {!document || !page ? (
-            <div className="mt-5 grid place-items-center gap-3 rounded-xl bg-paper px-5 py-10 text-center">
+            <div className="grid place-items-center gap-3 rounded-xl bg-paper px-5 py-10 text-center">
               <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-2xl bg-lapis-soft text-lapis">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" /><path strokeLinecap="round" d="M14 3v5h5M9.5 13h5M9.5 16.5h5" /></svg>
               </span>
-              <p className="max-w-[32ch] text-sm leading-6 text-ink-soft">
+              <p className="max-w-[32ch] text-body-sm leading-6 text-ink-soft">
                 Add a source to inspect its canonical pages, warnings and hashes.
               </p>
             </div>
           ) : (
             <>
-              <dl className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+              <dl className="grid grid-cols-2 gap-3 text-body-sm sm:grid-cols-3">
                 <div className="rounded-lg bg-paper p-3">
-                  <dt className="text-ink-soft">Pages</dt>
-                  <dd className="mt-1 font-semibold">{document.pages.length}</dd>
+                  <dt className="text-label text-ink-soft">Pages</dt>
+                  <dd className="mt-1 font-semibold tabular-nums">{document.pages.length}</dd>
                 </div>
                 <div className="col-span-2 rounded-lg bg-paper p-3 sm:col-span-1">
-                  <dt className="text-ink-soft">Source type</dt>
+                  <dt className="text-label text-ink-soft">Source type</dt>
                   <dd className="mt-1 truncate font-semibold" title={document.originalFileName ?? document.mediaType}>
                     {document.originalFileName ?? (document.mediaType === "text/markdown" ? "Pasted Markdown" : "Pasted text")}
                   </dd>
                 </div>
                 <div className="rounded-lg bg-paper p-3">
-                  <dt className="text-ink-soft">Characters</dt>
-                  <dd className="mt-1 font-semibold">{document.charCount.toLocaleString()}</dd>
+                  <dt className="text-label text-ink-soft">Characters</dt>
+                  <dd className="mt-1 font-semibold tabular-nums">{document.charCount.toLocaleString()}</dd>
                 </div>
               </dl>
-              {sourcePack && <div className="mt-4 rounded-xl border border-lapis/15 bg-lapis-soft/45 p-4 text-sm">
-                <div className="flex items-center justify-between gap-3"><p className="font-semibold">{sourcePack.materials.length} normalized {sourcePack.materials.length === 1 ? "material" : "materials"}</p><span className="font-mono text-[0.65rem] text-ink-soft">pack {sourcePack.sha256.slice(0, 10)}…</span></div>
-                <ul className="mt-3 space-y-2">{sourcePack.materials.map((material, index) => <li key={material.id} className="rounded-lg bg-surface/80 px-3 py-2"><div className="flex items-center justify-between gap-3"><span className="min-w-0 truncate font-medium">{index + 1}. {material.title}</span><span className="shrink-0 text-xs capitalize text-ink-soft">{material.role.replaceAll("-", " ")}</span></div>{material.document.sourceReference ? <a href={material.document.sourceReference.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs font-medium text-lapis-dark underline underline-offset-4">{material.document.sourceReference.kind.replaceAll("_", " ")} reference</a> : <span className="mt-1 block text-xs text-ink-soft">No external reference</span>}</li>)}</ul>
-                <p className="mt-3 text-xs leading-5 text-ink-soft">Every material hash and reference is bound to this pack. Course claims still derive only from the normalized evidence pages shown below.</p>
+              {sourcePack && <div className="mt-4 rounded-xl border border-lapis/15 bg-lapis-soft/45 p-4 text-body-sm">
+                <div className="flex items-center justify-between gap-3"><p className="font-semibold">{sourcePack.materials.length} normalized {sourcePack.materials.length === 1 ? "material" : "materials"}</p><span className="font-mono text-micro text-ink-soft">pack {sourcePack.sha256.slice(0, 10)}…</span></div>
+                <ul className="mt-3 space-y-2">{sourcePack.materials.map((material, index) => <li key={material.id} className="rounded-lg bg-surface/80 px-3 py-2"><div className="flex items-center justify-between gap-3"><span className="min-w-0 truncate font-medium">{index + 1}. {material.title}</span><span className="shrink-0 text-label capitalize text-ink-soft">{material.role.replaceAll("-", " ")}</span></div>{material.document.sourceReference ? <a href={material.document.sourceReference.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-label font-medium text-lapis-dark underline underline-offset-4">{material.document.sourceReference.kind.replaceAll("_", " ")} reference</a> : <span className="mt-1 block text-label text-ink-soft">No external reference</span>}</li>)}</ul>
+                <p className="mt-3 text-label leading-5 text-ink-soft">Every material hash and reference is bound to this pack. Course claims still derive only from the normalized evidence pages shown below.</p>
               </div>}
-              <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-3 text-xs">
+              <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-3 text-label">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-ink-soft">Document SHA-256</p>
                   <button type="button" onClick={() => void copyHash()} className="font-semibold text-lapis-dark underline underline-offset-4">Copy hash</button>
@@ -656,17 +664,19 @@ export default function SourceCreator() {
                 {copyNotice && <p role="status" aria-live="polite" className="mt-2 text-ink-soft">{copyNotice}</p>}
               </div>
 
+              {/* Gold is attention: these warnings are unresolved until the
+                  creator acknowledges them, and acknowledging them is a gate. */}
               {document.warnings.length > 0 && (
                 <div className="mt-4 rounded-lg bg-gold-soft px-4 py-3">
-                  <h3 className="text-sm font-semibold">Review warnings</h3>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                  <h3 className="text-body-sm font-semibold">Review warnings</h3>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-body-sm">
                     {document.warnings.map((warning, index) => (
                       <li key={`${warning.code}-${warning.pageNumber}-${index}`}>
                         Page {warning.pageNumber}: {warning.message}
                       </li>
                     ))}
                   </ul>
-                  <label className="mt-4 flex items-start gap-3 border-t border-gold/25 pt-3 text-sm font-medium">
+                  <label className="mt-4 flex items-start gap-3 border-t border-gold/25 pt-3 text-body-sm font-medium">
                     <input type="checkbox" checked={warningsAccepted} onChange={(event) => setWarningsAccepted(event.target.checked)} className="mt-1" />
                     I reviewed these warnings and want Museion to treat the source as data, not instructions.
                   </label>
@@ -680,7 +690,7 @@ export default function SourceCreator() {
                     type="button"
                     aria-pressed={sourcePage.pageNumber === selectedPage}
                     onClick={() => setSelectedPage(sourcePage.pageNumber)}
-                    className={`min-h-10 min-w-10 rounded-lg border px-3 py-2 text-sm font-medium ${
+                    className={`min-h-10 min-w-10 rounded-lg border px-3 py-2 text-body-sm font-medium tabular-nums ${
                       sourcePage.pageNumber === selectedPage
                         ? "border-lapis bg-lapis text-white"
                         : "border-ink/15 hover:border-lapis"
@@ -691,34 +701,34 @@ export default function SourceCreator() {
                 ))}
               </div>
               <div className="mt-4 rounded-lg border border-ink/10 bg-paper p-4">
-                <div className="flex flex-wrap justify-between gap-2 text-xs text-ink-soft">
+                <div className="flex flex-wrap justify-between gap-2 text-label text-ink-soft">
                   <span>Page {page.pageNumber}</span>
                   <span>{page.charCount.toLocaleString()} characters</span>
                 </div>
-                <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
+                <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words font-sans text-body-sm leading-relaxed">
                   {page.text}
                 </pre>
               </div>
-              <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading learning design…</div>}>
+              <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-body-sm text-ink-soft">Loading learning design…</div>}>
                 <SourceLearningDesign templateId={templateId} level={level} language={language} targetMinutes={targetMinutes} learnerGoal={learnerGoal} onTemplate={setTemplateId} onLevel={setLevel} onLanguage={setLanguage} onMinutes={setTargetMinutes} onGoal={setLearnerGoal} />
               </Suspense>
-              {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-lg border border-lapis px-5 py-2.5 text-center font-medium text-lapis">Open checked golden review</Link>}
-              {activeJob && job && <div className="mt-5 rounded-2xl bg-ink p-5 text-white" aria-live="polite">
-                <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">3. Compile</p><p className="mt-1 font-semibold">Building a grounded course</p><p className="mt-1 text-xs text-white/55">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-sm">{job.completedStages}/{job.totalStages}</span></div>
+              {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-xl border border-lapis px-5 py-2.5 text-center text-body-sm font-semibold text-lapis-dark">Open checked golden review</Link>}
+              {activeJob && job && <Card tone="tinted" tint="var(--color-ink)" className="mt-5 p-5 text-white" aria-live="polite">
+                <div className="flex items-center justify-between gap-3"><div><p className="text-label font-semibold uppercase tracking-[0.08em] text-white/60">3. Compile</p><p className="mt-1 text-body font-semibold">Building a grounded course</p><p className="mt-1 text-label text-white/60">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-body-sm tabular-nums">{job.completedStages}/{job.totalStages}</span></div>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${Math.max(7, (job.completedStages / job.totalStages) * 100)}%` }} /></div>
-                <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/40"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-xs">{stage.model}</span></li>; })}</ol>
-                <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
-              </div>}
-              <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-20 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[var(--shadow-2)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
+                <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-body-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/45"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-label">{stage.model}</span></li>; })}</ol>
+                <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-body-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
+              </Card>}
+              <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-20 mt-3 min-h-11 w-full rounded-xl bg-ink px-5 text-body-sm font-semibold text-white shadow-[var(--shadow-2)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
                 {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
               </button>
-              {!sourceAuthorized && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Confirm source authorization to continue.</p>}
-              {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
-              {sourceReady && !learningBriefReady && <p className="mt-2 text-center text-xs font-medium text-wrong">Complete the language, duration and learner goal before compiling.</p>}
-              <p className="mt-1 text-center text-xs text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
+              {!sourceAuthorized && <p className="mt-2 text-center text-label font-medium text-ink-soft">Confirm source authorization to continue.</p>}
+              {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-label font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
+              {sourceReady && !learningBriefReady && <p className="mt-2 text-center text-label font-medium text-wrong">Complete the language, duration and learner goal before compiling.</p>}
+              <p className="mt-1 text-center text-label text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
             </>
           )}
-        </section>
+        </Card>
       </div>
       <button
         ref={architectTrigger}
@@ -728,10 +738,10 @@ export default function SourceCreator() {
         onClick={() => setArchitectOpen(true)}
         className="fixed bottom-20 right-4 z-40 flex items-center gap-3 rounded-2xl border border-lapis/15 bg-surface px-3 py-2.5 shadow-[var(--shadow-2)] transition hover:-translate-y-0.5 hover:border-lapis/35 sm:bottom-5 sm:right-6"
       >
-        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft text-sm font-semibold tracking-[-0.04em] text-lapis-dark">CA</span>
-        <span className="text-left"><span className="block font-semibold">Course Architect</span><span className="block text-xs text-ink-soft">Build from my material</span></span>
+        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft text-body-sm font-semibold tracking-title text-lapis-dark">CA</span>
+        <span className="text-left"><span className="block text-body-sm font-semibold">Course Architect</span><span className="block text-label text-ink-soft">Build from my material</span></span>
       </button>
-      {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 shadow-xl">Opening Course Architect…</div>}><CourseArchitectPanel
+      {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 text-body-sm shadow-[var(--shadow-3)]">Opening Course Architect…</div>}><CourseArchitectPanel
         document={document}
         textLength={materials.reduce((total, material) => total + material.content.length, 0)}
         materialCount={materials.length}
