@@ -35,7 +35,7 @@ export default function AboutPage() {
     <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:py-24">
       <article className="animate-fade-up">
         <p className="eyebrow">The name and the method</p>
-        <h1 className="mt-4 tracking-title text-4xl font-semibold tracking-[-0.03em]">
+        <h1 className="mt-4 tracking-display text-4xl font-semibold">
           Why &ldquo;Museion&rdquo;?
         </h1>
 
@@ -54,7 +54,7 @@ export default function AboutPage() {
           </p>
         </section>
 
-        <h2 className="mt-12 tracking-title text-3xl font-semibold tracking-tight">
+        <h2 className="mt-12 tracking-display text-3xl font-semibold">
           And who is Maia?
         </h2>
 
@@ -82,7 +82,7 @@ export default function AboutPage() {
           </p>
         </section>
 
-        <h2 className="mt-12 tracking-title text-3xl font-semibold tracking-tight">
+        <h2 className="mt-12 tracking-display text-3xl font-semibold">
           The science we build on
         </h2>
         <div className="mt-8 space-y-3">

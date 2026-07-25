@@ -441,7 +441,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
       return (
         <section role="alert" className="mx-auto w-full max-w-xl px-4 py-20 text-center animate-fade-up">
           <p className="eyebrow">Session unavailable</p>
-          <h1 className="mt-4 tracking-title text-3xl font-semibold tracking-tight">Your lesson could not open.</h1>
+          <h1 className="mt-4 tracking-display text-3xl font-semibold">Your lesson could not open.</h1>
           <p className="mx-auto mt-3 max-w-[52ch] leading-7 text-ink-soft">{requestError} A saved session is kept unless the server confirms that it expired.</p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <button type="button" onClick={() => location.reload()} className="rounded-lg bg-ink px-5 py-2.5 font-semibold text-white transition hover:bg-lapis-dark">Retry session</button>
@@ -791,7 +791,7 @@ function CompletionScreen({
         <MaiaCharacter state="celebrating" animated className="h-28 w-24 shrink-0 animate-pop-in" title="Maia celebrating" />
         <div>
           <p className="eyebrow">{practiceDone ? "Hint-free practice recorded" : "Lesson path completed"}</p>
-          <h1 className="mt-2 tracking-title text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+          <h1 className="mt-2 tracking-display text-4xl font-semibold sm:text-5xl">
             {practiceDone ? "Practice complete" : "Lesson complete"}
           </h1>
         </div>

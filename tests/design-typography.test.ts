@@ -4,12 +4,18 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 function grepCount(pattern: string, target: string): number {
+  let output: string;
   try {
-    const output = execFileSync("grep", ["-ro", pattern, target], { encoding: "utf8" });
-    return output.split("\n").filter(Boolean).length;
-  } catch {
-    return 0; // grep exits 1 when there are no matches
+    // -e keeps patterns that start with "-" (e.g. "--font-serif-display") from
+    // being parsed as grep options.
+    output = execFileSync("grep", ["-ro", "-e", pattern, target], { encoding: "utf8" });
+  } catch (error) {
+    // grep exits 1 for "no matches" — the only failure that means zero. Exit 2
+    // (missing path, bad pattern) or a spawn failure must not pass vacuously.
+    if ((error as { status?: unknown }).status === 1) return 0;
+    throw error;
   }
+  return output.split("\n").filter(Boolean).length;
 }
 
 describe("Fraunces retirement", () => {

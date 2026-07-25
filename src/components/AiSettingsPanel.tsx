@@ -379,7 +379,7 @@ export default function AiSettingsPanel() {
       <section className="premium-surface overflow-hidden rounded-[var(--radius-card)] border border-white/80">
         <div className="p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-3"><span className={`h-2.5 w-2.5 rounded-full ${liveReady ? "bg-correct" : "bg-gold"}`} aria-hidden /><p className="text-sm font-semibold">Local runtime</p><span className={`rounded-md px-2 py-1 text-xs font-semibold ${liveReady ? "bg-correct-soft text-correct" : "bg-gold-soft text-ink"}`}>{statusLabel}</span></div>
-          <h2 className="mt-5 tracking-title text-2xl font-semibold tracking-[-0.02em]">Use your ChatGPT plan, locally.</h2>
+          <h2 className="mt-5 tracking-title text-2xl font-semibold">Use your ChatGPT plan, locally.</h2>
           <p className="mt-3 max-w-[58ch] leading-7 text-ink-soft">Museion invokes Codex without receiving OAuth credentials. Disconnecting Museion changes its provider only; global logout is a separate action.</p>
           <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2"><div className="rounded-xl bg-paper p-4"><dt className="text-ink-soft">Runtime</dt><dd className="mt-1 font-semibold">{status.installed ? status.codexVersion ?? "Codex installed" : "Not found"}</dd></div><div className="rounded-xl bg-paper p-4"><dt className="text-ink-soft">Active mode</dt><dd className="mt-1 font-semibold">{status.provider === "codex" ? "Live GPT-5.6 family" : "Offline verified guidance"}</dd></div></dl>
           <ol aria-label="Live AI readiness" className="mt-6 divide-y divide-ink/10 border-y border-ink/10">

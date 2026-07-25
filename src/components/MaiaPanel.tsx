@@ -512,7 +512,7 @@ export default function MaiaPanel({
               {messages.length === 0 && (
                 <div className="mx-auto flex max-w-[19rem] flex-col items-center pt-[10vh] text-center text-sm text-ink-soft">
                   <MaiaCharacter state="curious" animated className="h-20 w-16" />
-                  <h2 className="mt-4 tracking-title text-xl font-semibold tracking-tight text-ink">Think it through with Maia</h2>
+                  <h2 className="mt-4 tracking-title text-xl font-semibold text-ink">Think it through with Maia</h2>
                   <p className="mt-2 leading-6">Commit to a move. If it breaks, Maia asks a smaller question without handing you the answer.</p>
                 </div>
               )}
@@ -584,7 +584,7 @@ export default function MaiaPanel({
                 <span aria-hidden="true" className="absolute -inset-3 rounded-full bg-lapis-soft/70 blur-xl" />
                 <MaiaCharacter state="curious" animated className="relative h-24 w-20" />
               </div>
-              <h2 className="tracking-title text-xl font-semibold tracking-tight text-ink">Think it through with Maia</h2>
+              <h2 className="tracking-title text-xl font-semibold text-ink">Think it through with Maia</h2>
               <p className="mt-2 leading-6">Tell me where your reasoning feels uncertain. I&apos;ll ask a smaller question — never the answer.</p>
             </div>
           )}

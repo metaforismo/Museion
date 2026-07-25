@@ -517,7 +517,7 @@ export default function SourceCreator() {
         <p className="text-sm font-medium text-lapis-dark">
           Source review
         </p>
-        <h1 className="mt-2 tracking-title text-3xl font-semibold tracking-[-0.03em]">
+        <h1 className="mt-2 tracking-display text-3xl font-semibold">
           Start with a source you trust.
         </h1>
         <p className="mt-4 max-w-[62ch] leading-7 text-ink-soft">
