@@ -91,7 +91,7 @@ export default function AboutPage() {
               key={principle.title}
               className={`grid gap-3 rounded-2xl p-6 sm:grid-cols-[3rem_1fr] ${index % 2 === 0 ? "premium-surface border border-white/80" : "border border-ink/10 bg-paper/50 lg:ml-10"}`}
             >
-              <span className="tabular-nums font-mono text-sm font-semibold text-lapis">0{index + 1}</span>
+              <span className="tabular-nums font-mono text-label font-semibold text-lapis">0{index + 1}</span>
               <div><h3 className="text-lg font-semibold text-lapis-dark">{principle.title}</h3><p className="mt-2 leading-relaxed text-ink-soft">{principle.body}</p></div>
             </div>
           ))}

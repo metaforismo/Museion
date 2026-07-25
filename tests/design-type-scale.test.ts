@@ -55,7 +55,6 @@ const ARBITRARY_REM_DEBT = [
  * future task should be clearing first.
  */
 const NAMED_OFF_SCALE_DEBT = [
-  "src/app/about/page.tsx",
   "src/components/AppCommandPalette.tsx",
   "src/components/CourseArchitectPanel.tsx",
   "src/components/GraphTransformLab.tsx",
@@ -66,7 +65,6 @@ const NAMED_OFF_SCALE_DEBT = [
   "src/components/LessonPlayer.tsx",
   "src/components/MaiaPanel.tsx",
   "src/components/MethodTraceDemo.tsx",
-  "src/components/OnboardingTour.tsx",
   "src/components/RecursionCodeLab.tsx",
   "src/components/ScientificMethodDiagram.tsx",
   "src/components/SourceLearningDesign.tsx",

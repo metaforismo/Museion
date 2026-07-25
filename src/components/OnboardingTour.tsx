@@ -127,7 +127,7 @@ export default function OnboardingTour() {
           <ChoiceGroup legend="I am learning as" value={preferences.role} options={[["student","Student"],["educator","Educator"],["independent","Independent learner"]]} onChange={(role) => setPreferences((current) => ({ ...current, role: role as LearningPreferences["role"] }))}/>
           <ChoiceGroup legend="Age band" value={preferences.ageBand} options={[["13-15","13–15"],["16-18","16–18"],["adult","Adult"],["prefer-not-to-say","Prefer not to say"]]} onChange={(ageBand) => setPreferences((current) => ({ ...current, ageBand: ageBand as LearningPreferences["ageBand"] }))}/>
           <ChoiceGroup legend="First goal" value={preferences.goal} options={[["build-foundations","Build foundations"],["prepare-exam","Prepare for an exam"],["teach-it-back","Explain it to someone"]]} onChange={(goal) => setPreferences((current) => ({ ...current, goal: goal as LearningPreferences["goal"] }))}/>
-          <p className="text-xs leading-5 text-ink-soft">Local to this browser. No birth date or school identifier is collected.</p>
+          <p className="text-label leading-5 text-ink-soft">Local to this browser. No birth date or school identifier is collected.</p>
         </div>}
       </div>
 
@@ -152,7 +152,7 @@ export default function OnboardingTour() {
           {!isLast && (
             <button
               onClick={finish}
-              className="text-sm text-ink-soft underline-offset-2 hover:underline"
+              className="text-body text-ink-soft underline-offset-2 hover:underline"
             >
               Skip
             </button>
@@ -160,14 +160,14 @@ export default function OnboardingTour() {
           {index > 0 && (
             <button
               onClick={() => setIndex((i) => i - 1)}
-              className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-sm font-medium transition hover:border-lapis"
+              className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-body font-medium transition hover:border-lapis"
             >
               Back
             </button>
           )}
           <button
             onClick={isLast ? finish : () => setIndex((i) => i + 1)}
-            className="rounded-lg bg-lapis px-5 py-2 text-sm font-medium text-white transition hover:bg-lapis-dark"
+            className="rounded-lg bg-lapis px-5 py-2 text-body font-medium text-white transition hover:bg-lapis-dark"
           >
             {isLast ? "Start learning →" : "Next"}
           </button>
@@ -178,5 +178,5 @@ export default function OnboardingTour() {
 }
 
 function ChoiceGroup({ legend, value, options, onChange }: { legend: string; value: string; options: readonly (readonly [string, string])[]; onChange(value: string): void }) {
-  return <fieldset><legend className="text-sm font-semibold text-ink">{legend}</legend><div className="mt-2 flex flex-wrap gap-2">{options.map(([option,label]) => <button type="button" key={option} aria-pressed={value === option} onClick={() => onChange(option)} className={`min-h-11 rounded-xl border px-3.5 text-sm font-medium transition ${value === option ? "border-lapis bg-lapis-soft text-lapis-dark" : "border-ink/15 bg-surface text-ink-soft hover:border-lapis/40"}`}>{label}</button>)}</div></fieldset>;
+  return <fieldset><legend className="text-body font-semibold text-ink">{legend}</legend><div className="mt-2 flex flex-wrap gap-2">{options.map(([option,label]) => <button type="button" key={option} aria-pressed={value === option} onClick={() => onChange(option)} className={`min-h-11 rounded-xl border px-3.5 text-body font-medium transition ${value === option ? "border-lapis bg-lapis-soft text-lapis-dark" : "border-ink/15 bg-surface text-ink-soft hover:border-lapis/40"}`}>{label}</button>)}</div></fieldset>;
 }
