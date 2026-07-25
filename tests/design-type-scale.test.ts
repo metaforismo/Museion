@@ -57,7 +57,6 @@ const ARBITRARY_REM_DEBT = [
 const NAMED_OFF_SCALE_DEBT = [
   "src/app/about/page.tsx",
   "src/components/AppCommandPalette.tsx",
-  "src/components/AuthButton.tsx",
   "src/components/CourseArchitectPanel.tsx",
   "src/components/GraphTransformLab.tsx",
   "src/components/JudgeDeferredPanels.tsx",
@@ -70,7 +69,6 @@ const NAMED_OFF_SCALE_DEBT = [
   "src/components/OnboardingTour.tsx",
   "src/components/RecursionCodeLab.tsx",
   "src/components/ScientificMethodDiagram.tsx",
-  "src/components/SiteHeader.tsx",
   "src/components/SourceLearningDesign.tsx",
   "src/components/blocks/InteractiveBlock.tsx",
   "src/components/source-creator/SourcePackEditor.tsx",

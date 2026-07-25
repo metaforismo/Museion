@@ -12,20 +12,23 @@ export default function SiteHeader({ landing = false }: { landing?: boolean }) {
       <div className={`mx-auto flex w-full items-center justify-between gap-3 sm:gap-6 ${landing ? "min-h-14 max-w-5xl rounded-full border border-ink/[.06] bg-white/90 px-4 shadow-[0_12px_35px_rgba(46,89,137,.08)] sm:px-5" : "min-h-18 max-w-7xl px-4 sm:px-6 lg:px-8"}`}>
         <Link href="/" aria-label="Museion home" className="flex shrink-0 items-center gap-2 sm:gap-3">
           <BrandMark className={landing ? "h-8 w-8 shrink-0" : "h-10 w-10 shrink-0"} />
-          <span className={landing ? "text-sm font-bold tracking-[-0.02em]" : "text-lg font-semibold tracking-tight"}>Museion</span>
+          <span className={landing ? "text-body font-bold tracking-[-0.02em]" : "text-lg font-semibold tracking-tight"}>Museion</span>
         </Link>
+        {/* One size for the whole nav row. Library and About used to sit a step
+            below Create for no reason anyone could name, which read as a
+            rendering fault rather than a hierarchy. */}
         <nav aria-label="Public navigation" className="flex items-center gap-1 sm:gap-2">
-          <Link href={landing ? "/#how-it-works" : "/library"} className="hidden min-h-11 items-center px-3 text-xs font-medium text-ink-soft hover:text-ink sm:inline-flex">
+          <Link href={landing ? "/#how-it-works" : "/library"} className="hidden min-h-11 items-center px-3 text-body-sm font-medium text-ink-soft hover:text-ink sm:inline-flex">
             {landing ? "How it works" : "Library"}
           </Link>
-          <Link href={landing ? "/#library" : "/about"} className="hidden min-h-11 items-center px-3 text-xs font-medium text-ink-soft hover:text-ink md:inline-flex">
+          <Link href={landing ? "/#library" : "/about"} className="hidden min-h-11 items-center px-3 text-body-sm font-medium text-ink-soft hover:text-ink md:inline-flex">
             {landing ? "Courses" : "About"}
           </Link>
-          {!landing && <Link href="/create" className="hidden min-h-11 items-center px-3 text-sm font-medium text-ink-soft hover:text-ink sm:inline-flex">
+          {!landing && <Link href="/create" className="hidden min-h-11 items-center px-3 text-body-sm font-medium text-ink-soft hover:text-ink sm:inline-flex">
             Create
           </Link>}
           <AuthButton />
-          <Link href="/dashboard" className={`inline-flex min-h-10 items-center bg-ink px-4 font-semibold text-white hover:bg-lapis-dark ${landing ? "rounded-full text-xs shadow-[0_3px_0_rgba(0,0,0,.14)]" : "rounded-lg text-sm"}`}>
+          <Link href="/dashboard" className={`inline-flex min-h-10 items-center bg-ink px-4 text-body-sm font-semibold text-white hover:bg-lapis-dark ${landing ? "rounded-full shadow-[0_3px_0_rgba(0,0,0,.14)]" : "rounded-lg"}`}>
             Open Museion
           </Link>
         </nav>
