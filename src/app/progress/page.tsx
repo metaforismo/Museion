@@ -3,11 +3,13 @@ import Link from "next/link";
 
 import MaiaCharacter from "@/components/MaiaCharacter";
 import ProgressRing from "@/components/ProgressRing";
+import VerifiedMoment from "@/components/VerifiedMoment";
 import { Card, Chip, SectionHeader, SubjectBadge } from "@/components/ui";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot } from "@/lib/dashboard";
 import { buildConceptMap } from "@/lib/dashboard/concept-map";
 import { evidenceTone } from "@/lib/design/evidence-tone";
+import { verifiedMomentFor } from "@/lib/design/moments";
 import { currentActor } from "@/lib/server/actor";
 
 export const metadata: Metadata = { title: "Evidence", description: "Recorded learning observations and their explicit limits." };
@@ -32,6 +34,7 @@ const EMPTY_EDGE = { borderStyle: "dashed" } as const;
 export default async function EvidencePage() {
   const learnerId = (await currentActor()).ownerId;
   const [snapshot, conceptMap] = await Promise.all([buildDashboardSnapshot(learnerId), buildConceptMap(learnerId)]);
+  const verifiedMoment = verifiedMomentFor(snapshot);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
@@ -51,6 +54,13 @@ export default async function EvidencePage() {
           Review next
         </Link>
       </header>
+
+      {/* The strongest thing the record can currently justify, with the line
+          that justifies it. This page is where a celebration belongs: it is
+          the page that also states what the observation does not prove. It is
+          absent entirely until an engine-checked trigger fires — there is no
+          placeholder, no counter and nothing to accumulate. */}
+      {verifiedMoment && <VerifiedMoment kind={verifiedMoment} className="mt-7" />}
 
       {conceptMap.groups.length > 0 && (
         <section className="mt-7" aria-labelledby="concept-map-title">

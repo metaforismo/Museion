@@ -323,6 +323,27 @@ a[class*="bg-"]:active {
   animation: method-live 2.8s ease-in-out infinite;
 }
 
+/* A verified moment blooms once on arrival and then holds still. It never
+   loops: a celebration that repeats stops being about the thing it marks. */
+@keyframes verified-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-verified-bloom {
+  animation: verified-bloom 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -336,6 +357,7 @@ a[class*="bg-"]:active {
   .animate-shake,
   .animate-fade-up,
   .animate-pop-in,
+  .animate-verified-bloom,
   .method-live-indicator,
   .method-path,
   .method-step,
