@@ -43,12 +43,17 @@ app used to be grey — there was nothing to fill with.
 
 | Subject | Accent | Tint | Accent on its own tint |
 | --- | --- | --- | --- |
-| Algebra | `#2b5ee7` | sky `#f3f9ff` | 9.5:1 |
+| Algebra | `#2b5ee7` | sky `#f3f9ff` | 5.1:1 |
 | Arithmetic | `#0b656d` | yellow `#fff2ad` | 6.0:1 |
 | Computer Science | `#6d28d9` | violet `#f7f1ff` | 6.4:1 |
 | Research Methods | `#9a470c` | coral `#ffeee6` | 5.7:1 |
 | Physics | `#b3341f` | peach `#fff0e7` | 5.5:1 |
 | Biology | `#17703d` | mint `#dff8ea` | 5.5:1 |
+
+Algebra is the tightest pair at 5.1:1 and the only one with a separate darker
+text variant, `--color-lapis-dark` `#20379b`, which reaches 9.5:1 on sky. Use it
+for small text and links on a sky field; the accent itself is for fills, bars
+and glyphs.
 
 **The rule that binds them: every accent clears 4.5:1 against its own tint.**
 Not against white — against the surface it will actually be printed on. Biology
@@ -90,12 +95,26 @@ comes back.
 | lead | `--text-lead` | 1.0625rem | panel titles, standfirst |
 
 Headings above `lead` use `.title-page` (a clamp, for the one page title) and
-`.title-panel`, plus Tailwind's own `text-xl`/`text-2xl`/`text-3xl` steps.
-Arbitrary `text-[0.82rem]` sizes are banned:
-`tests/design-type-scale.test.ts` keeps a shrinking allowlist of files that
-still carry them, and the list may only get shorter. Adding an entry is a review
-failure, not a fix. What remains on it is the lesson canvas and the marketing
-landing.
+`.title-panel`, plus Tailwind's own `text-lg`/`text-xl`/`text-2xl`/`text-3xl`
+steps. Everything else is off the scale, and `tests/design-type-scale.test.ts`
+enforces that in three parts:
+
+- Arbitrary **absolute** sizes — `text-[13px]`, `text-[0.9em]`,
+  `text-[length:…]`, `calc`/`clamp` — are banned outright. No allowlist.
+- Arbitrary **rem** sizes — `text-[0.82rem]` — are banned outside a shrinking
+  allowlist, which holds the lesson canvas and the marketing landing.
+- Tailwind's **named sizes below lead** — `text-xs` 12, `text-sm` 14,
+  `text-base` 16 — are banned outside a second shrinking allowlist, seeded
+  from what the tree already carried. Most of it is the lesson canvas, the
+  Judge canvas and the landing; the app-shell chrome still on it (SiteHeader,
+  AppCommandPalette, AuthButton, LessonCatalog, OnboardingTour,
+  CourseArchitectPanel, SourceLearningDesign, SourcePackEditor) is the debt to
+  clear first.
+
+Both allowlists may only get shorter, and a staleness assertion forces a file
+off its list the moment it is clean. Adding an entry is a review failure, not a
+fix. The rule originally covered only the rem form, which is how a whole Studio
+surface built out of `text-sm` stayed invisible through fifteen tasks.
 
 Tracking is tokenised, not typed by hand: `tracking-display` (-0.045em) for
 large headlines, `tracking-title` (-0.01em) for panel and card titles,
