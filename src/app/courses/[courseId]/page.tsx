@@ -5,6 +5,7 @@ import { AlertCircleIcon, CheckmarkCircle02Icon, Files02Icon, Target01Icon } fro
 
 import CourseTrail from "@/components/CourseTrail";
 import SubjectIcon from "@/components/SubjectIcon";
+import TrailArrivalCleanup from "@/components/TrailArrivalCleanup";
 import { Card, Pressable, ProgressRail, SectionHeader } from "@/components/ui";
 import { getLesson } from "@/lib/content";
 import { coursePaths, getCoursePath } from "@/lib/curriculum";
@@ -13,7 +14,10 @@ import { courseArtSrc } from "@/lib/design/assets";
 import { currentActor } from "@/lib/server/actor";
 import { learnerProfile } from "@/lib/server/session-repository";
 
-type Props = { params: Promise<{ courseId: string }> };
+type Props = {
+  params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ completed?: string | string[] }>;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +71,7 @@ function HeroFigure({ subject, art }: { subject: string; art: string | null }) {
   );
 }
 
-export default async function CoursePage({ params }: Props) {
+export default async function CoursePage({ params, searchParams }: Props) {
   const course = getCoursePath((await params).courseId);
   if (!course) notFound();
   const lessons = course.lessonIds.map((lessonId) => getLesson(lessonId));
@@ -75,6 +79,15 @@ export default async function CoursePage({ params }: Props) {
 
   const learnerId = (await currentActor()).ownerId;
   const completed = (await learnerProfile(learnerId, false))?.completedLessons ?? new Set<string>();
+  // The completion screen hands back ?completed=<lessonId> so the trail can
+  // play the arrival. Honesty gate: the animation exists only when the real
+  // learner record holds a completion for that lesson on this path — a
+  // hand-typed URL for an uncompleted lesson renders the trail untouched.
+  const { completed: completedParam } = await searchParams;
+  const justCompleted =
+    typeof completedParam === "string" && completed.has(completedParam) && course.lessonIds.includes(completedParam)
+      ? completedParam
+      : null;
   const total = course.lessonIds.length;
   const doneCount = course.lessonIds.filter((id) => completed.has(id)).length;
   const accent = subjectColor(course.subject);
@@ -152,7 +165,11 @@ export default async function CoursePage({ params }: Props) {
               subject={course.subject}
               lessons={lessons.map((lesson) => ({ id: lesson!.id, title: lesson!.title, description: lesson!.description }))}
               completed={completed}
+              justCompleted={justCompleted}
             />
+            {/* Read once, then gone: any ?completed= — valid or not — is
+                stripped from the URL so a refresh cannot replay the arrival. */}
+            {completedParam !== undefined && <TrailArrivalCleanup />}
           </section>
 
           <section aria-labelledby="outcomes-title" className="mt-8">

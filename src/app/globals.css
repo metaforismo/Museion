@@ -399,6 +399,62 @@ a[class*="bg-"]:active {
   opacity: 0.5;
 }
 
+/* Return-to-trail arrival — the node the learner just completed fills with
+   the subject accent while the rail segment arriving at it draws in. It plays
+   once per completion: the course page validates ?completed= against the real
+   learner record before rendering these classes, then strips the param so a
+   refresh cannot replay it. The unanimated styles are the finished state, so
+   reduced motion (animation: none, below) lands the fill instantly with no
+   draw. */
+@keyframes trail-node-fill {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  62% {
+    opacity: 1;
+    transform: scale(1.09);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.trail-node-fill {
+  animation: trail-node-fill 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 420ms both;
+}
+
+@keyframes trail-rail-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.trail-rail-grow {
+  transform-origin: top;
+  animation: trail-rail-grow 220ms ease-out both;
+}
+
+/* The S-curve connector draws by dash offset; pathLength="1" on the path
+   normalises the geometry so one dash of length 1 always covers it exactly. */
+@keyframes trail-rail-trace {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.trail-rail-trace {
+  stroke-dasharray: 1 1;
+  animation: trail-rail-trace 260ms ease-out 160ms both;
+}
+
 @keyframes method-flow {
   to {
     stroke-dashoffset: -32;
@@ -475,6 +531,9 @@ a[class*="bg-"]:active {
   .animate-pop-in,
   .animate-verified-bloom,
   .path-halo,
+  .trail-node-fill,
+  .trail-rail-grow,
+  .trail-rail-trace,
   .method-live-indicator,
   .method-path,
   .method-step,

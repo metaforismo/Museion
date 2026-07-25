@@ -272,25 +272,38 @@ tinted card — `CourseTrail`, with its state logic in
 `src/lib/design/course-trail.ts` and every state derived from the real
 completion record. Three node states and nothing else:
 
-- **Done** — full accent fill, white check, settled at 48px. The learner
-  stood here.
-- **Current** — 72px, full accent fill, a breathing halo, Maia beside it
+- **Done** — full accent fill, white check, settled at 52px. The learner
+  stood here. Title-only: the row itself is the link.
+- **Current** — 64px, full accent fill, a breathing halo, Maia beside it
   (pose `curious`, hero rung, still) and the page's one full-fill
-  Start/Continue `Pressable` in a white card. The course hero's CTA steps
-  down to the secondary variant so this node is unmistakably the loudest
-  thing on the page.
-- **Ahead** — surface fill, ink/15 border, the lesson number. **Never a
-  padlock**: Museion recommends order, it does not lock content, so an ahead
-  node is a fully clickable link that simply speaks more softly.
+  Start/Continue `Pressable` in a white card — the row's single tab stop,
+  carrying the position, the title and `aria-current="step"`; the circle is
+  presentational. The course hero's CTA steps down to the secondary variant
+  so this node is unmistakably the loudest thing on the page.
+- **Ahead** — surface fill, ink/15 border, the lesson number, title-only like
+  done. **Never a padlock**: Museion recommends order, it does not lock
+  content, so an ahead row is a fully clickable link that simply speaks more
+  softly.
 
 The connecting rail is subject accent behind the learner — a segment is
 traversed when the lesson it leaves has a completed record — and ink/10
-ahead. "Current" is the first lesson without a completed record, even when
-later lessons were finished out of order: the path reports the record, it
-does not tidy it up. Course completion crowns the final node, which is legal
-celebration because "every lesson has a completed record" is a fact the
-engine checked; per-lesson milestone flags wait until per-lesson transfer
-evidence actually exists in the record.
+ahead, 8–9px thick so the path reads as ground at a glance. "Current" is the
+first lesson without a completed record, even when later lessons were
+finished out of order: the path reports the record, it does not tidy it up.
+Course completion crowns the final node, which is legal celebration because
+"every lesson has a completed record" is a fact the engine checked;
+per-lesson milestone flags wait until per-lesson transfer evidence actually
+exists in the record.
+
+Finishing a lesson closes the loop on this ground: the completion screen's
+one full-fill press returns to the course with `?completed=<lessonId>`, and
+the trail plays the arrival — the node fills with the subject accent while
+the rail segment arriving at it draws in (`trail-node-fill`,
+`trail-rail-grow`, `trail-rail-trace`; reduced motion lands instantly). The
+course page validates the param against the real learner record before any
+class is rendered — a hand-typed URL for an uncompleted lesson animates
+nothing — and strips it from the URL after one read so a refresh cannot
+replay it.
 
 The halo is the one licensed ring: a plain accent border breathing by
 opacity and scale (`.path-halo`), so it introduces no unchecked colour and
