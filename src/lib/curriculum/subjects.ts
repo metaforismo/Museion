@@ -1,9 +1,10 @@
+import { SUBJECT_PALETTE, type SubjectKey } from "@/lib/design/palette";
+
 /**
- * Subject accent colors. Small dots and hairlines only — the palette
- * stays calm; color signals which discipline a course belongs to without
- * turning cards into big colored boxes.
+ * Subject identity. Every subject owns an accent + tint pair so colour can
+ * fill a surface rather than only mark a hairline.
  */
-export type SubjectKey = "algebra" | "arithmetic" | "cs" | "research" | "physics" | "biology" | "default";
+export type { SubjectKey };
 
 const SUBJECT_MAP: Record<string, SubjectKey> = {
   algebra: "algebra",
@@ -18,8 +19,17 @@ export function subjectKey(subject: string): SubjectKey {
   return SUBJECT_MAP[subject.trim().toLowerCase()] ?? "default";
 }
 
-/** CSS color value for a subject (var-backed). */
+/** Accent — fills, bars, rings, glyphs. */
 export function subjectColor(subject: string): string {
-  const key = subjectKey(subject);
-  return key === "default" ? "var(--color-lapis)" : `var(--color-subject-${key})`;
+  return SUBJECT_PALETTE[subjectKey(subject)].accentVar;
+}
+
+/** Tint — the surface fill for cards, badges and washes. */
+export function subjectTint(subject: string): string {
+  return SUBJECT_PALETTE[subjectKey(subject)].tintVar;
+}
+
+/** Text colour guaranteed to clear 4.5:1 on this subject's own tint. */
+export function subjectTextColor(subject: string): string {
+  return SUBJECT_PALETTE[subjectKey(subject)].accentVar;
 }
