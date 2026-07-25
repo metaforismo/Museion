@@ -528,7 +528,7 @@ export default function SourceCreator() {
         <Card tint="var(--color-lapis-soft)" className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-lapis/15 px-4 py-3 text-body-sm">
           <span className="font-semibold text-lapis-dark">Source → validated course</span>
           <span className="text-ink-soft">When live AI is connected, Museion designs the course in staged passes and publishes only after deterministic checks pass.</span>
-          <Link href="/settings" className="font-semibold text-lapis-dark underline underline-offset-4">Check connection</Link>
+          <Link href="/settings" className="inline-flex min-h-9 items-center font-semibold text-lapis-dark underline underline-offset-4">Check connection</Link>
         </Card>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm">
           <span
@@ -544,11 +544,11 @@ export default function SourceCreator() {
           </span>
           {clearConfirmation ? (
             <span className="inline-flex items-center gap-3">
-              <button type="button" disabled={activeJob} onClick={clearDraft} className="font-semibold text-wrong underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40">Confirm clear</button>
-              <button type="button" onClick={() => setClearConfirmation(false)} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink">Keep draft</button>
+              <button type="button" disabled={activeJob} onClick={clearDraft} className="min-h-9 font-semibold text-wrong underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40">Confirm clear</button>
+              <button type="button" onClick={() => setClearConfirmation(false)} className="min-h-9 font-medium text-ink-soft underline underline-offset-4 hover:text-ink">Keep draft</button>
             </span>
           ) : (
-            <button type="button" disabled={activeJob} onClick={() => setClearConfirmation(true)} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
+            <button type="button" disabled={activeJob} onClick={() => setClearConfirmation(true)} className="min-h-9 font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
           )}
           <span className="text-label text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
         </div>
@@ -565,7 +565,7 @@ export default function SourceCreator() {
           <li
             key={step.label}
             aria-current={step.current ? "step" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-4 py-3 ${step.ready ? "bg-correct-soft" : step.current ? "bg-lapis-soft/70 shadow-[inset_0_0_0_1.5px_var(--color-lapis)]" : "bg-paper"}`}
+            className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${step.ready ? "border-correct/25 bg-correct-soft" : step.current ? "border-lapis/50 bg-lapis-soft/70 shadow-[var(--shadow-1)]" : "border-transparent bg-paper"}`}
           >
             <span
               aria-hidden="true"

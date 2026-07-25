@@ -126,7 +126,7 @@ export default function SourcePackEditor({
         <label className="mt-4 block text-body-sm font-medium" htmlFor="source-rights-basis">Rights basis<select id="source-rights-basis" value={rightsBasis} disabled={disabled} onChange={(event) => onRightsBasis(event.target.value as SourceRightsBasis)} className="mt-2 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2.5"><option value="personal-notes">My own notes</option><option value="creator-owned">Creator-owned material</option><option value="licensed">Licensed material</option><option value="open-licensed">Open-licensed material</option><option value="public-domain">Public domain</option><option value="authorized-excerpt">Authorized bounded excerpt</option></select></label>
       </div>
 
-      <button type="button" disabled={busy || disabled || !canNormalize} onClick={onNormalize} className="mt-4 w-full rounded-xl bg-lapis px-5 py-3 font-semibold text-white transition hover:bg-lapis-dark disabled:cursor-not-allowed disabled:opacity-45">{busy ? "Normalizing Source Pack…" : `Normalize ${materials.length} ${materials.length === 1 ? "material" : "materials"}`}</button>
+      <button type="button" disabled={busy || disabled || !canNormalize} onClick={onNormalize} className="mt-4 min-h-12 w-full rounded-xl bg-lapis px-5 text-body-sm font-semibold text-white transition hover:bg-lapis-dark disabled:cursor-not-allowed disabled:opacity-45">{busy ? "Normalizing Source Pack…" : `Normalize ${materials.length} ${materials.length === 1 ? "material" : "materials"}`}</button>
       {!sourceAuthorized ? <p className="mt-2 text-center text-label font-medium text-ink-soft">Confirm authorization for the complete pack before normalization.</p> : null}
     </section>
   );
