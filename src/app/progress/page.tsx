@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import JourneyStats from "@/components/JourneyStats";
 import MaiaCharacter from "@/components/MaiaCharacter";
 import ProgressRing from "@/components/ProgressRing";
 import VerifiedMoment from "@/components/VerifiedMoment";
-import { Card, Chip, SectionHeader, SubjectBadge } from "@/components/ui";
+import { Card, Chip, Pressable, SectionHeader, SubjectBadge } from "@/components/ui";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot } from "@/lib/dashboard";
 import { buildConceptMap } from "@/lib/dashboard/concept-map";
@@ -47,12 +48,19 @@ export default async function EvidencePage() {
             these alone establishes retained mastery.
           </p>
         </div>
-        <Link
-          href="/review"
-          className="inline-flex min-h-11 shrink-0 items-center self-start rounded-xl bg-ink px-5 text-body-sm font-semibold text-white transition hover:bg-lapis-dark lg:self-auto"
-        >
-          Review next
-        </Link>
+        {/* The one press this page offers follows the record: a non-empty
+            queue takes the warm gold press with the real count — the same
+            sanctioned urgency the dashboard carries — and an empty queue
+            leaves a quiet secondary door. Never a zero, never a nudge. */}
+        {snapshot.reviewQueue.length > 0 ? (
+          <Pressable href="/review" variant="attention" className="shrink-0 self-start lg:self-auto">
+            {snapshot.reviewQueue.length} to revisit
+          </Pressable>
+        ) : (
+          <Pressable href="/review" variant="secondary" className="shrink-0 self-start lg:self-auto">
+            Open review
+          </Pressable>
+        )}
       </header>
 
       {/* The strongest thing the record can currently justify, with the line
@@ -61,6 +69,15 @@ export default async function EvidencePage() {
           absent entirely until an engine-checked trigger fires — there is no
           placeholder, no counter and nothing to accumulate. */}
       {verifiedMoment && <VerifiedMoment kind={verifiedMoment} className="mt-7" />}
+
+      {/* The record in numbers, arriving by count-up — earned, not inflated:
+          every value is the recorded count and the animation lands on it
+          exactly. Absent until there is a record to count. */}
+      {snapshot.journey.lessonsCompleted > 0 && (
+        <section aria-label="The record in numbers" className="mt-7">
+          <JourneyStats journey={snapshot.journey} />
+        </section>
+      )}
 
       {conceptMap.groups.length > 0 && (
         <section className="mt-7" aria-labelledby="concept-map-title">
@@ -77,7 +94,10 @@ export default async function EvidencePage() {
             {conceptMap.groups.map((group) => {
               const accent = subjectColor(group.subject);
               return (
-                <Card key={group.subject} className="overflow-hidden">
+                // The subject's own accent holds the card's top edge, the same
+                // grammar as its course card: this section is the subject's
+                // ground on the evidence page, warmed by its tint band below.
+                <Card key={group.subject} accent={accent} className="overflow-hidden">
                   <div className="flex items-center justify-between gap-3 px-5 py-3.5" style={{ backgroundColor: subjectTint(group.subject) }}>
                     {/* The badge is the group's heading, not decoration: without the
                         h3 there is no way to move between subjects with a screen
@@ -172,12 +192,11 @@ export default async function EvidencePage() {
                 <p className="mt-2 text-body-sm leading-6 text-ink-soft">
                   Museion will not display a readiness score before it has checked work.
                 </p>
-                <Link
-                  href="/library"
-                  className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-ink px-4 text-body-sm font-semibold text-white transition hover:bg-lapis-dark"
-                >
+                {/* Quiet on purpose: an empty record is a starting point, not
+                    a deficit, so the way in is a secondary press. */}
+                <Pressable href="/library" variant="secondary" className="mt-4">
                   Choose a lesson
-                </Link>
+                </Pressable>
               </div>
             </Card>
           )}

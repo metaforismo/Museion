@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { GraduationScrollIcon, Idea01Icon, LibraryIcon, RepeatIcon, Target01Icon, Files02Icon } from "@hugeicons/core-free-icons";
+import { RepeatIcon, Files02Icon } from "@hugeicons/core-free-icons";
 
 import CoursePathCard from "@/components/CoursePathCard";
 import DashboardEmptyState from "@/components/DashboardEmptyState";
+import JourneyStats from "@/components/JourneyStats";
 import MaiaCharacter from "@/components/MaiaCharacter";
-import { Card, Chip, Pressable, ProgressRail, SectionHeader, StatTile, cardClasses } from "@/components/ui";
+import { Card, Chip, Pressable, ProgressRail, SectionHeader, cardClasses } from "@/components/ui";
 import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
 import { subjectColor, subjectDeep, subjectTint } from "@/lib/curriculum/subjects";
@@ -22,19 +23,6 @@ export const dynamic = "force-dynamic";
 
 const METHOD_MOVES = ["Ground", "Predict", "Interact", "Diagnose", "Explain", "Transfer", "Revisit"] as const;
 type MethodMove = (typeof METHOD_MOVES)[number];
-
-/**
- * The record's own colours. These tiles count recorded work, so they may not
- * borrow a subject accent — violet here would read as Computer Science. Three
- * report activity; the unaided transfer is the one observation the learner
- * produced without help, so it alone carries the verified green.
- */
-const JOURNEY_TILES = [
-  { key: "lessonsCompleted", label: "Lessons completed", icon: GraduationScrollIcon, accent: "var(--color-lapis)", tint: "var(--color-lapis-soft)" },
-  { key: "coursesCompleted", label: "Courses finished", icon: LibraryIcon, accent: "var(--color-lapis)", tint: "var(--color-lapis-soft)" },
-  { key: "conceptsObserved", label: "Concepts observed", icon: Idea01Icon, accent: "var(--color-lapis)", tint: "var(--color-lapis-soft)" },
-  { key: "unassistedTransfers", label: "Unaided transfers", icon: Target01Icon, accent: "var(--color-correct)", tint: "var(--color-correct-soft)" },
-] as const satisfies readonly { key: keyof DashboardSnapshot["journey"]; label: string; icon: typeof LibraryIcon; accent: string; tint: string }[];
 
 function formatTemplate(value: string) {
   return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -214,17 +202,8 @@ export default async function DashboardPage() {
       </Card>
 
       {snapshot.journey.lessonsCompleted > 0 && (
-        <section aria-label="Your journey so far" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {JOURNEY_TILES.map((tile) => (
-            <StatTile
-              key={tile.key}
-              label={tile.label}
-              value={snapshot.journey[tile.key]}
-              icon={tile.icon}
-              accent={tile.accent}
-              tint={tile.tint}
-            />
-          ))}
+        <section aria-label="Your journey so far" className="mt-4">
+          <JourneyStats journey={snapshot.journey} />
         </section>
       )}
 
