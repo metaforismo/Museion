@@ -2,7 +2,6 @@
 
 :root {
   --font-ui: "Inter Variable", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-serif-display: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
   --radius-card: 1.25rem;
   --radius-control: 0.75rem;
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.85);
@@ -14,9 +13,9 @@
 @theme {
   --color-paper: #f7f5f0;
   --color-surface: #ffffff;
-  --color-ink: #14192b;
+  --color-ink: #10131b;
   --color-ink-soft: #5d6374;
-  --color-lapis: #2b4acb;
+  --color-lapis: #2b5ee7;
   --color-lapis-dark: #20379b;
   --color-lapis-soft: #e8edfc;
   --color-gold: #c79114;
@@ -25,15 +24,47 @@
   --color-correct-soft: #e7f6ec;
   --color-wrong: #b42318;
   --color-wrong-soft: #fdecea;
-  /* Subject accents — used as small dots and hairlines, never big fills. */
-  --color-subject-algebra: #2b4acb;
-  --color-subject-arithmetic: #0e7c86;
-  --color-subject-cs: #7c3aed;
-  --color-subject-research: #b0530f;
-  --color-subject-physics: #c0392b;
-  --color-subject-biology: #1f8a4c;
+
+  /* Tints — promoted from the landing's private palette. These are surface
+     fills, not decoration: every subject accent is contrast-checked against
+     its own tint in tests/design-palette.test.ts. */
+  --color-sky: #f3f9ff;
+  --color-peach: #fff0e7;
+  --color-mint: #dff8ea;
+  --color-violet: #f7f1ff;
+  --color-yellow: #fff2ad;
+  --color-coral: #ffeee6;
+
+  /* Subject accent + tint pairs. */
+  --color-subject-algebra: #2b5ee7;
+  --color-subject-algebra-tint: #f3f9ff;
+  --color-subject-arithmetic: #0b656d;
+  --color-subject-arithmetic-tint: #fff2ad;
+  --color-subject-cs: #6d28d9;
+  --color-subject-cs-tint: #f7f1ff;
+  --color-subject-research: #9a470c;
+  --color-subject-research-tint: #ffeee6;
+  --color-subject-physics: #b3341f;
+  --color-subject-physics-tint: #fff0e7;
+  --color-subject-biology: #17703d;
+  --color-subject-biology-tint: #dff8ea;
+  --color-subject-default: #2b5ee7;
+  --color-subject-default-tint: #f3f9ff;
+
   --font-sans: var(--font-ui);
-  --font-display: var(--font-serif-display);
+
+  /* Type scale — five steps. Arbitrary text-[Xrem] is banned and enforced
+     by tests/design-type-scale.test.ts. */
+  --text-micro: 0.6875rem;
+  --text-label: 0.75rem;
+  --text-body-sm: 0.8125rem;
+  --text-body: 0.9375rem;
+  --text-lead: 1.0625rem;
+
+  --tracking-display: -0.045em;
+  --tracking-title: -0.01em;
+  --tracking-body: 0em;
+
   /* Elevation system — exactly three levels. Do not add bespoke shadows. */
   --shadow-1: 0 1px 2px rgba(24, 33, 56, 0.05), 0 4px 14px rgba(24, 33, 56, 0.05);
   --shadow-2: 0 2px 4px rgba(24, 33, 56, 0.05), 0 12px 32px rgba(24, 33, 56, 0.09);
@@ -144,17 +175,16 @@ a[class*="bg-"]:active {
  * app, page titles use .title-page and panel headings use .title-panel.
  */
 .title-page {
-  font-family: var(--font-display);
-  font-size: clamp(1.6rem, 1.3rem + 1.2vw, 2.1rem);
+  font-size: clamp(1.5rem, 1.2rem + 1.3vw, 2rem);
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: var(--tracking-title);
   line-height: 1.15;
 }
 
 .title-panel {
-  font-size: 1.05rem;
+  font-size: var(--text-lead);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-title);
 }
 
 /* Canonical card surface. Elevation via --shadow-1..3 only. */
