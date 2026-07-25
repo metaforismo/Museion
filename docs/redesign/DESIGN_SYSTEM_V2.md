@@ -55,6 +55,13 @@ text variant, `--color-lapis-dark` `#20379b`, which reaches 9.5:1 on sky. Use it
 for small text and links on a sky field; the accent itself is for fills, bars
 and glyphs.
 
+That exception is a *token*, not a palette field. There is no per-subject text
+colour in `SUBJECT_PALETTE` — one existed briefly, identical to the accent for
+five of six subjects, carried by no CSS variable and read by nothing, which
+meant the contrast test was pinning a value the app never painted. The rule is
+now asserted against `accent`, which is what `subjectColor()` returns and what
+actually reaches the screen.
+
 **The rule that binds them: every accent clears 4.5:1 against its own tint.**
 Not against white — against the surface it will actually be printed on. Biology
 and arithmetic were deepened from their original values for precisely this

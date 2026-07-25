@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { subjectColor, subjectKey, subjectTextColor, subjectTint } from "@/lib/curriculum/subjects";
+import { subjectColor, subjectKey, subjectTint } from "@/lib/curriculum/subjects";
 import { subjectObjectSrc } from "@/lib/design/assets";
 
 describe("subject helpers", () => {
@@ -17,10 +17,9 @@ describe("subject helpers", () => {
     expect(subjectKey(input)).toBe(expected);
   });
 
-  it("returns var-backed accent, tint and text colours", () => {
+  it("returns var-backed accent and tint, so a token change propagates", () => {
     expect(subjectColor("Physics")).toBe("var(--color-subject-physics)");
     expect(subjectTint("Physics")).toBe("var(--color-subject-physics-tint)");
-    expect(subjectTextColor("Physics")).toBe("var(--color-subject-physics)");
   });
 
   it("falls back to the default pair for unknown subjects", () => {
