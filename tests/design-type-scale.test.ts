@@ -32,9 +32,6 @@ import { describe, expect, it } from "vitest";
  */
 const ARBITRARY_REM_DEBT = [
   "src/components/LandingCoursePreview.tsx",
-  "src/components/MaiaPanel.tsx",
-  "src/components/MethodTraceDemo.tsx",
-  "src/components/ScientificMethodDiagram.tsx",
 ];
 
 /**
@@ -62,9 +59,6 @@ const NAMED_OFF_SCALE_DEBT = [
   "src/components/JudgeDeferredPanels.tsx",
   "src/components/JudgeExperience.tsx",
   "src/components/LandingCoursePreview.tsx",
-  "src/components/MaiaPanel.tsx",
-  "src/components/MethodTraceDemo.tsx",
-  "src/components/ScientificMethodDiagram.tsx",
 ];
 
 /**

@@ -103,27 +103,27 @@ export default function MethodTraceDemo() {
     >
       {/* Trace header */}
       <div className="flex items-center justify-between border-b border-ink/8 bg-paper/60 px-4 py-2.5 sm:px-5">
-        <p className="font-mono text-[0.64rem] font-semibold uppercase tracking-[0.09em] text-ink-soft">One learning move · replayed</p>
-        <p className="font-mono text-[0.64rem] text-ink-soft">algebra / page 1</p>
+        <p className="font-mono text-micro font-semibold uppercase tracking-[0.09em] text-ink-soft">One learning move · replayed</p>
+        <p className="font-mono text-micro text-ink-soft">algebra / page 1</p>
       </div>
 
       <div className="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         {/* Source panel */}
         <div className="border-b border-ink/8 p-4 sm:border-b-0 sm:border-r sm:p-5">
-          <p className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.09em] text-lapis-dark">Source</p>
+          <p className="font-mono text-micro font-semibold uppercase tracking-[0.09em] text-lapis-dark">Source</p>
           <blockquote
-            className={`mt-2.5 border-l-2 pl-3 text-[1.02rem] leading-6 transition-colors duration-300 ${
+            className={`mt-2.5 border-l-2 pl-3 text-lead leading-6 transition-colors duration-300 ${
               stage === "ground" ? "border-gold bg-gold-soft/50 text-ink" : "border-ink/15 text-ink-soft"
             }`}
           >
             “Subtracting the same amount from both sides preserves equality.”
           </blockquote>
-          <p className="mt-2.5 text-[0.68rem] leading-4 text-ink-soft">Exact text, page and hash stay attached to the lesson.</p>
+          <p className="mt-2.5 text-micro leading-4 text-ink-soft">Exact text, page and hash stay attached to the lesson.</p>
 
           <div className="mt-4 flex items-start gap-2.5">
             <MaiaCharacter state={maiaState} size="inline" className="shrink-0" />
             <div
-              className={`min-h-11 flex-1 rounded-xl rounded-bl-sm border px-3 py-2 text-[0.78rem] leading-5 transition-colors duration-300 ${
+              className={`min-h-11 flex-1 rounded-xl rounded-bl-sm border px-3 py-2 text-body-sm leading-5 transition-colors duration-300 ${
                 stage === "maia"
                   ? "border-lapis/30 bg-lapis-soft text-ink"
                   : stage === "correct" || stage === "evidence"
@@ -148,8 +148,8 @@ export default function MethodTraceDemo() {
 
         {/* Activity panel */}
         <div className="p-4 sm:p-5">
-          <p className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.09em] text-lapis-dark">Learner activity</p>
-          <p className="mt-2.5 text-[0.95rem] font-semibold leading-6">
+          <p className="font-mono text-micro font-semibold uppercase tracking-[0.09em] text-lapis-dark">Learner activity</p>
+          <p className="mt-2.5 text-body font-semibold leading-6">
             What should you subtract from both sides of{" "}
             <span
               className={`rounded px-1 transition-colors duration-300 ${stage === "maia" ? "bg-gold-soft ring-2 ring-gold/70" : ""}`}
@@ -173,7 +173,7 @@ export default function MethodTraceDemo() {
                   key={option.label}
                   type="button"
                   onClick={() => pick(option.index)}
-                  className={`min-h-10 min-w-14 rounded-lg border px-4 text-sm font-semibold transition ${
+                  className={`min-h-10 min-w-14 rounded-lg border px-4 text-body-sm font-semibold transition ${
                     wrongPicked
                       ? "border-wrong/40 bg-wrong-soft text-wrong"
                       : rightPicked
@@ -188,11 +188,11 @@ export default function MethodTraceDemo() {
             })}
           </div>
 
-          <div className="mt-3 min-h-[3.4rem] text-[0.78rem] leading-5" aria-live="polite">
+          <div className="mt-3 min-h-[3.4rem] text-body-sm leading-5" aria-live="polite">
             {stage === "diagnose" && (
               <p className="rounded-lg border border-wrong/20 bg-wrong-soft/60 px-3 py-2 text-ink">
                 <span className="font-semibold text-wrong">Checked by code:</span> not yet. Pattern matched:{" "}
-                <span className="font-mono text-[0.7rem]">subtracted-the-coefficient</span>. Maia is told what went wrong — never the answer to give you.
+                <span className="font-mono text-micro">subtracted-the-coefficient</span>. Maia is told what went wrong — never the answer to give you.
               </p>
             )}
             {stage === "correct" && (
@@ -202,7 +202,7 @@ export default function MethodTraceDemo() {
             )}
             {stage === "evidence" && (
               <div className="rounded-lg border border-ink/10 bg-paper px-3 py-2">
-                <p className="font-mono text-[0.64rem] font-semibold uppercase tracking-[0.08em] text-ink-soft">Recorded observation</p>
+                <p className="font-mono text-micro font-semibold uppercase tracking-[0.08em] text-ink-soft">Recorded observation</p>
                 <p className="mt-1 text-ink">
                   {firstTry ? "Correct on the first unassisted attempt." : "One misconception caught, corrected without the answer being shown."}{" "}
                   Nothing stronger is claimed.
@@ -230,7 +230,7 @@ export default function MethodTraceDemo() {
               }`}
             >
               <span className={`h-1 w-full rounded-full transition-colors ${index <= stageIndex ? "bg-lapis" : "bg-ink/10 group-hover:bg-ink/20"}`} />
-              <span className="text-[0.6rem] font-semibold sm:text-[0.66rem]">{item.label}</span>
+              <span className="text-micro font-semibold">{item.label}</span>
             </button>
           ))}
         </div>
