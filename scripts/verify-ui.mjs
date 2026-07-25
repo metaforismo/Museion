@@ -52,6 +52,173 @@ async function scanPage(page, label) {
   recordAxeViolations(label, results);
 }
 
+/**
+ * Computed contrast for every rendered run of text. axe only reports colour
+ * pairs it can resolve statically, which excludes the subject tints and the
+ * zone washes — precisely the surfaces this redesign introduced.
+ */
+async function scanContrast(page, label) {
+  // `reducedMotion: "reduce"` collapses transitions to 0.01ms rather than
+  // removing them, so a scan that lands mid-hydration reads the colour a
+  // property is transitioning *from* — a skeleton's grey, not the surface the
+  // learner ends up looking at. Settle before measuring anything.
+  await page.waitForLoadState("networkidle").catch(() => {});
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const findings = await page.evaluate(() => {
+    // Tailwind's opacity modifiers compile to color-mix, which Chrome reports
+    // as oklab(...). Pulling digits out of that string reads white-at-95% as
+    // near-black, so every colour is resolved through a 1x1 canvas instead:
+    // whatever the browser can paint, it can also report as sRGB plus alpha.
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    const cache = new Map();
+    const unresolved = new Set();
+    const colourOf = (value) => {
+      if (cache.has(value)) return cache.get(value);
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = "#010203";
+      context.fillStyle = value;
+      // fillStyle silently keeps its old value for anything it cannot parse,
+      // so an unparsed colour is reported rather than scored as black.
+      if (context.fillStyle === "#010203" && value.trim().toLowerCase() !== "#010203") {
+        unresolved.add(value);
+        cache.set(value, null);
+        return null;
+      }
+      context.fillRect(0, 0, 1, 1);
+      const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+      const resolved = { rgb: [red, green, blue], alpha: alpha / 255 };
+      cache.set(value, resolved);
+      return resolved;
+    };
+
+    const channel = (value) => {
+      const ratio = value / 255;
+      return ratio <= 0.04045 ? ratio / 12.92 : Math.pow((ratio + 0.055) / 1.055, 2.4);
+    };
+    const luminance = ([red, green, blue]) => 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
+    const over = (top, bottom) => top.rgb.map((component, index) => component * top.alpha + bottom[index] * (1 - top.alpha));
+
+    // A zone wash is a gradient, so it carries no background-colour to inherit.
+    // Its first stop is composited as its own layer: full tint strength is the
+    // darkest surface a learner can be standing on inside that wash.
+    const washOf = (image) => {
+      if (!image || image === "none" || image.startsWith("url(")) return null;
+      const match = image.match(/(?:rgba?|oklab|oklch|color|hsla?)\([^)]*\)|#[0-9a-f]{3,8}/i);
+      const colour = match && colourOf(match[0]);
+      return colour && colour.alpha > 0 ? colour : null;
+    };
+
+    // The tints are opaque near-white fills and the overlays above them are
+    // fractional ink, so the walk composites every painted layer up to the
+    // first opaque one instead of stopping at the first non-transparent one.
+    const backgroundOf = (element) => {
+      const layers = [];
+      for (let node = element; node; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        const wash = washOf(style.backgroundImage);
+        if (wash) layers.push(wash);
+        const colour = colourOf(style.backgroundColor);
+        if (colour && colour.alpha > 0) {
+          layers.push(colour);
+          if (colour.alpha >= 1) break;
+        }
+      }
+      let base = [255, 255, 255];
+      for (let index = layers.length - 1; index >= 0; index -= 1) base = over(layers[index], base);
+      return base;
+    };
+
+    const rendered = (element) => {
+      for (let node = element; node instanceof HTMLElement; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.display === "none" || style.visibility !== "visible" || Number(style.opacity) === 0) return false;
+      }
+      const rect = element.getBoundingClientRect();
+      return rect.width >= 2 && rect.height >= 2;
+    };
+
+    const describe = (element) => {
+      const id = element.id ? `#${element.id}` : "";
+      const classes = [...element.classList].slice(0, 2).map((name) => `.${name}`).join("");
+      return `${element.tagName.toLowerCase()}${id}${classes}`;
+    };
+
+    const seen = new Set();
+    const problems = [];
+    for (const element of document.body.querySelectorAll("*")) {
+      if (/^(script|style|noscript|template|option|svg|title)$/i.test(element.tagName)) continue;
+      // WCAG 1.4.3 exempts inactive components; everything else is in scope,
+      // including aria-hidden marks, which sighted learners still read.
+      if (element.closest("[hidden]") || element.matches(":disabled") || element.closest('[aria-disabled="true"]')) continue;
+      // Only text the element paints itself, so the colour being scored is the
+      // colour that run of text is actually drawn in.
+      const text = [...element.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent.trim())
+        .join(" ")
+        .trim();
+      if (!text || !rendered(element)) continue;
+      const style = getComputedStyle(element);
+      const foreground = colourOf(style.color);
+      if (!foreground || foreground.alpha === 0) continue;
+      const background = backgroundOf(element);
+      const composited = over(foreground, background);
+      const size = Number.parseFloat(style.fontSize);
+      const weight = Number.parseInt(style.fontWeight, 10) || 400;
+      const light = Math.max(luminance(composited), luminance(background));
+      const dark = Math.min(luminance(composited), luminance(background));
+      const ratio = (light + 0.05) / (dark + 0.05);
+      const required = size >= 24 || (size >= 18.66 && weight >= 700) ? 3 : 4.5;
+      if (ratio >= required) continue;
+      const pair = `${composited.map(Math.round).join(",")}|${background.map(Math.round).join(",")}|${required}`;
+      if (seen.has(pair)) continue;
+      seen.add(pair);
+      problems.push(`${describe(element)} "${text.slice(0, 44)}" rgb(${composited.map(Math.round).join(",")}) on rgb(${background.map(Math.round).join(",")}) ${ratio.toFixed(2)}:1 < ${required}`);
+    }
+    for (const value of unresolved) problems.push(`unresolvable colour ${value}`);
+    return problems.slice(0, 10);
+  });
+  for (const finding of findings) failures.push(`${label} contrast: ${finding}`);
+}
+
+/**
+ * Cold-record pass over every washed and tinted app surface, at both widths.
+ * The populated states are scanned inside `desktopFlow`, after a lesson has
+ * actually written evidence.
+ *
+ * The landing is deliberately not scanned here: its remaining sub-threshold
+ * marks are aria-hidden decorative glyphs in the landing CSS module, which
+ * predate this work and are tracked separately.
+ */
+async function contrastFlow() {
+  const routes = [
+    "/dashboard",
+    "/library",
+    "/progress",
+    "/review",
+    "/create",
+    "/settings",
+    "/courses/forces-and-motion",
+    "/courses/proportional-reasoning",
+    "/lessons/linear-equations-intro",
+  ];
+  for (const [width, height, label] of [[1440, 1000, "desktop"], [390, 844, "mobile"]]) {
+    const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });
+    await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+    const page = await context.newPage();
+    watch(page, `contrast-${label}`);
+    for (const route of routes) {
+      await page.goto(`${baseURL}${route}`);
+      await page.locator("main").waitFor({ state: "visible" });
+      await scanContrast(page, `${label} ${route}`);
+    }
+    await context.close();
+  }
+}
+
 async function accessibilityFlow() {
   const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
   await desktop.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
@@ -545,7 +712,29 @@ async function desktopFlow() {
 
   await page.goto(`${baseURL}/library`);
   await expectVisible(page.getByRole("heading", { name: /Learn through designed investigations/ }), "library heading");
-  await expectVisible(page.getByText(/\d+ paths · \d+ lessons/), "real sidebar catalog totals");
+
+  // The rail used to prove it held real data with a "N paths · M lessons"
+  // summary line. The rebuilt rail lists the paths themselves, capped at six,
+  // and states the true total on the overflow link — so that is what gets
+  // checked against the catalog rendered on this very page.
+  const catalogPaths = page.getByRole("region", { name: "Follow a designed reasoning path." }).locator('a[href^="/courses/"]');
+  const catalogHrefs = await catalogPaths.evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+  if (catalogHrefs.length < 2) failures.push(`desktop /library: catalog rendered ${catalogHrefs.length} paths`);
+  const railSection = page.getByRole("navigation", { name: "Application navigation" }).getByRole("region", { name: "Paths" });
+  await expectVisible(railSection, "sidebar paths rail");
+  const railHrefs = await railSection.locator('a[href^="/courses/"]').evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+  const expectedRailPaths = Math.min(6, catalogHrefs.length);
+  if (railHrefs.length !== expectedRailPaths) {
+    failures.push(`desktop /library sidebar lists ${railHrefs.length} paths, expected ${expectedRailPaths}`);
+  }
+  const inventedPaths = railHrefs.filter((href) => !catalogHrefs.includes(href));
+  if (inventedPaths.length) failures.push(`desktop /library sidebar lists paths absent from the catalog: ${inventedPaths.join(", ")}`);
+  if (catalogHrefs.length > 6) {
+    await expectVisible(
+      railSection.getByRole("link", { name: `View all ${catalogHrefs.length} paths` }),
+      "real sidebar catalog total",
+    );
+  }
   const sidebarExtent = await page.getByRole("complementary", { name: "Application navigation" }).evaluate((element) => ({
     documentHeight: document.documentElement.scrollHeight,
     sidebarHeight: element.getBoundingClientRect().height,
@@ -669,10 +858,14 @@ async function desktopFlow() {
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(150);
   await page.screenshot({ path: path.join(verificationImageDir, "museion-dashboard.png"), fullPage: false });
+  // A record now exists, so this pass covers the evidence chips, subject rings
+  // and verified moment that the cold pass in contrastFlow cannot reach.
+  await scanContrast(page, "desktop /dashboard with a record");
   await page.goto(`${baseURL}/progress`);
   await expectVisible(page.getByRole("heading", { name: /What Museion observed/ }), "evidence page");
   await expectVisible(page.getByText(/Observed in guided work|Hint-free practice completed/).first(), "recorded evidence state");
   await expectVisible(page.getByText(/Retention is not measured/), "retention boundary");
+  await scanContrast(page, "desktop /progress with a record");
 
   await page.getByRole("navigation", { name: "Application navigation" }).getByRole("link", { name: "Source Studio", exact: true }).click();
   await expectVisible(page.getByRole("heading", { name: /Start with a source/ }), "source creator");
@@ -1084,6 +1277,7 @@ try {
     await keyboardJudgeFlow();
   } else {
     await accessibilityFlow();
+    await contrastFlow();
     await mobileNavigationFlow();
     await globalSearchFlow();
   }
