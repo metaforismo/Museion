@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CrownIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 
@@ -73,21 +74,24 @@ function Connector({
   index,
   traversed,
   accent,
-  draw = false,
+  drawDelayMs,
 }: {
   index: number;
   traversed: boolean;
   accent: string;
-  draw?: boolean;
+  /** Set only for a traversed segment taking part in the arrival choreography. */
+  drawDelayMs?: number;
 }) {
   const from = CENTERS[(index - 1) % 2];
   const to = CENTERS[index % 2];
   const stroke = traversed ? accent : RAIL_QUIET;
+  const draw = drawDelayMs !== undefined;
+  const delay = draw ? ({ "--trail-draw-delay": `${drawDelayMs}ms` } as CSSProperties) : undefined;
   return (
     <div aria-hidden="true">
       <span
-        className={`ml-8 block h-10 w-2 rounded-full sm:hidden ${draw ? "trail-rail-grow [animation-delay:160ms]" : ""}`.trimEnd()}
-        style={{ backgroundColor: stroke }}
+        className={`ml-8 block h-10 w-2 rounded-full sm:hidden ${draw ? "trail-rail-grow" : ""}`.trimEnd()}
+        style={{ backgroundColor: stroke, ...delay }}
       />
       <svg
         className="hidden overflow-visible sm:block"
@@ -103,6 +107,7 @@ function Connector({
           strokeLinecap="round"
           pathLength="1"
           className={draw ? "trail-rail-trace" : undefined}
+          style={delay}
         />
       </svg>
     </div>
@@ -153,17 +158,35 @@ export default function CourseTrail({
           const node = trail[index];
           const crowned = complete && index === total - 1;
           const positionLabel = `Lesson ${index + 1} of ${total}`;
-          // The segment arriving at the just-completed node: its stub lives in
-          // the previous row, its connector in this one. Both draw only when
-          // the record says that ground is genuinely traversed.
-          const stubDraws = index === arrivalIndex - 1 && node.state === "done";
-          const connectorDraws = index === arrivalIndex && node.traversedFrom;
+          // Arrival choreography, in record order: the segment arriving at the
+          // just-completed node draws first (stub in the previous row, curve in
+          // this one), the node fills at 420ms, then the newly walked segment
+          // departing it draws on toward the path's new current node
+          // (stub 860ms, curve 1020ms). Every drawn piece is ground the record
+          // says is traversed — nothing animates that is not already accent.
+          const arriving = arrivalIndex >= 0 && index === arrivalIndex;
+          const connectorDrawDelay =
+            arriving && node.traversedFrom
+              ? 160
+              : arrivalIndex >= 0 && index === arrivalIndex + 1 && node.traversedFrom
+                ? 1020
+                : undefined;
+          const stubDrawDelay =
+            arrivalIndex >= 0 && index === arrivalIndex - 1 && node.state === "done"
+              ? 0
+              : arriving && index < total - 1 && (trail[index + 1]?.traversedFrom ?? false)
+                ? 860
+                : undefined;
+          const stubDraw =
+            stubDrawDelay !== undefined
+              ? { className: "trail-rail-grow", style: { "--trail-draw-delay": `${stubDrawDelay}ms` } as CSSProperties }
+              : { className: "", style: undefined };
 
           if (node.state === "current") {
             const even = index % 2 === 0;
             return (
               <li key={lesson.id} className="relative">
-                {index > 0 && <Connector index={index} traversed={node.traversedFrom} accent={accent} draw={connectorDraws} />}
+                {index > 0 && <Connector index={index} traversed={node.traversedFrom} accent={accent} drawDelayMs={connectorDrawDelay} />}
                 <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-x-6">
                   <div className="flex flex-col">
                     {/* Presentational on purpose: the Start/Continue Pressable
@@ -218,10 +241,9 @@ export default function CourseTrail({
           }
 
           const done = node.state === "done";
-          const arriving = index === arrivalIndex;
           return (
             <li key={lesson.id} className="relative">
-              {index > 0 && <Connector index={index} traversed={node.traversedFrom} accent={accent} draw={connectorDraws} />}
+              {index > 0 && <Connector index={index} traversed={node.traversedFrom} accent={accent} drawDelayMs={connectorDrawDelay} />}
               <Link
                 href={`/lessons/${lesson.id}?course=${courseId}`}
                 className="group grid min-h-11 grid-cols-[4.5rem_minmax(0,1fr)] gap-x-4 rounded-2xl transition active:translate-y-px sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-x-6"
@@ -265,8 +287,8 @@ export default function CourseTrail({
                   {index < total - 1 && (
                     <span
                       aria-hidden="true"
-                      className={`w-2 flex-1 rounded-full ${stubOffsetClass(index)} ${stubDraws ? "trail-rail-grow" : ""}`.trimEnd()}
-                      style={{ backgroundColor: done ? accent : RAIL_QUIET }}
+                      className={`w-2 flex-1 rounded-full ${stubOffsetClass(index)} ${stubDraw.className}`.trimEnd()}
+                      style={{ backgroundColor: done ? accent : RAIL_QUIET, ...stubDraw.style }}
                     />
                   )}
                 </span>

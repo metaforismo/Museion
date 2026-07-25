@@ -434,9 +434,13 @@ a[class*="bg-"]:active {
   }
 }
 
+/* Each drawn rail piece takes its slot in the arrival choreography through
+   --trail-draw-delay (inline, from the trail's sequencing), so one class
+   serves the segment arriving at the node and the one departing it. */
 .trail-rail-grow {
   transform-origin: top;
   animation: trail-rail-grow 220ms ease-out both;
+  animation-delay: var(--trail-draw-delay, 0ms);
 }
 
 /* The S-curve connector draws by dash offset; pathLength="1" on the path
@@ -452,7 +456,8 @@ a[class*="bg-"]:active {
 
 .trail-rail-trace {
   stroke-dasharray: 1 1;
-  animation: trail-rail-trace 260ms ease-out 160ms both;
+  animation: trail-rail-trace 260ms ease-out both;
+  animation-delay: var(--trail-draw-delay, 160ms);
 }
 
 @keyframes method-flow {
