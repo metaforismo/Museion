@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckmarkCircle02Icon, Clock01Icon, FlashIcon, SecurityCheckIcon } from "@hugeicons/core-free-icons";
 
+import { Card, Chip, SectionHeader } from "@/components/ui";
 import { sanitizedAiDiagnostics } from "@/lib/client/ai-diagnostics";
 import { fetchWithTimeout } from "@/lib/client/fetch-with-timeout";
 
@@ -64,7 +65,7 @@ function friendlyError(value: unknown, fallback: string): string {
 
 function SettingsSkeleton() {
   return (
-    <div role="status" aria-label="Loading AI settings" className="premium-surface overflow-hidden rounded-[var(--radius-card)] border border-white/80">
+    <div role="status" aria-label="Loading AI settings" className="surface-card overflow-hidden">
       <div className="grid animate-pulse gap-0 lg:grid-cols-[1.15fr_.85fr]">
         <div className="space-y-5 p-6 sm:p-8">
           <div className="h-5 w-40 rounded bg-ink/10" />
@@ -315,12 +316,12 @@ export default function AiSettingsPanel() {
 
   if (loadingError && !status) {
     return (
-      <div role="alert" className="premium-surface rounded-[var(--radius-card)] border border-wrong/20 p-7">
-        <p className="eyebrow">Settings unavailable</p>
-        <h2 className="mt-3 tracking-title text-2xl font-semibold">Museion could not read the local AI runtime.</h2>
-        <p className="mt-3 max-w-[60ch] text-sm leading-6 text-ink-soft">{loadingError}</p>
-        <button type="button" onClick={() => void refresh().catch((error) => setLoadingError(error instanceof Error ? error.message : "Retry failed."))} className="mt-5 rounded-lg bg-ink px-5 py-3 font-semibold text-white transition hover:bg-lapis">Retry status check</button>
-      </div>
+      <Card role="alert" className="border-wrong/25 p-6">
+        <p className="text-label font-semibold uppercase tracking-[0.08em] text-wrong">Settings unavailable</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-title">Museion could not read the local AI runtime.</h2>
+        <p className="mt-3 max-w-[60ch] text-body-sm leading-6 text-ink-soft">{loadingError}</p>
+        <button type="button" onClick={() => void refresh().catch((error) => setLoadingError(error instanceof Error ? error.message : "Retry failed."))} className="mt-5 min-h-11 rounded-xl bg-ink px-5 text-body-sm font-semibold text-white transition hover:bg-lapis-dark">Retry status check</button>
+      </Card>
     );
   }
   if (!status) return <SettingsSkeleton />;
@@ -340,52 +341,51 @@ export default function AiSettingsPanel() {
   return (
     <div className="space-y-7">
       <section aria-labelledby="provider-heading">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><p className="eyebrow">Provider</p><h2 id="provider-heading" className="mt-1.5 text-xl font-semibold tracking-[-0.01em]">Choose the execution path.</h2></div>
-          <p className="max-w-md text-xs leading-5 text-ink-soft">The offline replay is always available. Live local AI never falls through to paid API billing.</p>
-        </div>
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <article className={`rounded-[var(--radius-card)] border p-5 transition ${status.provider === "codex" ? "border-lapis/40 bg-lapis-soft/60 shadow-[inset_0_0_0_1px_var(--color-lapis)]" : "border-ink/10 bg-surface"}`}>
+        <SectionHeader id="provider-heading" title="Choose the execution path." />
+        <p className="-mt-1 max-w-2xl text-body-sm leading-5 text-ink-soft">The offline replay is always available. Live local AI never falls through to paid API billing.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <article className={`rounded-[var(--radius-card)] border p-5 transition ${status.provider === "codex" ? "border-lapis/40 bg-lapis-soft/60 shadow-[var(--shadow-1)]" : "border-ink/10 bg-surface"}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5">
                 <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gold-soft text-gold"><HugeiconsIcon icon={FlashIcon} size={18} strokeWidth={1.8} /></span>
-                <h3 className="min-w-0 font-semibold">Live AI (your ChatGPT account)</h3>
+                <h3 className="min-w-0 text-body font-semibold">Live AI (your ChatGPT account)</h3>
               </div>
-              <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${liveReady ? "bg-correct-soft text-correct" : "bg-surface"}`}>{statusLabel}</span>
+              <Chip tone={liveReady ? "correct" : "attention"}>{statusLabel}</Chip>
             </div>
-            <p className="mt-3 text-sm leading-6 text-ink-soft">Runs through your authenticated local ChatGPT session and consumes plan quota.</p>
-            <p id="live-provider-guidance" className={`mt-2 text-xs leading-5 ${liveReady ? "text-correct" : "text-ink-soft"}`}>{liveGuidance}</p>
-            <button type="button" aria-describedby="live-provider-guidance" disabled={!liveReady || status.provider === "codex" || Boolean(busyAction) || checking} onClick={() => void patchSettings({ provider: "codex" }, "live")} className="mt-4 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-40">{status.provider === "codex" ? "Active provider" : "Use live AI"}</button>
+            <p className="mt-3 text-body-sm leading-6 text-ink-soft">Runs through your authenticated local ChatGPT session and consumes plan quota.</p>
+            <p id="live-provider-guidance" className={`mt-2 text-label leading-5 ${liveReady ? "text-correct" : "text-ink-soft"}`}>{liveGuidance}</p>
+            <button type="button" aria-describedby="live-provider-guidance" disabled={!liveReady || status.provider === "codex" || Boolean(busyAction) || checking} onClick={() => void patchSettings({ provider: "codex" }, "live")} className="mt-4 min-h-11 rounded-xl bg-ink px-4 text-body-sm font-semibold text-white transition hover:bg-lapis-dark disabled:cursor-not-allowed disabled:opacity-40">{status.provider === "codex" ? "Active provider" : "Use live AI"}</button>
           </article>
-          <article className={`rounded-[var(--radius-card)] border p-5 transition ${status.provider === "offline" ? "border-lapis/40 bg-lapis-soft/60 shadow-[inset_0_0_0_1px_var(--color-lapis)]" : "border-ink/10 bg-surface"}`}>
+          <article className={`rounded-[var(--radius-card)] border p-5 transition ${status.provider === "offline" ? "border-lapis/40 bg-lapis-soft/60 shadow-[var(--shadow-1)]" : "border-ink/10 bg-surface"}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5">
                 <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-correct-soft text-correct"><HugeiconsIcon icon={SecurityCheckIcon} size={18} strokeWidth={1.8} /></span>
-                <h3 className="min-w-0 font-semibold">Offline verified guidance</h3>
+                <h3 className="min-w-0 text-body font-semibold">Offline verified guidance</h3>
               </div>
-              <span className="shrink-0 rounded-md bg-surface px-2 py-1 text-xs font-semibold">Always available</span>
+              <Chip tone="neutral">Always available</Chip>
             </div>
-            <p className="mt-3 text-sm leading-6 text-ink-soft">Verified replay and deterministic guidance, with no account, network model call or usage charge.</p>
-            <p className="mt-2 text-xs leading-5 text-ink-soft">Selecting this disables Museion’s live provider without signing Codex or other local clients out.</p>
-            <button type="button" disabled={status.provider === "offline" || Boolean(busyAction) || checking} onClick={() => void patchSettings({ provider: "offline" }, "offline")} className="mt-4 rounded-lg border border-ink/15 bg-surface px-4 py-2.5 text-sm font-semibold transition hover:border-lapis disabled:cursor-not-allowed disabled:opacity-40">{status.provider === "offline" ? "Active provider" : "Use offline demo"}</button>
+            <p className="mt-3 text-body-sm leading-6 text-ink-soft">Verified replay and deterministic guidance, with no account, network model call or usage charge.</p>
+            <p className="mt-2 text-label leading-5 text-ink-soft">Selecting this disables Museion’s live provider without signing Codex or other local clients out.</p>
+            <button type="button" disabled={status.provider === "offline" || Boolean(busyAction) || checking} onClick={() => void patchSettings({ provider: "offline" }, "offline")} className="mt-4 min-h-11 rounded-xl border border-ink/15 bg-surface px-4 text-body-sm font-semibold transition hover:border-lapis disabled:cursor-not-allowed disabled:opacity-40">{status.provider === "offline" ? "Active provider" : "Use offline demo"}</button>
           </article>
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-ink/15 px-5 py-4 text-sm">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-ink/15 px-5 py-4 text-body-sm">
           <div><p className="font-semibold">Live AI (API key)</p><p className="mt-1 text-ink-soft">Future server-configured provider. Browser API keys are intentionally unsupported.</p></div>
-          <span className="rounded-md bg-paper px-2 py-1 text-xs font-semibold text-ink-soft">Not configured</span>
+          <Chip tone="neutral">Not configured</Chip>
         </div>
       </section>
 
-      <section className="premium-surface overflow-hidden rounded-[var(--radius-card)] border border-white/80">
+      <section className="surface-card overflow-hidden">
         <div className="p-6 sm:p-8">
-          <div className="flex flex-wrap items-center gap-3"><span className={`h-2.5 w-2.5 rounded-full ${liveReady ? "bg-correct" : "bg-gold"}`} aria-hidden /><p className="text-sm font-semibold">Local runtime</p><span className={`rounded-md px-2 py-1 text-xs font-semibold ${liveReady ? "bg-correct-soft text-correct" : "bg-gold-soft text-ink"}`}>{statusLabel}</span></div>
-          <h2 className="mt-5 tracking-title text-2xl font-semibold">Use your ChatGPT plan, locally.</h2>
-          <p className="mt-3 max-w-[58ch] leading-7 text-ink-soft">Museion invokes Codex without receiving OAuth credentials. Disconnecting Museion changes its provider only; global logout is a separate action.</p>
-          <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2"><div className="rounded-xl bg-paper p-4"><dt className="text-ink-soft">Runtime</dt><dd className="mt-1 font-semibold">{status.installed ? status.codexVersion ?? "Codex installed" : "Not found"}</dd></div><div className="rounded-xl bg-paper p-4"><dt className="text-ink-soft">Active mode</dt><dd className="mt-1 font-semibold">{status.provider === "codex" ? "Live GPT-5.6 family" : "Offline verified guidance"}</dd></div></dl>
+          <div className="flex flex-wrap items-center gap-3"><span className={`h-2.5 w-2.5 rounded-full ${liveReady ? "bg-correct" : "bg-gold"}`} aria-hidden /><p className="text-body-sm font-semibold">Local runtime</p><Chip tone={liveReady ? "correct" : "attention"}>{statusLabel}</Chip></div>
+          <h2 className="mt-4 text-2xl font-semibold tracking-title">Use your ChatGPT plan, locally.</h2>
+          <p className="mt-2 max-w-[58ch] text-body leading-6 text-ink-soft">Museion invokes Codex without receiving OAuth credentials. Disconnecting Museion changes its provider only; global logout is a separate action.</p>
+          <dl className="mt-6 grid gap-3 text-body-sm sm:grid-cols-2"><div className="rounded-xl bg-paper p-4"><dt className="text-label text-ink-soft">Runtime</dt><dd className="mt-1 font-semibold">{status.installed ? status.codexVersion ?? "Codex installed" : "Not found"}</dd></div><div className="rounded-xl bg-paper p-4"><dt className="text-label text-ink-soft">Active mode</dt><dd className="mt-1 font-semibold">{status.provider === "codex" ? "Live GPT-5.6 family" : "Offline verified guidance"}</dd></div></dl>
           <ol aria-label="Live AI readiness" className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
             {readiness.map((item) => (
-              <li key={item.label} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 py-3 text-sm">
-                <span aria-hidden="true" className={`mt-0.5 grid h-6 w-6 place-items-center rounded-full ${item.ready ? "bg-correct-soft text-correct" : "bg-gold-soft text-gold"}`}>
+              <li key={item.label} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 py-3 text-body-sm">
+                {/* Ink on solid gold, not gold on gold-soft: that pair is 2.5:1, under the 3:1 a meaningful glyph needs. */}
+                <span aria-hidden="true" className={`mt-0.5 grid h-6 w-6 place-items-center rounded-full ${item.ready ? "bg-correct-soft text-correct" : "bg-gold text-ink"}`}>
                   <HugeiconsIcon icon={item.ready ? CheckmarkCircle02Icon : Clock01Icon} size={14} strokeWidth={2} />
                 </span>
                 <span>
@@ -399,26 +399,26 @@ export default function AiSettingsPanel() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="eyebrow">Optional local setup</p>
-                <h3 id="codex-setup-heading" className="mt-1.5 font-semibold">Give Codex this short prompt.</h3>
+                <h3 id="codex-setup-heading" className="mt-1.5 text-body font-semibold">Give Codex this short prompt.</h3>
               </div>
-              <button type="button" onClick={() => void copySetupPrompt()} className="rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm font-semibold text-lapis-dark transition hover:border-lapis/35">Copy setup prompt</button>
+              <button type="button" onClick={() => void copySetupPrompt()} className="min-h-11 rounded-xl border border-ink/15 bg-surface px-3 text-body-sm font-semibold text-lapis-dark transition hover:border-lapis/35">Copy setup prompt</button>
             </div>
-            <p className="mt-3 text-sm leading-6 text-ink-soft">Codex will prepare the local runtime. Then return here, choose <strong className="font-semibold text-ink">Connect ChatGPT</strong>, finish the official device login, and run <strong className="font-semibold text-ink">Check models</strong>. No Museion account, database, or API key is involved.</p>
-            <p className="mt-3 rounded-lg border-l-2 border-lapis bg-surface px-3 py-2.5 font-mono text-xs leading-5 text-ink">{CODEX_SETUP_PROMPT}</p>
+            <p className="mt-3 text-body-sm leading-6 text-ink-soft">Codex will prepare the local runtime. Then return here, choose <strong className="font-semibold text-ink">Connect ChatGPT</strong>, finish the official device login, and run <strong className="font-semibold text-ink">Check models</strong>. No Museion account, database, or API key is involved.</p>
+            <p className="mt-3 rounded-lg border-l-2 border-lapis bg-surface px-3 py-2.5 font-mono text-label leading-5 text-ink">{CODEX_SETUP_PROMPT}</p>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            {!connected && <button type="button" disabled={busyAction === "connect" || !status.enabled} onClick={() => void connect()} className="rounded-lg bg-ink px-5 py-3 font-semibold text-white transition hover:bg-lapis disabled:opacity-45">{busyAction === "connect" ? "Starting connection…" : "Connect ChatGPT"}</button>}
-            {connected && !checking && <button type="button" disabled={Boolean(busyAction) || !status.enabled} onClick={() => void check()} className="rounded-lg bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-lapis disabled:opacity-45">Check models</button>}
-            {checking && <button type="button" onClick={() => checkController.current?.abort()} className="rounded-lg border border-wrong/30 px-5 py-3 text-sm font-semibold text-wrong">Cancel model check</button>}
-            <button type="button" disabled={Boolean(busyAction) || checking} onClick={() => void refreshStatus()} className="rounded-lg px-3 py-3 text-sm font-semibold text-lapis-dark hover:bg-lapis-soft disabled:cursor-not-allowed disabled:opacity-45">{busyAction === "refresh" ? "Refreshing…" : "Refresh status"}</button>
-            <button type="button" disabled={Boolean(busyAction) || checking} onClick={() => void copyDiagnostics()} className="rounded-lg px-3 py-3 text-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-45">Copy diagnostics</button>
+            {!connected && <button type="button" disabled={busyAction === "connect" || !status.enabled} onClick={() => void connect()} className="min-h-11 rounded-xl bg-ink px-5 text-body-sm font-semibold text-white transition hover:bg-lapis-dark disabled:opacity-45">{busyAction === "connect" ? "Starting connection…" : "Connect ChatGPT"}</button>}
+            {connected && !checking && <button type="button" disabled={Boolean(busyAction) || !status.enabled} onClick={() => void check()} className="min-h-11 rounded-xl bg-ink px-5 text-body-sm font-semibold text-white transition hover:bg-lapis-dark disabled:opacity-45">Check models</button>}
+            {checking && <button type="button" onClick={() => checkController.current?.abort()} className="min-h-11 rounded-xl border border-wrong/30 px-5 text-body-sm font-semibold text-wrong">Cancel model check</button>}
+            <button type="button" disabled={Boolean(busyAction) || checking} onClick={() => void refreshStatus()} className="min-h-11 rounded-xl px-3 text-body-sm font-semibold text-lapis-dark hover:bg-lapis-soft disabled:cursor-not-allowed disabled:opacity-45">{busyAction === "refresh" ? "Refreshing…" : "Refresh status"}</button>
+            <button type="button" disabled={Boolean(busyAction) || checking} onClick={() => void copyDiagnostics()} className="min-h-11 rounded-xl px-3 text-body-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-45">Copy diagnostics</button>
           </div>
-          {!status.enabled && <p role="alert" className="mt-4 rounded-xl bg-gold-soft p-4 text-sm">Local AI is disabled. Set <code>MUSEION_LOCAL_AI=1</code> and restart Museion to enable connection controls.</p>}
+          {!status.enabled && <p role="alert" className="mt-4 rounded-xl bg-gold-soft p-4 text-body-sm">Local AI is disabled. Set <code>MUSEION_LOCAL_AI=1</code> and restart Museion to enable connection controls.</p>}
           {notice && (
             <div
               role={notice.tone === "error" ? "alert" : "status"}
               aria-live={notice.tone === "error" ? "assertive" : "polite"}
-              className={`mt-4 flex items-start justify-between gap-4 rounded-xl p-4 text-sm ${
+              className={`mt-4 flex items-start justify-between gap-4 rounded-xl p-4 text-body-sm ${
                 notice.tone === "error"
                   ? "bg-wrong-soft text-wrong"
                   : notice.tone === "success"
@@ -437,47 +437,47 @@ export default function AiSettingsPanel() {
           className="border-t border-ink/10"
           open={attempt?.status === "pending" || Boolean(attempt && ["failed", "expired", "cancelled"].includes(attempt.status))}
         >
-          <summary className="cursor-pointer select-none bg-paper px-6 py-4 text-sm font-semibold text-ink-soft transition hover:text-ink sm:px-8">
+          <summary className="cursor-pointer select-none bg-paper px-6 py-4 text-body-sm font-semibold text-ink-soft transition hover:text-ink sm:px-8">
             Advanced: models and routing
           </summary>
           {(attempt?.status === "pending" || (attempt && ["failed", "expired", "cancelled"].includes(attempt.status))) && (
             <div className="border-t border-ink/10 bg-paper px-6 py-6 sm:px-8">
-              {attempt?.status === "pending" && <div className="rounded-xl border border-lapis/20 bg-lapis-soft p-4"><p className="font-semibold">Finish connecting in your browser</p>{attempt.userCode && <div className="mt-2 flex flex-wrap items-center gap-3"><code className="font-mono text-xl tracking-wider">{attempt.userCode}</code><button type="button" onClick={() => void copyDeviceCode()} className="text-sm font-semibold text-lapis-dark underline">Copy code</button></div>}{attempt.verificationUrl && <a className="mt-3 inline-block font-semibold text-lapis-dark underline" href={attempt.verificationUrl} target="_blank" rel="noreferrer">Open ChatGPT verification</a>}<p className="mt-2 text-sm text-ink-soft">Museion is waiting for the official Codex login flow.</p><button type="button" disabled={busyAction === "cancel-connection"} onClick={() => void cancelConnection()} className="mt-3 text-sm font-semibold text-lapis-dark underline">Cancel connection</button></div>}
-              {attempt && ["failed", "expired", "cancelled"].includes(attempt.status) && <div role="alert" className="rounded-xl bg-gold-soft p-4 text-sm"><p className="font-semibold">Connection {attempt.status}</p><p className="mt-1 text-ink-soft">{attempt.error ?? "You can start a new connection attempt when ready."}</p><button type="button" disabled={Boolean(busyAction) || !status.enabled} onClick={() => void connect()} className="mt-3 font-semibold text-lapis-dark underline">Try again</button></div>}
+              {attempt?.status === "pending" && <div className="rounded-xl border border-lapis/20 bg-lapis-soft p-4"><p className="text-body font-semibold">Finish connecting in your browser</p>{attempt.userCode && <div className="mt-2 flex flex-wrap items-center gap-3"><code className="font-mono text-xl tracking-wider">{attempt.userCode}</code><button type="button" onClick={() => void copyDeviceCode()} className="min-h-9 text-body-sm font-semibold text-lapis-dark underline">Copy code</button></div>}{attempt.verificationUrl && <a className="mt-3 inline-block text-body-sm font-semibold text-lapis-dark underline" href={attempt.verificationUrl} target="_blank" rel="noreferrer">Open ChatGPT verification</a>}<p className="mt-2 text-body-sm text-ink-soft">Museion is waiting for the official Codex login flow.</p><button type="button" disabled={busyAction === "cancel-connection"} onClick={() => void cancelConnection()} className="mt-3 min-h-9 text-body-sm font-semibold text-lapis-dark underline">Cancel connection</button></div>}
+              {attempt && ["failed", "expired", "cancelled"].includes(attempt.status) && <div role="alert" className="rounded-xl bg-gold-soft p-4 text-body-sm"><p className="font-semibold">Connection {attempt.status}</p><p className="mt-1 text-ink-soft">{attempt.error ?? "You can start a new connection attempt when ready."}</p><button type="button" disabled={Boolean(busyAction) || !status.enabled} onClick={() => void connect()} className="mt-3 min-h-9 font-semibold text-lapis-dark underline">Try again</button></div>}
             </div>
           )}
           <aside aria-label="Balanced model routing" className="border-t border-ink/10 bg-ink p-6 text-white sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">Balanced routing</p>
-            <div className="mt-5 space-y-4">{Object.entries(status.models.compiler).map(([stage, model]) => <div key={stage} className="border-b border-white/10 pb-4"><p className="text-sm text-white/60">{STAGE_LABELS[stage] ?? stage}</p><p className="mt-1 font-mono text-sm font-semibold">{model}</p></div>)}</div>
-            <div className="mt-5"><p className="text-sm text-white/60">Maia tutor</p><p className="mt-1 font-mono text-sm font-semibold">{status.models.tutor}</p></div>
-            <label className="mt-6 flex items-start gap-3 text-sm leading-6 text-white/75"><input type="checkbox" checked={status.familyFallback} disabled={Boolean(busyAction)} onChange={(event) => void patchSettings({ familyFallback: event.target.checked }, "fallback")} className="mt-1" />Allow visible fallback within GPT-5.6. Sol remains mandatory for publication.</label>
+            <p className="text-label font-semibold uppercase tracking-[0.08em] text-gold">Balanced routing</p>
+            <div className="mt-5 space-y-4">{Object.entries(status.models.compiler).map(([stage, model]) => <div key={stage} className="border-b border-white/10 pb-4"><p className="text-body-sm text-white/65">{STAGE_LABELS[stage] ?? stage}</p><p className="mt-1 font-mono text-body-sm font-semibold">{model}</p></div>)}</div>
+            <div className="mt-5"><p className="text-body-sm text-white/65">Maia tutor</p><p className="mt-1 font-mono text-body-sm font-semibold">{status.models.tutor}</p></div>
+            <label className="mt-6 flex items-start gap-3 text-body-sm leading-6 text-white/80"><input type="checkbox" checked={status.familyFallback} disabled={Boolean(busyAction)} onChange={(event) => void patchSettings({ familyFallback: event.target.checked }, "fallback")} className="mt-1" />Allow visible fallback within GPT-5.6. Sol remains mandatory for publication.</label>
           </aside>
         </details>
       </section>
 
       {checkResults && (
-        <section className="rounded-[var(--radius-card)] bg-surface p-5" aria-labelledby="capability-check-heading">
+        <Card as="section" className="p-5" aria-labelledby="capability-check-heading">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="capability-check-heading" className="tracking-title text-xl font-semibold">Capability check</h2>
-            <p className="text-xs text-ink-soft">Requested and resolved models are shown separately.</p>
+            <h2 id="capability-check-heading" className="title-panel">Capability check</h2>
+            <p className="text-label text-ink-soft">Requested and resolved models are shown separately.</p>
           </div>
           <div className="mt-4 divide-y divide-ink/10 border-y border-ink/10">
             {checkResults.map((result) => (
               <div key={result.model} className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,.7fr)] sm:items-center">
                 <div>
-                  <p className="font-mono text-sm font-semibold">{result.model}</p>
-                  {result.resolvedModel && <p className="mt-1 font-mono text-xs text-ink-soft">Resolved: {result.resolvedModel}</p>}
+                  <p className="font-mono text-body-sm font-semibold">{result.model}</p>
+                  {result.resolvedModel && <p className="mt-1 font-mono text-label text-ink-soft">Resolved: {result.resolvedModel}</p>}
                 </div>
-                <p className={`text-sm font-medium sm:text-right ${result.available ? "text-correct" : "text-wrong"}`}>
+                <p className={`text-body-sm font-medium sm:text-right ${result.available ? "text-correct" : "text-wrong"}`}>
                   {result.available ? `Available · ${result.durationMs.toLocaleString()} ms` : friendlyError(result.error, "Unavailable")}
                 </p>
               </div>
             ))}
           </div>
-        </section>
+        </Card>
       )}
 
-      {liveReady && <section className="rounded-[var(--radius-card)] border border-wrong/20 p-5"><h2 className="font-semibold">Global Codex session</h2><p className="mt-2 max-w-[64ch] text-sm leading-6 text-ink-soft">Normally, choose Offline Demo above. Global logout also signs the Codex CLI and other local clients out of this account.</p>{!confirmLogout ? <button type="button" disabled={Boolean(busyAction)} onClick={() => setConfirmLogout(true)} className="mt-4 text-sm font-semibold text-wrong underline">Review global logout</button> : <div role="group" aria-label="Confirm global logout" className="mt-4 rounded-xl bg-wrong-soft p-4"><p className="text-sm font-semibold text-wrong">Log out every local Codex client on this computer?</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={busyAction === "logout"} onClick={() => void globallyLogout()} className="rounded-lg bg-wrong px-4 py-2 text-sm font-semibold text-white">{busyAction === "logout" ? "Logging out…" : "Confirm global logout"}</button><button type="button" disabled={busyAction === "logout"} onClick={() => setConfirmLogout(false)} className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-sm font-semibold">Keep session</button></div></div>}</section>}
+      {liveReady && <Card as="section" className="border-wrong/25 p-5"><h2 className="title-panel">Global Codex session</h2><p className="mt-2 max-w-[64ch] text-body-sm leading-6 text-ink-soft">Normally, choose Offline Demo above. Global logout also signs the Codex CLI and other local clients out of this account.</p>{!confirmLogout ? <button type="button" disabled={Boolean(busyAction)} onClick={() => setConfirmLogout(true)} className="mt-4 min-h-9 text-body-sm font-semibold text-wrong underline">Review global logout</button> : <div role="group" aria-label="Confirm global logout" className="mt-4 rounded-xl bg-wrong-soft p-4"><p className="text-body-sm font-semibold text-wrong">Log out every local Codex client on this computer?</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={busyAction === "logout"} onClick={() => void globallyLogout()} className="min-h-11 rounded-xl bg-wrong px-4 text-body-sm font-semibold text-white">{busyAction === "logout" ? "Logging out…" : "Confirm global logout"}</button><button type="button" disabled={busyAction === "logout"} onClick={() => setConfirmLogout(false)} className="min-h-11 rounded-xl border border-ink/15 bg-surface px-4 text-body-sm font-semibold">Keep session</button></div></div>}</Card>}
     </div>
   );
 }

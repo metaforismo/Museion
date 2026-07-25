@@ -32,6 +32,8 @@ export default function Card({
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
+  /** For the cases where the card itself is the live region, e.g. role="alert". */
+  role?: string;
 } & { "aria-labelledby"?: string; "aria-label"?: string }) {
   return (
     <Tag
