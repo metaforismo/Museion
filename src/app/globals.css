@@ -265,6 +265,17 @@ a[class*="bg-"]:active {
   transform: none;
 }
 
+/* A pressed-and-held pressable: the engine is checking (or has just said
+   "not yet"), and the key stays down while it does. Higher specificity than
+   .pressable:disabled so the held state wins while the control is disabled. */
+.pressable.pressable-held,
+.pressable.pressable-held:disabled {
+  box-shadow: 0 0 0 0 var(--pressable-edge);
+  cursor: progress;
+  opacity: 0.85;
+  transform: translateY(2px);
+}
+
 /* The card form of the same device: a resting 2px hairline that takes the
    subject's accent as the pointer arrives, stands up on its deep edge, and
    presses flat. Cards keep their blur shadow OFF while carrying the hard
