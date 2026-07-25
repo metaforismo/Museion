@@ -15,8 +15,12 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const actor = await currentActor();
   const snapshot = await buildDashboardSnapshot(actor.ownerId);
-  return NextResponse.json({
-    courseProgress: snapshot.courseProgress,
-    runtime: { provider: snapshot.runtime.provider },
-  });
+  return NextResponse.json(
+    {
+      courseProgress: snapshot.courseProgress,
+      runtime: { provider: snapshot.runtime.provider },
+    },
+    // Per-learner data: never cacheable. Matches every other actor-scoped route.
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

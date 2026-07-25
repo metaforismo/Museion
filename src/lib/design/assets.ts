@@ -1,4 +1,5 @@
 import { subjectKey } from "@/lib/curriculum/subjects";
+import type { SubjectKey } from "@/lib/design/palette";
 
 /**
  * Clay objects already shipped for the landing and previously unused by the
@@ -6,7 +7,11 @@ import { subjectKey } from "@/lib/curriculum/subjects";
  * for course detail heroes, where nothing sits beside it to look inconsistent.
  */
 
-const SUBJECT_OBJECT: Record<string, string> = {
+/**
+ * Keyed by SubjectKey so adding a seventh subject is a compile error here,
+ * not a silently wrong illustration at runtime.
+ */
+const SUBJECT_OBJECT: Record<SubjectKey, string> = {
   algebra: "/landing/subject-mathematics-v2.png",
   arithmetic: "/landing/subject-arithmetic-v2.png",
   cs: "/landing/subject-computer-science-v2.png",
@@ -27,7 +32,9 @@ export const COURSE_ART: Record<string, string> = {
 };
 
 export function subjectObjectSrc(subject: string): string {
-  return SUBJECT_OBJECT[subjectKey(subject)] ?? SUBJECT_OBJECT.default;
+  // subjectKey() already collapses anything unrecognised to "default", and the
+  // record is exhaustive over SubjectKey, so this lookup is always populated.
+  return SUBJECT_OBJECT[subjectKey(subject)];
 }
 
 export function courseArtSrc(courseId: string): string | null {
