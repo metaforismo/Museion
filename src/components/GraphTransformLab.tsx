@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { Pressable } from "@/components/ui";
 import type { PublicStep } from "@/lib/content/types";
 
 /**
@@ -33,15 +34,24 @@ function clamp(value: number, min: number, max: number): number {
 
 export default function GraphTransformLab({
   graph,
+  accent = "var(--color-lapis)",
+  edge = "var(--color-lapis-deep)",
   disabled,
   checking,
+  held = false,
   highlight = null,
   onStateChange,
   onSubmit,
 }: {
   graph: GraphConfig;
+  /** Subject accent fill for the Check pressable — `subjectColor(track)`. */
+  accent?: string;
+  /** Its deep edge — `subjectDeep(track)`. */
+  edge?: string;
   disabled: boolean;
   checking: boolean;
+  /** Keeps the Check pressable pressed through checking and the wrong beat. */
+  held?: boolean;
   /** Engine attention mark: pulses one parameter control after a diagnosed misconception. */
   highlight?: "a" | "h" | "k" | null;
   /** Reports the live, unchecked canvas state so Maia can see it. */
@@ -129,12 +139,12 @@ export default function GraphTransformLab({
   );
   const equation =
     graph.family === "quadratic-vertex" ? (
-      <span className="font-mono text-sm tabular-nums">
+      <span className="font-mono text-body tabular-nums">
         y = {term("a", a)}(x − {term("h", h)})²{" "}
         + {term("k", k)}
       </span>
     ) : (
-      <span className="font-mono text-sm tabular-nums">
+      <span className="font-mono text-body tabular-nums">
         y = {term("a", a)}(x − {term("h", h)}) +{" "}
         {term("k", k)}
       </span>
@@ -144,7 +154,7 @@ export default function GraphTransformLab({
     <div>
       <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper/40">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/8 bg-surface px-4 py-2">
-          <p className="text-xs font-medium text-ink-soft">
+          <p className="text-label font-medium text-ink-soft">
             <span aria-hidden="true" className="mr-1.5 inline-block h-0.5 w-5 -translate-y-0.5 border-b-2 border-dashed border-gold align-middle" />
             Target curve — match it with yours
           </p>
@@ -196,7 +206,7 @@ export default function GraphTransformLab({
             event.preventDefault();
             moveVertex(delta[0], delta[1]);
           }}
-          className="min-h-11 rounded-lg border border-ink/15 bg-surface px-3 text-xs font-medium text-ink-soft transition focus-visible:border-lapis hover:border-lapis/50"
+          className="pressable min-h-11 rounded-lg border border-ink/15 bg-surface px-3 text-label font-medium text-ink-soft focus-visible:border-lapis hover:border-lapis/50"
           aria-label={`Move the ${graph.family === "quadratic-vertex" ? "vertex" : "anchor point"} with arrow keys. Currently h ${trim(h)}, k ${trim(k)}.`}
         >
           ✛ Arrow keys move the {graph.family === "quadratic-vertex" ? "vertex" : "anchor"}
@@ -213,7 +223,7 @@ export default function GraphTransformLab({
               key={name}
               className={`rounded-lg border p-2 transition ${highlight === name ? "border-gold bg-gold-soft/50 shadow-[0_0_0_3px_var(--color-gold-soft)] motion-safe:animate-pulse" : "border-ink/10 bg-surface"}`}
             >
-              <label htmlFor={`${labelId}-${name}`} className="flex items-baseline justify-between text-xs font-semibold">
+              <label htmlFor={`${labelId}-${name}`} className="flex items-baseline justify-between text-label font-semibold">
                 {name}
                 <span className="font-normal text-ink-soft">{describe}</span>
               </label>
@@ -223,7 +233,7 @@ export default function GraphTransformLab({
                   disabled={disabled}
                   onClick={() => update(current - PARAM_STEP)}
                   aria-label={`Decrease ${name}`}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-ink/15 font-semibold transition hover:border-lapis"
+                  className="pressable grid h-9 w-9 shrink-0 place-items-center rounded-md border border-ink/15 bg-surface font-semibold hover:border-lapis"
                 >
                   −
                 </button>
@@ -237,14 +247,14 @@ export default function GraphTransformLab({
                     const next = Number(event.target.value);
                     if (Number.isFinite(next)) update(next);
                   }}
-                  className="h-9 w-full min-w-0 rounded-md border border-ink/15 bg-surface px-1 text-center font-mono text-sm tabular-nums outline-none focus:border-lapis"
+                  className="h-9 w-full min-w-0 rounded-md border border-ink/15 bg-surface px-1 text-center font-mono text-lead tabular-nums outline-none focus:border-lapis"
                 />
                 <button
                   type="button"
                   disabled={disabled}
                   onClick={() => update(current + PARAM_STEP)}
                   aria-label={`Increase ${name}`}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-ink/15 font-semibold transition hover:border-lapis"
+                  className="pressable grid h-9 w-9 shrink-0 place-items-center rounded-md border border-ink/15 bg-surface font-semibold hover:border-lapis"
                 >
                   +
                 </button>
@@ -254,14 +264,17 @@ export default function GraphTransformLab({
         </div>
       </div>
 
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onSubmit(`a=${trim(a)},h=${trim(h)},k=${trim(k)}`)}
-        className="mx-auto mt-4 block min-h-12 rounded-2xl bg-lapis px-7 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
-      >
-        {checking ? "Checking…" : "Check my curve"}
-      </button>
+      <div className="mt-4 flex justify-center">
+        <Pressable
+          accent={accent}
+          edge={edge}
+          disabled={disabled}
+          onClick={() => onSubmit(`a=${trim(a)},h=${trim(h)},k=${trim(k)}`)}
+          className={`min-h-12 px-7 ${held ? "pressable-held" : ""}`}
+        >
+          {checking ? "Checking…" : "Check my curve"}
+        </Pressable>
+      </div>
     </div>
   );
 }

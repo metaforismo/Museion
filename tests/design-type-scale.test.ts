@@ -27,16 +27,13 @@ import { describe, expect, it } from "vitest";
  * each surface task deletes its own entry. Adding an entry is a review
  * failure, not a fix.
  *
- * What is left is the lesson canvas (LessonPlayer, MaiaPanel and the two
- * in-lesson interactives) and the marketing landing, both of which are out of
- * scope for the app-shell surface work.
+ * The lesson canvas round cleared its files; what is left is the marketing
+ * landing's course preview, out of scope for that round by design.
  */
 const ARBITRARY_REM_DEBT = [
   "src/components/LandingCoursePreview.tsx",
-  "src/components/LessonPlayer.tsx",
   "src/components/MaiaPanel.tsx",
   "src/components/MethodTraceDemo.tsx",
-  "src/components/RecursionCodeLab.tsx",
   "src/components/ScientificMethodDiagram.tsx",
 ];
 
@@ -50,10 +47,11 @@ const ARBITRARY_REM_DEBT = [
  *
  * The app-shell chrome this list was seeded with — SiteHeader, AuthButton,
  * AppCommandPalette, LessonCatalog, OnboardingTour, CourseArchitectPanel,
- * SourceLearningDesign, SourcePackEditor and the About page — is gone. What
- * remains is the lesson canvas, the Judge canvas and the marketing landing,
- * which are out of scope by design rather than un-swept: clearing them is a
- * content decision about those surfaces, not a sweep of chrome.
+ * SourceLearningDesign, SourcePackEditor and the About page — is gone, and
+ * the lesson canvas round cleared its own files. What remains is the Judge
+ * canvas and the marketing landing, which are out of scope by design rather
+ * than un-swept: clearing them is a content decision about those surfaces,
+ * not a sweep of chrome.
  *
  * One thing the sweep could not delete: a focused form field under 16px makes
  * iOS zoom the viewport, so the app's inputs, selects and textareas take lead
@@ -61,16 +59,12 @@ const ARBITRARY_REM_DEBT = [
  * the floor, and it is why those files are clean without their fields shrinking.
  */
 const NAMED_OFF_SCALE_DEBT = [
-  "src/components/GraphTransformLab.tsx",
   "src/components/JudgeDeferredPanels.tsx",
   "src/components/JudgeExperience.tsx",
   "src/components/LandingCoursePreview.tsx",
-  "src/components/LessonPlayer.tsx",
   "src/components/MaiaPanel.tsx",
   "src/components/MethodTraceDemo.tsx",
-  "src/components/RecursionCodeLab.tsx",
   "src/components/ScientificMethodDiagram.tsx",
-  "src/components/blocks/InteractiveBlock.tsx",
 ];
 
 /**

@@ -7,6 +7,7 @@ import GraphTransformLab from "@/components/GraphTransformLab";
 import MaiaCharacter from "@/components/MaiaCharacter";
 import MaiaPanel, { type MaiaOutbox } from "@/components/MaiaPanel";
 import RecursionCodeLab from "@/components/RecursionCodeLab";
+import { Pressable } from "@/components/ui";
 import type {
   AnswerResponse,
   ChatMessage,
@@ -23,6 +24,7 @@ import { sessionStorageKey } from "@/lib/client/storage";
 import type { MisconceptionHighlight, PublicLesson, PublicStep } from "@/lib/content/types";
 import type { LabActivity } from "@/lib/maia/activity";
 import type { CourseLessonContext } from "@/lib/curriculum";
+import { subjectColor, subjectDeep } from "@/lib/curriculum/subjects";
 
 type Feedback =
   | { kind: "correct"; mastery: number; solution: string | null }
@@ -109,6 +111,10 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
   const [shakeTick, setShakeTick] = useState(0);
+  // Holds the Check pressable down through the wrong-answer beat: the key
+  // deflates with the shake, then springs back. Timer-driven rather than
+  // animation-driven so reduced motion (animation: none) still releases it.
+  const [checkDeflated, setCheckDeflated] = useState(false);
   const [variantIndex, setVariantIndex] = useState(0);
   const [answerFocusRequest, setAnswerFocusRequest] = useState(0);
   const [chatSyncKey, setChatSyncKey] = useState(0);
@@ -117,6 +123,10 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   const feedbackRef = useRef<HTMLDivElement>(null);
   const backHref = courseContext ? `/courses/${courseContext.courseId}` : "/library";
   const backLabel = courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
+  // The subject's press pair for the Check control — accent fill with its
+  // deep edge, both from the palette. Components never darken a colour.
+  const accent = subjectColor(activeLesson.track);
+  const accentEdge = subjectDeep(activeLesson.track);
 
   const beginAction = useCallback((action: Exclude<PendingAction, null>) => {
     if (actionInFlight.current) return false;
@@ -231,6 +241,14 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
     feedbackRef.current?.focus({ preventScroll: true });
   }, [feedback]);
 
+  const deflateTimer = useRef(0);
+  const deflateCheck = useCallback(() => {
+    window.clearTimeout(deflateTimer.current);
+    setCheckDeflated(true);
+    deflateTimer.current = window.setTimeout(() => setCheckDeflated(false), 420);
+  }, []);
+  useEffect(() => () => window.clearTimeout(deflateTimer.current), []);
+
   const submitAnswer = useCallback(
     async (answer: string, retry?: Extract<RetryableMutation, { kind: "answer" }>) => {
       if (!sessionId || !step || !beginAction("answer")) return;
@@ -274,6 +292,10 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         } else {
           setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep, highlight: outcome.misconceptionHighlight ?? null });
           setShakeTick((t) => t + 1);
+          // The wrong beat: the Check key stays deflated through the shake,
+          // then springs back. Timer-driven so reduced motion (animation:
+          // none, no animationend) still releases it.
+          deflateCheck();
         }
       } catch (error) {
         setRetryMutation(mutation);
@@ -287,7 +309,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         finishAction();
       }
     },
-    [beginAction, finishAction, sessionId, sessionVersion, step],
+    [beginAction, deflateCheck, finishAction, sessionId, sessionVersion, step],
   );
 
   const advance = useCallback(async (retry?: Extract<RetryableMutation, { kind: "advance" }>) => {
@@ -476,9 +498,9 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
       <div className="mx-auto min-w-0 max-w-4xl">
         {requestError && (
           <div role="alert" className="mb-5 border-l-2 border-wrong bg-wrong-soft/70 px-4 py-3">
-            <p className="text-sm font-medium text-wrong">{requestError}</p>
+            <p className="text-body-sm font-medium text-wrong">{requestError}</p>
             {(retryMutation || recoveryNeeded) && (
-              <div className="mt-3 flex flex-wrap gap-4 text-sm">
+              <div className="mt-3 flex flex-wrap gap-4 text-body-sm">
                 {retryMutation && (
                   <button
                     type="button"
@@ -509,7 +531,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
           <div className="flex items-center gap-3 sm:gap-4">
             <Link
               href={backHref}
-              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-ink-soft transition hover:bg-surface hover:text-lapis-dark"
+              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-2 text-body-sm font-semibold text-ink-soft transition hover:bg-surface hover:text-lapis-dark"
             >
               <span aria-hidden="true">←</span>
               <span className="hidden sm:inline">{backLabel}</span>
@@ -538,9 +560,9 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                 );
               })}
             </div>
-            <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ink">
+            <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-body-sm text-ink">
               {/* The Museion Method move this moment exercises, derived from real state. */}
-              <span className="rounded-full bg-lapis-soft px-2.5 py-0.5 text-xs font-semibold text-lapis-dark">
+              <span className="rounded-full bg-lapis-soft px-2.5 py-0.5 text-label font-semibold text-lapis-dark">
                 {feedback?.kind === "wrong"
                   ? "Diagnose"
                   : feedback?.kind === "correct"
@@ -549,14 +571,14 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                       ? "Revisit"
                       : "Predict"}
               </span>
-              <span className="hidden text-xs text-ink-soft sm:inline">
+              <span className="hidden text-label text-ink-soft sm:inline">
                 Step {Math.min(stepIndex + 1, activeLesson.steps.length)} of {activeLesson.steps.length}
               </span>
             </span>
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1">
-            <h1 className="min-w-0 truncate text-sm font-semibold text-ink-soft">{activeLesson.title}</h1>
-            <span className="text-xs font-medium text-ink-soft">
+            <h1 className="min-w-0 truncate text-body-sm font-semibold text-ink-soft">{activeLesson.title}</h1>
+            <span className="text-label font-medium text-ink-soft">
               {mode === "practice"
                 ? "Hint-free practice"
                 : courseContext
@@ -565,7 +587,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
             </span>
           </div>
           {mode === "practice" && (
-            <p className="mt-2 px-1 text-xs text-ink">
+            <p className="mt-2 px-1 text-label text-ink">
               Practice mode removes the hint ladder. Maia can still ask a guiding question,
               so this is not the independent transfer checkpoint.
             </p>
@@ -584,7 +606,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
             }`}
           >
             {variantIndex > 0 && (
-              <p className="mx-auto mb-3 w-fit rounded-full bg-lapis-soft px-3 py-1 text-center text-xs font-semibold text-lapis-dark animate-pop-in">
+              <p className="mx-auto mb-3 w-fit rounded-full bg-lapis-soft px-3 py-1 text-center text-label font-semibold text-lapis-dark animate-pop-in">
                 Fresh numbers, same idea — variation {variantIndex}
               </p>
             )}
@@ -599,8 +621,11 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
               <AnswerControl
                 key={`${step.id}:${variantIndex}`}
                 step={step}
+                accent={accent}
+                edge={accentEdge}
                 disabled={busy || feedback?.kind === "correct"}
                 checking={pendingAction === "answer"}
+                held={pendingAction === "answer" || checkDeflated}
                 focusRequest={answerFocusRequest}
                 graphHighlight={feedback?.kind === "wrong" && feedback.highlight?.kind === "graph-region" ? feedback.highlight.param : null}
                 onLabState={reportLabState}
@@ -608,45 +633,49 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
               />
             </div>
 
+            {/* Checked-correct is the one moment the canvas goes full
+                correct-green: the engine verified it, so the surface blooms.
+                Correct-green is reserved for exactly this. */}
             {feedback?.kind === "correct" && (
               <div
                 ref={feedbackRef}
                 tabIndex={-1}
                 role="status"
                 aria-live="polite"
-                className="mt-5 rounded-2xl border-2 border-correct/25 bg-correct-soft p-4 outline-none animate-fade-up sm:p-5"
+                className="mt-5 rounded-2xl bg-correct p-4 text-white outline-none animate-verified-bloom sm:p-5"
               >
                 <div className="flex flex-wrap items-center gap-4">
                   <MaiaCharacter state="celebrating" className="h-16 w-14 shrink-0" title="Maia celebrating" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-lg font-semibold text-correct">Correct — nice reasoning.</p>
-                      <span className="animate-pop-in rounded-full bg-correct px-2.5 py-0.5 text-[0.68rem] font-bold text-white [animation-delay:0.15s]">
+                      <p className="text-lg font-semibold">Correct — nice reasoning.</p>
+                      <span className="animate-pop-in whitespace-nowrap rounded-full bg-surface px-2.5 py-0.5 text-micro font-bold text-correct [animation-delay:0.15s]">
                         +1 verified move
                       </span>
                     </div>
-                    <p className="mt-0.5 text-sm text-ink-soft">Adaptive support updated.</p>
+                    <p className="mt-0.5 text-body-sm text-white/90">Adaptive support updated.</p>
                   </div>
                   {!complete && (
-                    <button
+                    <Pressable
+                      variant="secondary"
                       onClick={() => void advance()}
                       disabled={busy}
-                      className="min-h-12 rounded-2xl bg-correct px-7 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:opacity-95 disabled:cursor-wait disabled:translate-y-0 disabled:opacity-70"
+                      className="min-h-12 w-full px-7 sm:w-auto"
                     >
                       {pendingAction === "advance" ? "Opening next step…" : "Continue"}
-                    </button>
+                    </Pressable>
                   )}
                 </div>
                 {feedback.solution && (
                   <div className="mt-2">
                     <button
                       onClick={() => setShowSolution((s) => !s)}
-                      className="text-sm font-medium text-correct underline-offset-2 hover:underline"
+                      className="text-body-sm font-medium text-white underline-offset-2 hover:underline"
                     >
                       {showSolution ? "Hide why it works" : "See why it works"}
                     </button>
                     {showSolution && (
-                      <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm leading-relaxed text-ink animate-fade-up">
+                      <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-body-sm leading-relaxed text-ink animate-fade-up">
                         {feedback.solution}
                       </p>
                     )}
@@ -673,13 +702,13 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-3">
                       <p className="text-lg font-semibold text-wrong">Not yet — stay with it.</p>
-                      <span className="font-mono text-xs text-wrong/80">Attempt {feedback.attempts}</span>
+                      <span className="font-mono text-label text-wrong/80">Attempt {feedback.attempts}</span>
                     </div>
-                    <p className="mt-1 text-sm leading-6 text-ink-soft">
+                    <p className="mt-1 text-body-sm leading-6 text-ink-soft">
                       Checked by code, not by a model. A different line of reasoning will get there.
                     </p>
                     {feedback.highlight && (feedback.highlight.kind === "graph-region" || step.prompt.includes(feedback.highlight.text)) && (
-                      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-semibold text-ink animate-pop-in">
+                      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-1 text-label font-semibold text-ink animate-pop-in">
                         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-gold" />
                         {feedback.highlight.kind === "term"
                           ? "Maia marked the part to re-read"
@@ -687,22 +716,22 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                       </p>
                     )}
                     <div className="mt-4 flex flex-wrap gap-2.5">
-                      <button
-                        type="button"
+                      <Pressable
+                        variant="attention"
                         aria-label="Try the answer again"
                         onClick={() => setAnswerFocusRequest((request) => request + 1)}
-                        className="min-h-11 rounded-2xl bg-gold px-6 text-sm font-bold text-ink shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:opacity-95"
+                        className="px-6"
                       >
                         Try again
-                      </button>
-                      <button
-                        type="button"
+                      </Pressable>
+                      <Pressable
+                        variant="secondary"
                         aria-label="ask Maia why"
                         onClick={() => sendToMaia(ASK_WHY_MESSAGE, step.id)}
-                        className="min-h-11 rounded-2xl border border-ink/15 bg-surface px-5 text-sm font-semibold text-ink transition hover:border-lapis/40 hover:text-lapis-dark"
+                        className="px-5"
                       >
                         Get help
-                      </button>
+                      </Pressable>
                     </div>
                   </div>
                 </div>
@@ -713,13 +742,13 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
             {mode === "lesson" && (
               <div className="mt-6 border-t border-ink/10 pt-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-ink-soft">
+                  <span className="text-body-sm font-medium text-ink-soft">
                     Hint ladder
                   </span>
                   <button
                     onClick={() => void requestHint()}
                     disabled={busy || feedback?.kind === "correct"}
-                    className="rounded-lg border border-gold bg-gold-soft px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-gold/20 disabled:opacity-50"
+                    className="rounded-lg border border-gold bg-gold-soft px-3 py-1.5 text-body-sm font-medium text-ink transition hover:bg-gold/20 disabled:opacity-50"
                   >
                     {pendingAction === "hint" ? "Getting hint…" : "Take a hint"}
                   </button>
@@ -728,11 +757,11 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                     earlier hints collapse behind a toggle. */}
                 {hints.length > 1 && (
                   <details className="mt-3">
-                    <summary className="cursor-pointer list-none text-xs font-semibold text-ink-soft underline-offset-4 hover:underline">
+                    <summary className="cursor-pointer list-none text-label font-semibold text-ink-soft underline-offset-4 hover:underline">
                       Show earlier hints ({hints.length - 1})
                     </summary>
                     {hints.slice(0, -1).map((hint, i) => (
-                      <p key={i} className="mt-2 rounded-lg bg-gold-soft/60 px-4 py-2.5 text-sm text-ink-soft">
+                      <p key={i} className="mt-2 rounded-lg bg-gold-soft/60 px-4 py-2.5 text-body-sm text-ink-soft">
                         <span className="mr-2 font-semibold text-gold">{i + 1}.</span>
                         {hint}
                       </p>
@@ -740,13 +769,13 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                   </details>
                 )}
                 {hints.length > 0 && (
-                  <p className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-sm animate-fade-up">
+                  <p className="mt-3 rounded-lg bg-gold-soft px-4 py-2.5 text-body-sm animate-fade-up">
                     <span className="mr-2 font-semibold text-gold">{hints.length}.</span>
                     {hints[hints.length - 1]}
                   </p>
                 )}
                 {hintNote && (
-                  <p className="mt-3 text-sm italic text-ink-soft">{hintNote}</p>
+                  <p className="mt-3 text-body-sm italic text-ink-soft">{hintNote}</p>
                 )}
               </div>
             )}
@@ -802,7 +831,7 @@ function CompletionScreen({
           : `You worked through every step of “${lesson.title}”. The real test is what stays with you — come back in a few days and try it without Maia.`}
       </p>
 
-      <div className="mt-6 border-l-2 border-gold pl-4 text-sm leading-6 text-ink-soft">
+      <div className="mt-6 border-l-2 border-gold pl-4 text-body-sm leading-6 text-ink-soft">
         {practiceDone
           ? "This records one completed hint-free practice run. Maia remained available, so this is not an unassisted transfer observation."
           : "This records completion of the assisted lesson path. Completion is not the same as proven mastery."}
@@ -811,19 +840,19 @@ function CompletionScreen({
       {stats && (
         <>
           <dl className="mt-10 grid border-y border-ink/10 sm:grid-cols-3 sm:divide-x sm:divide-ink/10">
-            {[{ label: "First-try steps", value: `${stats.firstTryCorrect}/${stats.steps}` }, { label: "Total attempts", value: String(stats.totalAttempts) }, { label: "Hints used", value: String(stats.hintsUsed) }].map((item) => <div key={item.label} className="border-b border-ink/10 py-5 last:border-b-0 sm:border-b-0 sm:px-6 sm:first:pl-0"><dt className="text-sm text-ink-soft">{item.label}</dt><dd className="mt-1 font-mono text-2xl font-semibold tabular-nums text-lapis-dark">{item.value}</dd></div>)}
+            {[{ label: "First-try steps", value: `${stats.firstTryCorrect}/${stats.steps}` }, { label: "Total attempts", value: String(stats.totalAttempts) }, { label: "Hints used", value: String(stats.hintsUsed) }].map((item) => <div key={item.label} className="border-b border-ink/10 py-5 last:border-b-0 sm:border-b-0 sm:px-6 sm:first:pl-0"><dt className="text-body-sm text-ink-soft">{item.label}</dt><dd className="mt-1 font-mono text-2xl font-semibold tabular-nums text-lapis-dark">{item.value}</dd></div>)}
           </dl>
 
           <div className="mt-10 rounded-[1.4rem] bg-surface p-6 shadow-[0_18px_60px_rgba(35,53,91,0.08)] sm:p-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-soft">
+            <h2 className="text-label font-semibold uppercase tracking-wide text-ink-soft">
               Adaptive support estimate
             </h2>
-            <p className="mb-5 mt-2 max-w-xl text-sm leading-6 text-ink-soft">
+            <p className="mb-5 mt-2 max-w-xl text-body-sm leading-6 text-ink-soft">
               This tunes future scaffolding. It is not a grade or proof of retained learning.
             </p>
             {Object.entries(stats.conceptMastery).map(([concept, mastery]) => (
               <div key={concept} className="mb-3 last:mb-0">
-                <div className="mb-1 flex justify-between text-sm">
+                <div className="mb-1 flex justify-between text-body-sm">
                   <span>{concept}</span>
                   <span className="text-ink-soft">
                     {(mastery * 100).toFixed(0)}%
@@ -896,7 +925,7 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
 
   if (sent) {
     return (
-      <p className="mt-3 text-sm text-ink-soft animate-fade-up">
+      <p className="mt-3 text-body-sm text-white/90 animate-fade-up">
         Sent to Maia — check her reply in the panel, then continue.
       </p>
     );
@@ -910,11 +939,11 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
         onSend(text.trim());
         setSent(true);
       }}
-      className="mt-3 border-t border-correct/20 pt-3"
+      className="mt-3 border-t border-white/25 pt-3"
     >
       <label
         htmlFor="self-explain"
-        className="text-sm font-medium text-correct"
+        className="text-body-sm font-medium text-white"
       >
         Lock it in: why did that work, in one sentence?
       </label>
@@ -924,12 +953,12 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Because…"
-          className="min-w-0 flex-1 rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none transition focus:border-correct"
+          className="min-w-0 flex-1 rounded-lg border border-ink/15 bg-surface px-3 py-2 text-lead text-ink outline-none transition focus:border-ink/40"
         />
         <button
           type="submit"
           disabled={!text.trim()}
-          className="rounded-lg border border-correct bg-correct-soft px-3 py-2 text-sm font-medium text-correct transition hover:bg-correct/15 disabled:opacity-50"
+          className="rounded-lg border border-ink/12 bg-surface px-3 py-2 text-body-sm font-semibold text-ink transition hover:bg-paper disabled:opacity-50"
         >
           Check with Maia
         </button>
@@ -963,16 +992,25 @@ function PromptWithMark({ prompt, highlight }: { prompt: string; highlight: Misc
 
 function AnswerControl({
   step,
+  accent,
+  edge,
   disabled,
   checking,
+  held,
   focusRequest,
   graphHighlight,
   onLabState,
   onSubmit,
 }: {
   step: PublicStep;
+  /** Subject accent fill for the Check pressable — `subjectColor(track)`. */
+  accent: string;
+  /** Its deep edge — `subjectDeep(track)`. */
+  edge: string;
   disabled: boolean;
   checking: boolean;
+  /** Keeps the Check pressable pressed: while checking, and through the wrong-answer beat. */
+  held: boolean;
   focusRequest: number;
   graphHighlight: "a" | "h" | "k" | null;
   onLabState?: (activity: LabActivity) => void;
@@ -990,8 +1028,11 @@ function AnswerControl({
     return (
       <RecursionCodeLab
         lab={step.lab}
+        accent={accent}
+        edge={edge}
         disabled={disabled}
         checking={checking}
+        held={held}
         onStateChange={(state) => onLabState?.({ kind: "recursion", slots: state.slots })}
         onSubmit={onSubmit}
       />
@@ -1005,8 +1046,11 @@ function AnswerControl({
       <div className="mx-auto max-w-2xl">
         <GraphTransformLab
           graph={step.graph}
+          accent={accent}
+          edge={edge}
           disabled={disabled}
           checking={checking}
+          held={held}
           highlight={graphHighlight}
           onStateChange={(state) => onLabState?.({ kind: "graph", ...state })}
           onSubmit={onSubmit}
@@ -1046,7 +1090,7 @@ function AnswerControl({
               />
               <span
                 aria-hidden="true"
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm font-semibold ${
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-body-sm font-semibold ${
                   selected === i
                     ? "bg-lapis text-white"
                     : "bg-paper text-ink-soft"
@@ -1059,13 +1103,15 @@ function AnswerControl({
           ))}
         </fieldset>
         <div className="mt-5 flex justify-end">
-          <button
+          <Pressable
             type="submit"
+            accent={accent}
+            edge={edge}
             disabled={disabled || selected === null}
-            className="min-h-12 rounded-2xl bg-lapis px-8 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-40"
+            className={`min-h-12 px-8 ${held ? "pressable-held" : ""}`}
           >
             {checking ? "Checking…" : "Check answer"}
-          </button>
+          </Pressable>
         </div>
       </form>
     );
@@ -1090,13 +1136,15 @@ function AnswerControl({
         inputMode={step.kind === "numeric" ? "decimal" : "text"}
         className="w-full min-w-0 rounded-2xl border-2 border-ink/12 bg-surface px-5 py-3 text-center font-mono text-lg tabular-nums outline-none transition focus:border-lapis disabled:opacity-60 sm:w-52"
       />
-      <button
+      <Pressable
         type="submit"
+        accent={accent}
+        edge={edge}
         disabled={disabled || !value.trim()}
-        className="min-h-12 rounded-2xl bg-lapis px-8 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark disabled:translate-y-0 disabled:opacity-40"
+        className={`min-h-12 px-8 ${held ? "pressable-held" : ""}`}
       >
         {checking ? "Checking…" : "Check"}
-      </button>
+      </Pressable>
     </form>
   );
 }

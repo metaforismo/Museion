@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 
+import { Pressable } from "@/components/ui";
 import type { RecursionLab } from "@/lib/content/types";
 
 /**
@@ -60,14 +61,23 @@ function simulate(lab: RecursionLab, chosen: Record<string, string>, input: numb
 
 export default function RecursionCodeLab({
   lab,
+  accent = "var(--color-lapis)",
+  edge = "var(--color-lapis-deep)",
   disabled,
   checking,
+  held = false,
   onStateChange,
   onSubmit,
 }: {
   lab: RecursionLab;
+  /** Subject accent fill for the Check pressable — `subjectColor(track)`. */
+  accent?: string;
+  /** Its deep edge — `subjectDeep(track)`. */
+  edge?: string;
   disabled: boolean;
   checking: boolean;
+  /** Keeps the Check pressable pressed through checking and the wrong beat. */
+  held?: boolean;
   /** Reports the live, unchecked slot choices so Maia can see them. */
   onStateChange?: (state: { slots: Record<string, string> }) => void;
   onSubmit: (answer: string) => void;
@@ -105,7 +115,7 @@ export default function RecursionCodeLab({
     const parts = line.split(/(\{[a-zA-Z]+\})/g);
     return (
       <div key={lineIndex} className="flex flex-wrap items-center gap-x-1.5 whitespace-pre">
-        <span className="mr-3 w-4 select-none text-right text-[0.66rem] text-white/30">{lineIndex + 1}</span>
+        <span className="mr-3 w-4 select-none text-right text-micro text-white/30">{lineIndex + 1}</span>
         {parts.map((part, partIndex) => {
           const slotMatch = part.match(/^\{([a-zA-Z]+)\}$/);
           if (!slotMatch) return <span key={partIndex}>{part}</span>;
@@ -119,7 +129,7 @@ export default function RecursionCodeLab({
               value={value}
               disabled={disabled}
               onChange={(event) => setChosen((current) => ({ ...current, [slot.id]: event.target.value }))}
-              className={`min-h-8 cursor-pointer appearance-none rounded-lg border-2 px-2.5 py-0.5 text-center font-mono text-[0.82rem] font-semibold transition focus:outline-2 focus:outline-offset-2 focus:outline-gold ${
+              className={`min-h-8 cursor-pointer appearance-none rounded-lg border-2 px-2.5 py-0.5 text-center font-mono text-lead font-semibold transition focus:outline-2 focus:outline-offset-2 focus:outline-gold ${
                 value ? "border-gold/70 bg-gold-soft text-ink" : "border-dashed border-white/40 bg-white/10 text-white"
               }`}
             >
@@ -143,13 +153,15 @@ export default function RecursionCodeLab({
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         {/* Code editor */}
         <div className="overflow-hidden rounded-xl border border-ink/60 bg-[#16192b] shadow-[var(--shadow-1)]">
+          {/* Neutral window chrome: correct-green and wrong-red are reserved
+              for checked outcomes, so the traffic lights stay monochrome. */}
           <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-2.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-wrong/70" aria-hidden="true" />
-            <span className="h-2.5 w-2.5 rounded-full bg-gold/70" aria-hidden="true" />
-            <span className="h-2.5 w-2.5 rounded-full bg-correct/70" aria-hidden="true" />
-            <span className="ml-2 font-mono text-[0.66rem] text-white/50">{lab.functionName}.py · fill the slots</span>
+            <span className="h-2.5 w-2.5 rounded-full bg-white/25" aria-hidden="true" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/25" aria-hidden="true" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/25" aria-hidden="true" />
+            <span className="ml-2 font-mono text-micro text-white/50">{lab.functionName}.py · fill the slots</span>
           </div>
-          <div className="space-y-1.5 p-4 font-mono text-[0.84rem] leading-7 text-[#d6e0ff]" aria-labelledby={labelId}>
+          <div className="space-y-1.5 p-4 font-mono text-lead leading-7 text-[#d6e0ff]" aria-labelledby={labelId}>
             <span id={labelId} className="sr-only">Complete the recursive function by choosing a value for each slot</span>
             {lab.lines.map(renderLine)}
           </div>
@@ -157,10 +169,10 @@ export default function RecursionCodeLab({
 
         {/* Output: live call trace */}
         <div className="overflow-hidden rounded-xl border border-gold/40 bg-gold-soft/60">
-          <p className="border-b border-gold/25 px-4 py-2.5 font-mono text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-ink">
+          <p className="border-b border-gold/25 px-4 py-2.5 font-mono text-micro font-semibold uppercase tracking-[0.08em] text-ink">
             ▾ Output · {firstTest ? `${lab.functionName}(${firstTest.input})` : ""}
           </p>
-          <div className="min-h-36 p-4 font-mono text-[0.8rem] leading-6" aria-live="polite">
+          <div className="min-h-36 p-4 font-mono text-body-sm leading-6" aria-live="polite">
             {!allChosen && <p className="text-ink-soft">Fill every slot to run the function.</p>}
             {run && (
               <>
@@ -170,11 +182,13 @@ export default function RecursionCodeLab({
                   </p>
                 ))}
                 {runaway ? (
-                  <p className="mt-2 font-sans text-[0.78rem] font-semibold text-wrong">
+                  <p className="mt-2 font-sans text-body-sm font-semibold text-wrong">
                     … every call still has the same distance to the base case. It never stops.
                   </p>
                 ) : (
-                  <p className="mt-2 text-correct">→ returns {run.value}</p>
+                  // Ink, not correct-green: the run terminating says nothing
+                  // about whether the definition is right.
+                  <p className="mt-2 font-semibold text-ink">→ returns {run.value}</p>
                 )}
               </>
             )}
@@ -189,7 +203,7 @@ export default function RecursionCodeLab({
           return (
             <span
               key={test.input}
-              className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 font-mono text-[0.78rem] tabular-nums ${
+              className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 font-mono text-body-sm tabular-nums ${
                 state === "pass"
                   ? "border-correct/40 bg-correct-soft text-correct"
                   : state === "fail"
@@ -205,15 +219,18 @@ export default function RecursionCodeLab({
         })}
       </div>
 
-      <button
-        type="button"
-        disabled={disabled || !allChosen}
-        onClick={() => onSubmit(canonical)}
-        className="mx-auto mt-4 block min-h-12 rounded-2xl bg-lapis px-7 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:bg-lapis-dark disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
-      >
-        {checking ? "Checking…" : "Check my function"}
-      </button>
-      <p className="mt-2 text-xs text-ink-soft">The trace and tests run locally as you explore; the checked result is decided by the engine.</p>
+      <div className="mt-4 flex justify-center">
+        <Pressable
+          accent={accent}
+          edge={edge}
+          disabled={disabled || !allChosen}
+          onClick={() => onSubmit(canonical)}
+          className={`min-h-12 px-7 ${held ? "pressable-held" : ""}`}
+        >
+          {checking ? "Checking…" : "Check my function"}
+        </Pressable>
+      </div>
+      <p className="mt-2 text-label text-ink-soft">The trace and tests run locally as you explore; the checked result is decided by the engine.</p>
     </div>
   );
 }
