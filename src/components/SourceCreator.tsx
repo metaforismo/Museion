@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 
-import { Card, SectionHeader } from "@/components/ui";
+import { Card, Pressable, SectionHeader } from "@/components/ui";
+import { STUDIO_ACCENT, STUDIO_DEEP } from "@/lib/design/zones";
 import { parseCreatorDraft, serializeCreatorDraft, type CreatorMaterialDraft } from "@/lib/client/creator-draft";
 import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
 import type { SourceDocument } from "@/lib/source/contracts";
@@ -43,6 +45,70 @@ const COMPILE_STAGES = [
   { id: "critic", label: "Audit for publication", model: "Audit pass" },
   { id: "repair", label: "Repair if needed", model: "Audit pass" },
 ] as const;
+
+/** Rail colour for pipeline ground not yet walked: ink/10, the hairline family. */
+const RAIL_QUIET = "color-mix(in srgb, var(--color-ink) 10%, transparent)";
+
+type SpineStep = { label: string; detail: string; state: "done" | "current" | "upcoming" };
+
+/**
+ * The studio's progress spine — the course trail's node grammar at pipeline
+ * scale, in the studio's peach accent. Three stages read left to right the
+ * way the compiler actually runs them: a done stage settles at 44px under a
+ * white check, the current stage stands at 56px inside the licensed breathing
+ * halo, and stages ahead stay quiet surface circles. The rail is ground-thick
+ * (8px) and fills only behind stages the runtime has satisfied. Compile is
+ * never drawn done here: a finished compile navigates to review before this
+ * spine could claim it.
+ */
+function StudioSpine({ steps }: { steps: SpineStep[] }) {
+  return (
+    <ol aria-label="Creator progress" role="list" className="m-0 mt-8 flex list-none items-start p-0">
+      {steps.map((step, index) => {
+        const done = step.state === "done";
+        const current = step.state === "current";
+        const walkedIn = index > 0 && steps[index - 1].state === "done";
+        return (
+          <li key={step.label} aria-current={current ? "step" : undefined} className="flex min-w-0 flex-1 flex-col items-center">
+            <div className="flex h-14 w-full items-center">
+              <span
+                aria-hidden="true"
+                className={`h-2 min-w-2 flex-1 rounded-full ${index === 0 ? "invisible" : ""}`.trimEnd()}
+                style={{ backgroundColor: walkedIn ? STUDIO_ACCENT : RAIL_QUIET }}
+              />
+              {done ? (
+                <span aria-hidden="true" className="mx-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: STUDIO_ACCENT }}>
+                  <HugeiconsIcon icon={Tick02Icon} size={22} strokeWidth={2.5} />
+                </span>
+              ) : current ? (
+                <span aria-hidden="true" className="relative mx-1 grid h-14 w-14 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: STUDIO_ACCENT }}>
+                  <span className="path-halo pointer-events-none absolute -inset-1.5 rounded-full border-[3px]" style={{ borderColor: STUDIO_ACCENT }} />
+                  <span className="font-mono text-lg font-bold">{index + 1}</span>
+                </span>
+              ) : (
+                <span aria-hidden="true" className="mx-1 grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-ink/15 bg-surface font-mono text-body-sm font-semibold text-ink-soft">
+                  {index + 1}
+                </span>
+              )}
+              <span
+                aria-hidden="true"
+                className={`h-2 min-w-2 flex-1 rounded-full ${index === steps.length - 1 ? "invisible" : ""}`.trimEnd()}
+                style={{ backgroundColor: done ? STUDIO_ACCENT : RAIL_QUIET }}
+              />
+            </div>
+            <span className="mt-2 block w-full px-1 text-center">
+              <span className={`block text-body-sm font-semibold ${step.state === "upcoming" ? "text-ink-soft" : "text-ink"}`}>
+                <span className="sr-only">{`Step ${index + 1} of ${steps.length}, ${done ? "complete" : current ? "current step" : "not started"}: `}</span>
+                {step.label}
+              </span>
+              <span className="mt-0.5 block text-label text-ink-soft">{step.detail}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 function emptyTextMaterial(id = "draft_primary", title = "Primary material"): CreatorMaterialDraft {
   return { id, title, origin: "text", content: "", mediaType: "text/markdown", role: "primary-source", sourceUrl: "", sourceKind: "webpage" };
@@ -523,10 +589,13 @@ export default function SourceCreator() {
           Museion first normalizes the source, fixes page boundaries and hashes
           every page. Nothing is compiled until you can inspect that record.
         </p>
-        <Card tint="var(--color-lapis-soft)" className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-lapis/15 px-4 py-3 text-body-sm">
+        {/* Check connection gates the whole live-compile path, so it takes a
+            real press rather than a text link — secondary, because the studio's
+            one full-fill press belongs to Compile. */}
+        <Card tint="var(--color-lapis-soft)" className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-lapis/15 px-4 py-3 text-body-sm">
           <span className="font-semibold text-lapis-dark">Source → validated course</span>
           <span className="text-ink-soft">When live AI is connected, Museion designs the course in staged passes and publishes only after deterministic checks pass.</span>
-          <Link href="/settings" className="inline-flex min-h-9 items-center font-semibold text-lapis-dark underline underline-offset-4">Check connection</Link>
+          <Pressable href="/settings" variant="secondary" size="compact">Check connection</Pressable>
         </Card>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm">
           <span
@@ -552,34 +621,17 @@ export default function SourceCreator() {
         </div>
       </div>
 
-      {/* Green marks a step the runtime has actually satisfied, lapis the step
-          you are on. Neither is decoration: both are read off real state. */}
-      <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-[var(--radius-card)] border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
-        {[
-          { label: "1. Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", ready: Boolean(document), current: !document },
-          { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
-          { label: "3. Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : "Needs review", ready: activeJob || readyToCompile, current: Boolean(document && learningBriefReady && !sourceReady) },
-        ].map((step) => (
-          <li
-            key={step.label}
-            aria-current={step.current ? "step" : undefined}
-            className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${step.ready ? "border-correct/25 bg-correct-soft" : step.current ? "border-lapis/50 bg-lapis-soft/70 shadow-[var(--shadow-1)]" : "border-transparent bg-paper"}`}
-          >
-            <span
-              aria-hidden="true"
-              // A pending step stays quiet through its fill, not through a faded
-              // numeral: ink-soft on a 10% ink pill measured 4.46:1, just under AA.
-              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-label font-bold ${step.ready ? "bg-correct text-white" : step.current ? "bg-lapis text-white" : "bg-ink/8 text-ink"}`}
-            >
-              {step.ready ? "✓" : step.label.charAt(0)}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-body-sm font-semibold">{step.label}</span>
-              <span className="mt-0.5 block truncate text-label text-ink-soft">{step.detail}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
+      {/* Every spine state is read off real runtime state, never decoration.
+          The spine speaks in the studio accent rather than correct-green:
+          green stays reserved for outcomes the engine checked, and a complete
+          form is a satisfied precondition, not a verdict. */}
+      <StudioSpine
+        steps={[
+          { label: "Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", state: document ? "done" : "current" },
+          { label: "Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", state: document && learningBriefReady ? "done" : document ? "current" : "upcoming" },
+          { label: "Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : document && learningBriefReady ? "Needs review" : "After learning design", state: document && learningBriefReady ? "current" : "upcoming" },
+        ]}
+      />
 
       {error && (
         <div role="alert" className="mt-7 flex items-start justify-between gap-4 rounded-xl border border-wrong/20 bg-wrong-soft px-4 py-3 text-body-sm text-wrong">
@@ -599,6 +651,7 @@ export default function SourceCreator() {
             sourceAuthorized={sourceAuthorized}
             busy={busy}
             disabled={activeJob}
+            normalized={Boolean(document)}
             canNormalize={canNormalize}
             onTitle={(value) => { invalidateNormalizedSource(); setTitle(value); }}
             onUpdate={updateMaterial}
@@ -713,16 +766,26 @@ export default function SourceCreator() {
               <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-body-sm text-ink-soft">Loading learning design…</div>}>
                 <SourceLearningDesign templateId={templateId} level={level} language={language} targetMinutes={targetMinutes} learnerGoal={learnerGoal} onTemplate={setTemplateId} onLevel={setLevel} onLanguage={setLanguage} onMinutes={setTargetMinutes} onGoal={setLearnerGoal} />
               </Suspense>
-              {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-xl border border-lapis px-5 py-2.5 text-center text-body-sm font-semibold text-lapis-dark">Open checked golden review</Link>}
+              {document.sha256 === GOLDEN_SOURCE_SHA256 && <Pressable href="/create/review" variant="secondary" className="mt-5 w-full">Open checked golden review</Pressable>}
               {activeJob && job && <Card tone="tinted" tint="var(--color-ink)" className="mt-5 p-5 text-white" aria-live="polite">
                 <div className="flex items-center justify-between gap-3"><div><p className="text-label font-semibold uppercase tracking-[0.08em] text-white/60">3. Compile</p><p className="mt-1 text-body font-semibold">Building a grounded course</p><p className="mt-1 text-label text-white/60">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-body-sm tabular-nums">{job.completedStages}/{job.totalStages}</span></div>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${Math.max(7, (job.completedStages / job.totalStages) * 100)}%` }} /></div>
                 <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-body-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/60"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-label">{stage.model}</span></li>; })}</ol>
                 <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-body-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
               </Card>}
-              <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-20 mt-3 min-h-11 w-full rounded-xl bg-ink px-5 text-body-sm font-semibold text-white shadow-[var(--shadow-2)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
+              {/* The studio's loudest moment: the page's one full-fill press,
+                  in the studio accent. While the compiler is deciding, the key
+                  stays down — .pressable-held — instead of pretending the
+                  press already worked. Edge, not blur: this is a key. */}
+              <Pressable
+                accent={STUDIO_ACCENT}
+                edge={STUDIO_DEEP}
+                disabled={compiling || activeJob || !readyToCompile}
+                onClick={() => void compile()}
+                className={`sticky bottom-20 mt-3 min-h-12 w-full lg:static ${compiling || activeJob ? "pressable-held" : ""}`.trimEnd()}
+              >
                 {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
-              </button>
+              </Pressable>
               {!sourceAuthorized && <p className="mt-2 text-center text-label font-medium text-ink-soft">Confirm source authorization to continue.</p>}
               {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-label font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
               {sourceReady && !learningBriefReady && <p className="mt-2 text-center text-label font-medium text-wrong">Complete the language, duration and learner goal before compiling.</p>}

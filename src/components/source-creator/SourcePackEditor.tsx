@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
+import { Pressable } from "@/components/ui";
 import type { CreatorMaterialDraft } from "@/lib/client/creator-draft";
+import { STUDIO_ACCENT, STUDIO_DEEP } from "@/lib/design/zones";
 import { MAX_NORMALIZED_CHARACTERS, MAX_SOURCE_BYTES, MAX_SOURCE_PAGES } from "@/lib/source/limits";
 import { inferSourceReferenceKind } from "@/lib/source/reference";
 import type { SourcePackMaterialRole, SourceRightsBasis } from "@/lib/source/source-pack";
@@ -21,6 +23,7 @@ export default function SourcePackEditor({
   sourceAuthorized,
   busy,
   disabled,
+  normalized,
   canNormalize,
   onTitle,
   onUpdate,
@@ -38,6 +41,8 @@ export default function SourcePackEditor({
   sourceAuthorized: boolean;
   busy: boolean;
   disabled: boolean;
+  /** A normalized document exists for the current draft — Compile is the loud action now. */
+  normalized: boolean;
   canNormalize: boolean;
   onTitle: (value: string) => void;
   onUpdate: (id: string, patch: Partial<CreatorMaterialDraft>) => void;
@@ -120,7 +125,7 @@ export default function SourcePackEditor({
       </ol>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <button type="button" disabled={disabled || materials.length >= 8} onClick={onAddText} className="min-h-12 rounded-xl border border-ink/15 bg-surface px-4 py-3 text-body-sm font-semibold hover:border-lapis/40 disabled:opacity-40">Add text material</button>
+        <Pressable variant="secondary" disabled={disabled || materials.length >= 8} onClick={onAddText} className="min-h-12 w-full">Add text material</Pressable>
         <label aria-disabled={disabled || materials.length >= 8} onDragEnter={(event) => { event.preventDefault(); if (!disabled) setDragActive(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false); }} onDrop={(event) => { event.preventDefault(); setDragActive(false); if (!disabled) onFiles(Array.from(event.dataTransfer.files)); }} className={`flex min-h-12 items-center justify-center rounded-xl border border-dashed px-4 py-3 text-center text-body-sm font-semibold ${disabled || materials.length >= 8 ? "cursor-not-allowed opacity-40" : dragActive ? "cursor-copy border-lapis bg-lapis-soft text-lapis-dark" : "cursor-pointer border-lapis/35 bg-lapis-soft/50 text-lapis-dark hover:border-lapis"}`}>Add files<input id="source-file" type="file" multiple accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf" disabled={disabled || materials.length >= 8} onChange={(event) => { onFiles(Array.from(event.currentTarget.files ?? [])); event.currentTarget.value = ""; }} className="sr-only" /></label>
       </div>
       <p className="mt-3 text-label leading-5 text-ink-soft">Pack limits: 8 materials, {(MAX_SOURCE_BYTES / 1024 / 1024).toFixed(0)} MB source bytes, {MAX_SOURCE_PAGES} compiled pages, and {MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")} normalized characters. Current draft: {textCharacters.toLocaleString("en-US")} text characters · {(fileBytes / 1024).toFixed(1)} KiB attached files.</p>
@@ -130,7 +135,21 @@ export default function SourcePackEditor({
         <label className="mt-4 block text-body-sm font-medium" htmlFor="source-rights-basis">Rights basis<select id="source-rights-basis" value={rightsBasis} disabled={disabled} onChange={(event) => onRightsBasis(event.target.value as SourceRightsBasis)} className="mt-2 block min-h-11 w-full rounded-lg border border-ink/15 bg-surface px-3 text-lead font-normal"><option value="personal-notes">My own notes</option><option value="creator-owned">Creator-owned material</option><option value="licensed">Licensed material</option><option value="open-licensed">Open-licensed material</option><option value="public-domain">Public domain</option><option value="authorized-excerpt">Authorized bounded excerpt</option></select></label>
       </div>
 
-      <button type="button" disabled={busy || disabled || !canNormalize} onClick={onNormalize} className="mt-4 min-h-12 w-full rounded-xl bg-lapis px-5 text-body-sm font-semibold text-white transition hover:bg-lapis-dark disabled:cursor-not-allowed disabled:opacity-45">{busy ? "Normalizing Source Pack…" : `Normalize ${materials.length} ${materials.length === 1 ? "material" : "materials"}`}</button>
+      {/* Normalize is step one's gating action: while nothing is normalized
+          the compile column stands empty, so this press takes the studio's
+          full fill. The moment a document exists, Compile must be the page's
+          one loud element, and Normalize steps down to the secondary key —
+          any edit invalidates the document and promotes it right back. The
+          key stays down (.pressable-held) while the normalizer runs. */}
+      {normalized ? (
+        <Pressable variant="secondary" disabled={busy || disabled || !canNormalize} onClick={onNormalize} className={`mt-4 min-h-12 w-full ${busy ? "pressable-held" : ""}`.trimEnd()}>
+          {busy ? "Normalizing Source Pack…" : `Normalize ${materials.length} ${materials.length === 1 ? "material" : "materials"}`}
+        </Pressable>
+      ) : (
+        <Pressable accent={STUDIO_ACCENT} edge={STUDIO_DEEP} disabled={busy || disabled || !canNormalize} onClick={onNormalize} className={`mt-4 min-h-12 w-full ${busy ? "pressable-held" : ""}`.trimEnd()}>
+          {busy ? "Normalizing Source Pack…" : `Normalize ${materials.length} ${materials.length === 1 ? "material" : "materials"}`}
+        </Pressable>
+      )}
       {!sourceAuthorized ? <p className="mt-2 text-center text-label font-medium text-ink-soft">Confirm authorization for the complete pack before normalization.</p> : null}
     </section>
   );

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { TINTS } from "./palette";
+import { SUBJECT_PALETTE, TINTS } from "./palette";
 
 /**
  * Zone washes give wayfinding you feel before you read. One soft radial at
@@ -25,6 +25,16 @@ const ZONE_TINT: Record<Zone, string | null> = {
   studio: TINTS.peach,
   account: null,
 };
+
+/**
+ * The studio zone's accent pair. The studio wash is peach, and peach's
+ * contrast-checked accent pair in the palette is the physics entry — the only
+ * accent proven 4.5:1 against this tint (and 6.1:1 under white). Exposed here
+ * so every studio surface shares one derivation instead of each re-deciding
+ * which accent may sit on the zone's ground.
+ */
+export const STUDIO_ACCENT = SUBJECT_PALETTE.physics.accentVar;
+export const STUDIO_DEEP = SUBJECT_PALETTE.physics.deepVar;
 
 function matches(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);

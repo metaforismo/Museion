@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { Pressable } from "@/components/ui";
+import { STUDIO_ACCENT, STUDIO_DEEP } from "@/lib/design/zones";
 import type { SourceDocument, SourceReferenceKind } from "@/lib/source";
 
 import BrandMark from "./BrandMark";
@@ -153,11 +155,15 @@ export default function CourseArchitectPanel({
           </div>
 
           <div className="border-t border-ink/10 p-3">
-            <div className="flex flex-wrap gap-2" aria-label="Course Architect message type">
+            {/* Mode chips are keys too — the same press grammar as the rest
+                of the studio. The selected mode holds the decision blue on
+                its tint (lapis-dark on lapis-soft, 8.6:1), with the matching
+                deep edge; unselected chips rest on the default ink edge. */}
+            <div className="flex flex-wrap gap-x-2 gap-y-3" aria-label="Course Architect message type">
               {([[
                 "ask", "Evaluate pack"], ["material", "Add material"], ["goal", "Set learner goal"],
-              ] as Array<[ArchitectMode, string]>).map(([value, label]) => <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={`min-h-9 rounded-lg px-3 text-label font-semibold ${mode === value ? "bg-lapis-soft text-lapis-dark" : "bg-paper text-ink-soft"}`}>{label}</button>)}
-              <button type="button" onClick={() => fileRef.current?.click()} className="min-h-9 rounded-lg bg-paper px-3 text-label font-semibold text-ink-soft">Add files</button>
+              ] as Array<[ArchitectMode, string]>).map(([value, label]) => <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={`pressable min-h-11 rounded-xl border px-3 text-label font-semibold ${mode === value ? "border-lapis/40 bg-lapis-soft text-lapis-dark [--pressable-edge:var(--color-lapis-deep)]" : "border-ink/10 bg-surface text-ink-soft"}`}>{label}</button>)}
+              <button type="button" onClick={() => fileRef.current?.click()} className="pressable min-h-11 rounded-xl border border-ink/10 bg-surface px-3 text-label font-semibold text-ink-soft">Add files</button>
               <input ref={fileRef} type="file" multiple accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf" className="sr-only" onChange={(event) => { const files = Array.from(event.currentTarget.files ?? []); if (files.length) { onFiles(files); addArchitectMessage(`I added ${files.length} file${files.length === 1 ? "" : "s"} and started normalization. I will evaluate the canonical record, not the filenames.`); } event.currentTarget.value = ""; }} />
             </div>
             <label className="sr-only" htmlFor="course-architect-message">Message Course Architect</label>
@@ -177,8 +183,10 @@ export default function CourseArchitectPanel({
               className="mt-3 w-full resize-none rounded-xl border border-ink/15 bg-surface px-3 py-3 text-lead leading-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis"
             />
             <div className="mt-2 flex items-center justify-between gap-3">
-              <button type="button" onClick={evaluate} className="min-h-9 text-label font-semibold text-lapis-dark underline underline-offset-4">Run method check</button>
-              <button type="button" disabled={!input.trim()} onClick={send} className="min-h-11 rounded-xl bg-ink px-4 text-body-sm font-semibold text-white transition hover:bg-lapis-dark disabled:opacity-40">Send</button>
+              <button type="button" onClick={evaluate} className="min-h-11 text-label font-semibold text-lapis-dark underline underline-offset-4">Run method check</button>
+              {/* The panel's primary action presses in the studio accent —
+                  this floor of the product creates, and its keys say so. */}
+              <Pressable accent={STUDIO_ACCENT} edge={STUDIO_DEEP} size="compact" disabled={!input.trim()} onClick={send}>Send</Pressable>
             </div>
           </div>
         </aside>
