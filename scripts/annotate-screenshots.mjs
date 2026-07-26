@@ -137,13 +137,15 @@ async function seedWrongSecondStep(page, lessonId, firstAnswer, wrongValue) {
  */
 const identityStates = new Map();
 
-async function seedContext(browser, viewport, storageState) {
+async function seedContext(browser, viewport, storageState, firstVisit = false) {
   const context = await browser.newContext({
     viewport,
     reducedMotion: "reduce",
     ...(storageState ? { storageState } : {}),
   });
-  await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
+  // App-shell routes redirect first-time visitors to onboarding; seed the flag
+  // except when the shot is the onboarding tour itself.
+  if (!firstVisit) await context.addInitScript(() => localStorage.setItem("museion-onboarded", "1"));
   return context;
 }
 
@@ -324,6 +326,64 @@ const SHOTS = [
     ],
   },
   {
+    name: "judge-demo-1440",
+    route: "/judge",
+    identity: "fresh",
+    prepare: async (page) => {
+      await page.locator('span.rounded-md:has-text("Sample lesson")').waitFor({ state: "visible", timeout: 20_000 });
+      // Advance past the grounded explanation to the first checked block, so
+      // the capture shows the key the engine actually answers.
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
+      await page.getByRole("button", { name: "Check prediction" }).waitFor({ state: "visible", timeout: 20_000 });
+      // Choose an option so the Check key stands live rather than disabled.
+      await page.locator("fieldset label").first().click();
+    },
+    callouts: [
+      { selector: 'span.rounded-md:has-text("Sample lesson")', label: "The sample's subject supplies the accent — CS violet, derived, not decorative", placement: "left" },
+      { selector: '[role="progressbar"]', label: "Progress carries the subject accent; the counter sits on the type scale", placement: "top-right", caption: false },
+      { selector: 'button.pressable:has-text("Check prediction")', label: "Check is a subject-accent press — the same key grammar as the app behind the gate", placement: "bottom-left" },
+    ],
+  },
+  {
+    name: "studio-spine-1440",
+    route: "/create",
+    identity: "fresh",
+    height: 1200,
+    prepare: async (page) => {
+      await page.getByLabel("Material 1 title").fill("Playlist transcript");
+      await page.getByLabel("Material 1 reference link").fill("https://www.youtube.com/playlist?list=OPEN-COURSE");
+      await page.getByLabel("Material 1 authorized text").fill("Authorized creator notes explaining the central ideas and the learner decisions supported by this playlist.");
+      await page.getByLabel("Material 1 role").selectOption("transcript");
+      await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
+      await page.getByRole("button", { name: "Normalize 1 material" }).click();
+      await page.getByText("1 normalized material", { exact: true }).waitFor({ state: "visible", timeout: 20_000 });
+    },
+    scrollTo: 'ol[aria-label="Creator progress"]',
+    callouts: [
+      { selector: 'a.pressable:has-text("Check connection")', label: "The gating action is a real press, not a bare text link", placement: "right" },
+      { selector: 'ol[aria-label="Creator progress"] li:first-child .grid', label: "A satisfied stage speaks the studio accent — a precondition never wears correct-green", placement: "left" },
+      { selector: 'ol[aria-label="Creator progress"] .path-halo', label: "The current stage stands in the licensed halo — the trail's node grammar at pipeline scale", placement: "top-right" },
+    ],
+  },
+  {
+    name: "onboarding-tour-1440",
+    route: "/welcome",
+    identity: "fresh",
+    firstVisit: true,
+    height: 1100,
+    prepare: async (page) => {
+      for (let i = 0; i < 4; i += 1) await page.getByRole("button", { name: "Next", exact: true }).click();
+      await page.getByRole("button", { name: /Start learning/ }).waitFor({ state: "visible", timeout: 20_000 });
+      await page.getByRole("button", { name: "Educator", exact: true }).click();
+    },
+    scrollTo: 'button.pressable[aria-pressed="true"]',
+    callouts: [
+      { selector: 'button.pressable[aria-pressed="true"]', label: "A chosen posture holds lapis-dark on lapis-soft above the deep edge", placement: "right" },
+      { selector: 'button.pressable:has-text("Start learning")', label: "The tour's forward key presses in lapis — the first minute speaks the product's grammar", placement: "top-right" },
+      { selector: 'button:has-text("Skip")', label: "Skip stays a quiet text action — leaving is not weighted like advancing", placement: "left", optional: true },
+    ],
+  },
+  {
     name: "library-1440",
     route: "/library",
     identity: "started",
@@ -460,7 +520,7 @@ try {
   for (const shot of shots) {
     const viewport = { width: shot.width ?? 1440, height: shot.height ?? 960 };
     const storageState = await identityState(browser, shot.identity ?? "fresh");
-    const context = await seedContext(browser, viewport, storageState);
+    const context = await seedContext(browser, viewport, storageState, shot.firstVisit ?? false);
     const page = await context.newPage();
     page.on("pageerror", (error) => errors.push(`${shot.name}: ${error.message}`));
     page.on("response", (response) => { if (response.status() >= 500) errors.push(`${shot.name}: HTTP ${response.status()} ${response.url()}`); });

@@ -56,6 +56,10 @@ async function seedWrongAnswer(page) {
 try {
   await capture({ name: "landing-desktop", route: "/" });
   await capture({ name: "landing-mobile", route: "/", width: 375, height: 812 });
+  await capture({ name: "judge-demo-desktop", route: "/judge", prepare: async (page) => {
+    await page.getByText("Sample lesson", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+    await page.getByText("No account needed · answers checked by code").waitFor({ state: "visible" });
+  } });
   await capture({ name: "onboarding-desktop", route: "/welcome", firstVisit: true });
   await capture({ name: "dashboard-desktop", route: "/dashboard", prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" }); } });
   await capture({ name: "dashboard-mobile", route: "/dashboard", width: 375, height: 812, prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" }); } });
@@ -152,4 +156,4 @@ if (errors.length) {
   throw new Error(`Screenshot browser errors:\n${errors.join("\n")}`);
 }
 
-console.log(`Captured ${captured} of 20 Museion product screenshots in ${outputDir}`);
+console.log(`Captured ${captured} of 21 Museion product screenshots in ${outputDir}`);
