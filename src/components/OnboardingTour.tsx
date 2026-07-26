@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Pressable } from "@/components/ui";
 import { markOnboarded, saveLearningPreferences, type LearningPreferences } from "@/lib/client/storage";
 import BrandMark from "./BrandMark";
 import MaiaCharacter from "./MaiaCharacter";
@@ -131,7 +132,7 @@ export default function OnboardingTour() {
         </div>}
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-y-4">
         <div className="flex gap-1" aria-label={`Slide ${index + 1} of ${SLIDES.length}`}>
           {SLIDES.map((_, i) => (
             <button
@@ -150,7 +151,12 @@ export default function OnboardingTour() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-3">
+        {/* The first keys anyone presses in the product, so they press. The
+            tour carries no subject yet — its decisions are the product's own
+            lapis, standing on the lapis deep edge. Skip stays a quiet text
+            action on purpose: a key would give leaving the tour the same
+            weight as taking it. */}
+        <div className="ml-auto flex items-center gap-3">
           {!isLast && (
             <button
               onClick={finish}
@@ -160,25 +166,25 @@ export default function OnboardingTour() {
             </button>
           )}
           {index > 0 && (
-            <button
-              onClick={() => setIndex((i) => i - 1)}
-              className="inline-flex min-h-11 items-center rounded-lg border border-ink/15 bg-surface px-4 text-body font-medium transition hover:border-lapis"
-            >
+            <Pressable variant="secondary" onClick={() => setIndex((i) => i - 1)}>
               Back
-            </button>
+            </Pressable>
           )}
-          <button
-            onClick={isLast ? finish : () => setIndex((i) => i + 1)}
-            className="inline-flex min-h-11 items-center rounded-lg bg-lapis px-5 text-body font-medium text-white transition hover:bg-lapis-dark"
-          >
+          <Pressable accent="var(--color-lapis)" edge="var(--color-lapis-deep)" onClick={isLast ? finish : () => setIndex((i) => i + 1)} className="whitespace-nowrap">
             {isLast ? "Start learning →" : "Next"}
-          </button>
+          </Pressable>
         </div>
       </div>
     </div>
   );
 }
 
+/**
+ * Choice chips with the press grammar: every option is a key resting on its
+ * edge, and the chosen one holds the decision blue on its tint (lapis-dark on
+ * lapis-soft, 8.6:1) above the matching lapis deep edge. State is carried by
+ * fill and aria-pressed — the physics only ever say "you can press this".
+ */
 function ChoiceGroup({ legend, value, options, onChange }: { legend: string; value: string; options: readonly (readonly [string, string])[]; onChange(value: string): void }) {
-  return <fieldset><legend className="text-body font-semibold text-ink">{legend}</legend><div className="mt-2 flex flex-wrap gap-2">{options.map(([option,label]) => <button type="button" key={option} aria-pressed={value === option} onClick={() => onChange(option)} className={`min-h-11 rounded-xl border px-3.5 text-body font-medium transition ${value === option ? "border-lapis bg-lapis-soft text-lapis-dark" : "border-ink/15 bg-surface text-ink-soft hover:border-lapis/40"}`}>{label}</button>)}</div></fieldset>;
+  return <fieldset><legend className="text-body font-semibold text-ink">{legend}</legend><div className="mt-2 flex flex-wrap gap-x-2 gap-y-3">{options.map(([option,label]) => <button type="button" key={option} aria-pressed={value === option} onClick={() => onChange(option)} className={`pressable min-h-11 rounded-xl border px-3.5 text-body font-medium ${value === option ? "border-lapis/40 bg-lapis-soft text-lapis-dark [--pressable-edge:var(--color-lapis-deep)]" : "border-ink/15 bg-surface text-ink-soft"}`}>{label}</button>)}</div></fieldset>;
 }
