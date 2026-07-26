@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import MaiaCharacter from "@/components/MaiaCharacter";
+import { MAIA_STATE_TITLE } from "@/lib/design/maia";
 import { Pressable } from "@/components/ui";
 import { subjectColor, subjectDeep, subjectTint } from "@/lib/curriculum/subjects";
 import type { JudgeSessionView } from "@/lib/judge/contracts";
@@ -319,7 +320,7 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
 
       {/* Maia is live here: the deterministic tutor is intervening on a move
           it just checked, so she appears redirecting — never decoratively. */}
-      {tutor && <aside aria-label="Maia runtime guidance" className="mt-4 rounded-[var(--radius-card)] border border-lapis/20 bg-lapis-soft p-5"><div className="flex items-start gap-3"><MaiaCharacter state="redirecting" size="inline" className="shrink-0" title="Maia redirecting" /><div className="min-w-0"><p className="text-label font-semibold uppercase tracking-wide text-lapis-dark">Maia · bounded intervention</p><p className="mt-2 font-medium">{tutor.turn.message}</p>{tutor.counterexample && <p className="mt-2 text-body-sm text-ink-soft">Counterexample: [{tutor.counterexample.before.low}, {tutor.counterexample.before.high}] with midpoint {tutor.counterexample.before.mid}; the proposed [{tutor.counterexample.proposed.low}, {tutor.counterexample.proposed.high}] can repeat the same midpoint.</p>}<p className="mt-3 text-micro text-ink-soft">Maia may highlight or focus registered targets. The deterministic runtime still owns state and correctness.</p></div></div></aside>}
+      {tutor && <aside aria-label="Maia runtime guidance" className="mt-4 rounded-[var(--radius-card)] border border-lapis/20 bg-lapis-soft p-5"><div className="flex items-start gap-3"><MaiaCharacter state="redirecting" size="inline" className="shrink-0" title={MAIA_STATE_TITLE.redirecting} /><div className="min-w-0"><p className="text-label font-semibold uppercase tracking-wide text-lapis-dark">Maia · bounded intervention</p><p className="mt-2 font-medium">{tutor.turn.message}</p>{tutor.counterexample && <p className="mt-2 text-body-sm text-ink-soft">Counterexample: [{tutor.counterexample.before.low}, {tutor.counterexample.before.high}] with midpoint {tutor.counterexample.before.mid}; the proposed [{tutor.counterexample.proposed.low}, {tutor.counterexample.proposed.high}] can repeat the same midpoint.</p>}<p className="mt-3 text-micro text-ink-soft">Maia may highlight or focus registered targets. The deterministic runtime still owns state and correctness.</p></div></div></aside>}
 
       {currentBlock && canAdvance && <Pressable accent={accent} edge={accentEdge} disabled={busy} onClick={advance} className="sticky bottom-3 mt-5 min-h-12 w-full lg:static">{blockIndex === lessonBlocks.length - 1 ? "Finish lesson and unlock transfer" : "Continue"}</Pressable>}
 

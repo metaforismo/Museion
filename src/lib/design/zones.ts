@@ -35,6 +35,7 @@ const ZONE_TINT: Record<Zone, string | null> = {
  */
 export const STUDIO_ACCENT = SUBJECT_PALETTE.physics.accentVar;
 export const STUDIO_DEEP = SUBJECT_PALETTE.physics.deepVar;
+export const STUDIO_TINT = SUBJECT_PALETTE.physics.tintVar;
 
 function matches(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);

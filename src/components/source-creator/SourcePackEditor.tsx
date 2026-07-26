@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Pressable } from "@/components/ui";
 import type { CreatorMaterialDraft } from "@/lib/client/creator-draft";
-import { STUDIO_ACCENT, STUDIO_DEEP } from "@/lib/design/zones";
+import { STUDIO_ACCENT, STUDIO_DEEP, STUDIO_TINT } from "@/lib/design/zones";
 import { MAX_NORMALIZED_CHARACTERS, MAX_SOURCE_BYTES, MAX_SOURCE_PAGES } from "@/lib/source/limits";
 import { inferSourceReferenceKind } from "@/lib/source/reference";
 import type { SourcePackMaterialRole, SourceRightsBasis } from "@/lib/source/source-pack";
@@ -112,7 +112,10 @@ export default function SourcePackEditor({
                     <p className="mt-2 text-right font-mono text-label tabular-nums text-ink-soft">{material.content.length.toLocaleString("en-US")}/{MAX_NORMALIZED_CHARACTERS.toLocaleString("en-US")}</p>
                   </>
                 ) : (
-                  <div className={`mt-4 rounded-xl border p-4 ${material.needsReattach ? "border-gold/40 bg-gold-soft" : "border-correct/20 bg-correct-soft"}`}>
+                  // An attached file is a satisfied precondition, not an engine
+                  // verdict — the ready state takes the studio tint, never
+                  // correct-green.
+                  <div className={`mt-4 rounded-xl border p-4 ${material.needsReattach ? "border-gold/40 bg-gold-soft" : "border-ink/10"}`} style={material.needsReattach ? undefined : { backgroundColor: STUDIO_TINT }}>
                     <p className="text-body-sm font-semibold">{material.needsReattach ? "File must be reattached" : "File ready for normalization"}</p>
                     <p className="mt-1 text-label leading-5 text-ink-soft">{material.fileName} · {((material.fileSize ?? 0) / 1024).toFixed(1)} KiB. File bytes are held only for this open page.</p>
                     {material.needsReattach ? <label className="mt-3 inline-flex min-h-10 cursor-pointer items-center rounded-lg bg-ink px-3 py-2 text-label font-semibold text-white">Reattach this file<input type="file" accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf" className="sr-only" onChange={(event) => { onFiles(Array.from(event.currentTarget.files ?? []), material.id); event.currentTarget.value = ""; }} /></label> : null}

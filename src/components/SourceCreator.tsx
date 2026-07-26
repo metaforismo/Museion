@@ -605,7 +605,10 @@ export default function SourceCreator() {
           >
             <span
               aria-hidden="true"
-              className={`h-2 w-2 rounded-full ${draftStatus === "error" ? "bg-wrong" : draftStatus === "saving" || draftStatus === "loading" ? "bg-gold" : draftStatus === "empty" ? "bg-ink/25" : "bg-correct"}`}
+              className={`h-2 w-2 rounded-full ${draftStatus === "error" ? "bg-wrong" : draftStatus === "saving" || draftStatus === "loading" ? "bg-gold" : draftStatus === "empty" ? "bg-ink/25" : ""}`.trimEnd()}
+              // A saved draft is a satisfied precondition, not an engine
+              // verdict — it speaks in the studio accent, never correct-green.
+              style={draftStatus === "error" || draftStatus === "saving" || draftStatus === "loading" || draftStatus === "empty" ? undefined : { backgroundColor: STUDIO_ACCENT }}
             />
             {draftStatusLabel}
           </span>
