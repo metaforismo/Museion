@@ -12,11 +12,28 @@ type PublicInteractiveBlock = Extract<
   { kind: "prediction-choice" | "sequence-builder" | "range-explorer" | "state-trace" }
 >;
 
+/**
+ * A checked outcome, or a note. The verdict decides which of the reserved
+ * colours — correct-green bloom, wrong-red — the status area may use: only
+ * an outcome the engine accepted and checked earns one. A rejected (invalid)
+ * action is a `note` and stays neutral.
+ */
+export interface CheckedFeedback {
+  message: string;
+  verdict: "correct" | "wrong" | "note";
+}
+
 export interface InteractiveBlockProps {
   block: PublicInteractiveBlock;
   state: RuntimeState;
   busy: boolean;
-  feedback: string | null;
+  /** Keeps the Check pressable pressed: while checking, and through the wrong-answer beat. */
+  held: boolean;
+  /** Subject accent fill for the Check pressables — `subjectColor(...)`. */
+  accent: string;
+  /** Its deep edge — `subjectDeep(...)`. */
+  edge: string;
+  feedback: CheckedFeedback | null;
   tutor: RuntimeTutorIntervention | null;
   onAction(action: RuntimeAction): Promise<void>;
 }
@@ -25,6 +42,9 @@ export default function InteractiveBlock({
   block,
   state,
   busy,
+  held,
+  accent,
+  edge,
   feedback,
   tutor,
   onAction,
@@ -65,7 +85,7 @@ export default function InteractiveBlock({
     <section
       aria-labelledby={`${block.id}-title`}
       data-runtime-target={`block:${block.id}`}
-      className={`rounded-xl border border-ink/10 bg-surface p-5 shadow-sm${emphasis(`block:${block.id}`)}`}
+      className={`surface-card p-5${emphasis(`block:${block.id}`)}`}
     >
       <h3 id={`${block.id}-title`} className="text-xl font-semibold">
         {block.accessibilityLabel}
@@ -81,7 +101,7 @@ export default function InteractiveBlock({
               <span>{option}</span>
             </label>
           ))}
-          <Pressable accent="var(--color-lapis)" edge="var(--color-lapis-deep)" disabled={selectedIndex === null || busy} onClick={() => selectedIndex !== null && void onAction({ kind: "prediction_select", optionIndex: selectedIndex })} className={`mt-3 px-5 ${busy ? "pressable-held" : ""}`}>
+          <Pressable accent={accent} edge={edge} disabled={selectedIndex === null || busy} onClick={() => selectedIndex !== null && void onAction({ kind: "prediction_select", optionIndex: selectedIndex })} className={`mt-3 px-5 ${held ? "pressable-held" : ""}`}>
             Check prediction
           </Pressable>
         </fieldset>
@@ -103,7 +123,7 @@ export default function InteractiveBlock({
               );
             })}
           </ol>
-          <Pressable accent="var(--color-lapis)" edge="var(--color-lapis-deep)" disabled={busy || (state.kind === block.kind && state.complete)} onClick={() => void onAction({ kind: "sequence_submit", order })} className={`mt-4 px-5 ${busy ? "pressable-held" : ""}`}>
+          <Pressable accent={accent} edge={edge} disabled={busy || (state.kind === block.kind && state.complete)} onClick={() => void onAction({ kind: "sequence_submit", order })} className={`mt-4 px-5 ${held ? "pressable-held" : ""}`}>
             Check order
           </Pressable>
         </div>
@@ -127,7 +147,7 @@ export default function InteractiveBlock({
           </div>
           <p id={`${block.id}-range-help`} role={fieldsTouched && !rangeValid ? "alert" : undefined} className={`mt-2 text-body-sm ${fieldsTouched && !rangeValid ? "text-wrong" : "text-ink-soft"}`}>Low must be non-negative. High may be -1 only when the interval becomes empty.</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Pressable accent="var(--color-lapis)" edge="var(--color-lapis-deep)" disabled={busy || state.status !== "active" || !rangeValid} onClick={() => { setFieldsTouched(true); if (rangeValid && lowValue !== null && highValue !== null) void onAction({ kind: "range_update", low: lowValue, high: highValue }); }} className={`px-5 ${busy ? "pressable-held" : ""}`}>Update interval</Pressable>
+            <Pressable accent={accent} edge={edge} disabled={busy || state.status !== "active" || !rangeValid} onClick={() => { setFieldsTouched(true); if (rangeValid && lowValue !== null && highValue !== null) void onAction({ kind: "range_update", low: lowValue, high: highValue }); }} className={`px-5 ${held ? "pressable-held" : ""}`}>Update interval</Pressable>
             <Pressable variant="secondary" disabled={busy || state.mid === null || state.status !== "active"} onClick={() => state.mid !== null && void onAction({ kind: "range_confirm_found", index: state.mid })} className="px-5">Confirm target at mid</Pressable>
           </div>
         </div>
@@ -142,13 +162,19 @@ export default function InteractiveBlock({
             <label data-runtime-target={`control:${block.id}:mid`} className={`text-body-sm font-medium${emphasis(`control:${block.id}:mid`)}`}>Mid<input type="text" inputMode="numeric" value={mid} aria-invalid={fieldsTouched && (midValue === null || midValue < 0)} aria-describedby={`${block.id}-trace-help`} onBlur={() => setFieldsTouched(true)} onChange={(event) => setMid(event.target.value)} className="mt-1 block w-full rounded-lg border border-ink/15 px-3 py-2 font-mono text-lead tabular-nums" /></label>
           </div>
           <p id={`${block.id}-trace-help`} role={fieldsTouched && !traceValid ? "alert" : undefined} className={`mt-2 text-body-sm ${fieldsTouched && !traceValid ? "text-wrong" : "text-ink-soft"}`}>Enter a non-negative whole number for every boundary and midpoint.</p>
-          <Pressable accent="var(--color-lapis)" edge="var(--color-lapis-deep)" disabled={busy || state.complete || !traceValid} onClick={() => { setFieldsTouched(true); if (traceValid && lowValue !== null && highValue !== null && midValue !== null) void onAction({ kind: "trace_submit", low: lowValue, high: highValue, mid: midValue }); }} className={`mt-4 px-5 ${busy ? "pressable-held" : ""}`}>Check next state</Pressable>
+          <Pressable accent={accent} edge={edge} disabled={busy || state.complete || !traceValid} onClick={() => { setFieldsTouched(true); if (traceValid && lowValue !== null && highValue !== null && midValue !== null) void onAction({ kind: "trace_submit", low: lowValue, high: highValue, mid: midValue }); }} className={`mt-4 px-5 ${held ? "pressable-held" : ""}`}>Check next state</Pressable>
         </div>
       )}
 
-      <p role="status" aria-live="polite" data-runtime-target={`status:${block.id}`} className={`mt-4 min-h-6 text-body-sm font-medium text-ink-soft${emphasis(`status:${block.id}`)}`}>
-        {feedback}
-      </p>
+      {/* Checked outcomes follow the canvas grammar exactly: the engine said
+          correct and the surface blooms its green; the engine said wrong and
+          the card wears wrong-red (the shake plays on the wrapper above).
+          Anything the engine did not check stays neutral. */}
+      <div role="status" aria-live="polite" data-runtime-target={`status:${block.id}`} className={`mt-4 min-h-6${emphasis(`status:${block.id}`)}`}>
+        {feedback?.verdict === "correct" && <p className="rounded-xl bg-correct px-4 py-3 font-semibold text-white animate-verified-bloom">{feedback.message}</p>}
+        {feedback?.verdict === "wrong" && <p className="rounded-xl border-2 border-wrong/20 bg-wrong-soft px-4 py-3 font-semibold text-wrong">{feedback.message}</p>}
+        {feedback?.verdict === "note" && <p className="text-body-sm font-medium text-ink-soft">{feedback.message}</p>}
+      </div>
       {tutor?.turn.uiActions.some((action) => action.kind === "annotate" && action.text) && (
         <div className="mt-3 rounded-lg border-l-2 border-gold bg-gold-soft px-3 py-2 text-body-sm leading-6 text-ink" aria-label="Maia annotation">
           {tutor.turn.uiActions.filter((action) => action.kind === "annotate" && action.text).map((action) => (

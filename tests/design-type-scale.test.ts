@@ -44,11 +44,11 @@ const ARBITRARY_REM_DEBT = [
  *
  * The app-shell chrome this list was seeded with — SiteHeader, AuthButton,
  * AppCommandPalette, LessonCatalog, OnboardingTour, CourseArchitectPanel,
- * SourceLearningDesign, SourcePackEditor and the About page — is gone, and
- * the lesson canvas round cleared its own files. What remains is the Judge
- * canvas and the marketing landing, which are out of scope by design rather
- * than un-swept: clearing them is a content decision about those surfaces,
- * not a sweep of chrome.
+ * SourceLearningDesign, SourcePackEditor and the About page — is gone, the
+ * lesson canvas round cleared its own files, and the last-mile round cleared
+ * the Judge canvas. What remains is the marketing landing, out of scope by
+ * design rather than un-swept: clearing it is a content decision about that
+ * surface, not a sweep of chrome.
  *
  * One thing the sweep could not delete: a focused form field under 16px makes
  * iOS zoom the viewport, so the app's inputs, selects and textareas take lead
@@ -56,8 +56,6 @@ const ARBITRARY_REM_DEBT = [
  * the floor, and it is why those files are clean without their fields shrinking.
  */
 const NAMED_OFF_SCALE_DEBT = [
-  "src/components/JudgeDeferredPanels.tsx",
-  "src/components/JudgeExperience.tsx",
   "src/components/LandingCoursePreview.tsx",
 ];
 

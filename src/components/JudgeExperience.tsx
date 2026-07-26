@@ -3,8 +3,14 @@
 import dynamic from "next/dynamic";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
+import MaiaCharacter from "@/components/MaiaCharacter";
+import { Pressable } from "@/components/ui";
+import { subjectColor, subjectDeep, subjectTint } from "@/lib/curriculum/subjects";
 import type { JudgeSessionView } from "@/lib/judge/contracts";
+import { JUDGE_SAMPLE_SUBJECT } from "@/lib/judge/subject";
 import type { RuntimeAction, RuntimeOutcome, RuntimeTutorIntervention } from "@/lib/runtime";
+
+import type { CheckedFeedback } from "./blocks/InteractiveBlock";
 
 const InteractiveBlock = dynamic(() => import("./blocks/InteractiveBlock"), {
   loading: () => <div role="status" className="mt-7 h-64 animate-pulse rounded-xl bg-ink/5"><span className="sr-only">Loading interactive activity.</span></div>,
@@ -80,13 +86,27 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
   const [session, setSession] = useState<JudgeSessionView | null>(null);
   const [blockIndex, setBlockIndex] = useState(0);
   const [busy, setBusy] = useState(true);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<CheckedFeedback | null>(null);
   const [tutor, setTutor] = useState<RuntimeTutorIntervention | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transferAnswer, setTransferAnswer] = useState("");
   const [transferTouched, setTransferTouched] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  // The wrong-answer beat, exactly as the lesson canvas plays it: the block
+  // card shakes while the Check pressable stays deflated, then both settle.
+  const [shakeTick, setShakeTick] = useState(0);
+  const [checkDeflated, setCheckDeflated] = useState(false);
+  const deflateTimer = useRef(0);
   const started = useRef(false);
+
+  // Timer-driven rather than animation-driven so reduced motion (animation:
+  // none, no animationend event) still releases the key.
+  const deflateCheck = () => {
+    window.clearTimeout(deflateTimer.current);
+    setCheckDeflated(true);
+    deflateTimer.current = window.setTimeout(() => setCheckDeflated(false), 420);
+  };
+  useEffect(() => () => window.clearTimeout(deflateTimer.current), []);
 
   useEffect(() => {
     if (started.current) return;
@@ -138,6 +158,13 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
     transferBlock?.kind === "transfer-challenge" ? transferBlock.options.length : 0,
   );
   const reviewHref = compilerRunId ? `/create/review/${compilerRunId}` : "/create/review";
+  // The verified replay is the binary-search lesson — Computer Science — so
+  // this surface presses in that subject's violet. A generated course declares
+  // no subject and resolves the palette's default pair through the same calls.
+  const subject = compilerRunId ? "" : JUDGE_SAMPLE_SUBJECT;
+  const accent = subjectColor(subject);
+  const accentEdge = subjectDeep(subject);
+  const accentTint = subjectTint(subject);
 
   const advance = () => {
     if (!session || busy) return;
@@ -179,8 +206,17 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
         body: JSON.stringify({ blockId, action, expectedRevision: session.revision, commandId: crypto.randomUUID() }),
       });
       setSession(result.session);
-      setFeedback(result.outcome.message);
+      // Correct-green and wrong-red are reserved for outcomes the engine
+      // actually checked; a rejected (invalid) action is a note, not a verdict.
+      setFeedback({
+        message: result.outcome.message,
+        verdict: result.outcome.accepted ? (result.outcome.correct ? "correct" : "wrong") : "note",
+      });
       setTutor(result.tutor);
+      if (result.outcome.accepted && !result.outcome.correct) {
+        setShakeTick((tick) => tick + 1);
+        deflateCheck();
+      }
     } catch (cause) {
       await handleMutationFailure(cause);
     } finally {
@@ -261,31 +297,40 @@ export default function JudgeExperience({ compilerRunId }: { compilerRunId?: str
   return (
     <div className="mx-auto min-h-svh w-full max-w-5xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div><div className="flex flex-wrap items-center gap-2"><span className="rounded-md bg-correct-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-correct">{session.mode === "verified-replay" ? "Sample lesson" : "From your source"}</span><span className="rounded-md bg-lapis-soft px-3 py-1 text-xs font-medium text-lapis-dark">No account needed · answers checked by code</span></div><h1 className="mt-4 tracking-title text-3xl font-semibold sm:text-4xl">{session.artifact.title}</h1><p className="mt-3 max-w-[62ch] text-lg leading-7 text-ink-soft">{session.artifact.bigQuestion}</p></div>
-        <button type="button" disabled={busy} onClick={() => setConfirmReset(true)} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-medium transition hover:border-lapis disabled:opacity-45">Reset run</button>
+        {/* The lesson chip is the subject speaking, not a verdict: correct-green
+            stays reserved for outcomes the engine checked. */}
+        <div><div className="flex flex-wrap items-center gap-2"><span className="rounded-md px-3 py-1 text-label font-semibold uppercase tracking-wide" style={{ backgroundColor: accentTint, color: accent }}>{session.mode === "verified-replay" ? "Sample lesson" : "From your source"}</span><span className="rounded-md border border-ink/10 bg-surface px-3 py-1 text-label font-medium text-ink-soft">No account needed · answers checked by code</span></div><h1 className="mt-4 tracking-display text-3xl font-semibold sm:text-4xl">{session.artifact.title}</h1><p className="mt-3 max-w-[62ch] text-lg leading-7 text-ink-soft">{session.artifact.bigQuestion}</p></div>
+        <Pressable variant="secondary" size="compact" disabled={busy} onClick={() => setConfirmReset(true)}>Reset run</Pressable>
       </header>
 
-      {confirmReset && <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-4 text-sm text-ink-soft">Loading reset controls…</div>}><JudgeDeferredPanel kind="reset" busy={busy} onCancel={() => setConfirmReset(false)} onConfirm={reset} /></Suspense>}
+      {confirmReset && <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-4 text-body-sm text-ink-soft">Loading reset controls…</div>}><JudgeDeferredPanel kind="reset" busy={busy} onCancel={() => setConfirmReset(false)} onConfirm={reset} /></Suspense>}
 
-      <div className="mt-7" role="progressbar" aria-label="Lesson progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="flex justify-between text-xs font-medium text-ink-soft"><span>{blockIndex < lessonBlocks.length ? `Lesson block ${blockIndex + 1} of ${lessonBlocks.length}` : "Lesson complete"}</span><span className="font-mono tabular-nums">{progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-ink/10"><div className="h-full origin-left rounded-full bg-lapis transition-transform duration-300" style={{ transform: `scaleX(${progress / 100})` }} /></div></div>
+      <div className="mt-7" role="progressbar" aria-label="Lesson progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="flex items-baseline justify-between"><span className="text-label font-semibold text-ink-soft">{blockIndex < lessonBlocks.length ? `Lesson block ${blockIndex + 1} of ${lessonBlocks.length}` : "Lesson complete"}</span><span className="font-mono text-label tabular-nums text-ink-soft">{progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-ink/10"><div className="h-full origin-left rounded-full transition-transform duration-300 motion-reduce:transition-none" style={{ transform: `scaleX(${progress / 100})`, backgroundColor: accent }} /></div></div>
 
-      {error && <div role="alert" className="mt-5 flex items-start justify-between gap-4 rounded-lg bg-wrong-soft px-4 py-3 text-sm text-wrong"><p>{error}</p><button type="button" onClick={() => setError(null)} className="shrink-0 font-semibold underline underline-offset-4">Dismiss</button></div>}
+      {error && <div role="alert" className="mt-5 flex items-start justify-between gap-4 rounded-lg bg-wrong-soft px-4 py-3 text-body-sm text-wrong"><p>{error}</p><button type="button" onClick={() => setError(null)} className="shrink-0 font-semibold underline underline-offset-4">Dismiss</button></div>}
 
-      {currentBlock?.kind === "explanation" && <section className="mt-7 rounded-xl border border-ink/10 bg-surface p-7 shadow-sm"><p className="text-sm font-semibold uppercase tracking-wide text-lapis">Grounded explanation</p><h2 className="mt-2 tracking-title text-2xl font-semibold">{currentBlock.title}</h2><p className="mt-4 whitespace-pre-line text-lg leading-relaxed">{currentBlock.body}</p><p className="mt-5 text-xs text-ink-soft">Citations: {currentBlock.citations.map((item) => item.spanId).join(", ")}</p></section>}
+      {currentBlock?.kind === "explanation" && <section className="surface-card mt-7 p-7"><p className="text-label font-semibold uppercase tracking-wide" style={{ color: accent }}>Grounded explanation</p><h2 className="mt-2 tracking-title text-2xl font-semibold">{currentBlock.title}</h2><p className="mt-4 whitespace-pre-line text-lg leading-relaxed">{currentBlock.body}</p><p className="mt-5 font-mono text-micro text-ink-soft">Citations: {currentBlock.citations.map((item) => item.spanId).join(", ")}</p></section>}
 
+      {/* The shake lives on this wrapper, which stays mounted across the state
+          change a checked answer causes — the block itself remounts by key. */}
       {currentBlock && ["prediction-choice", "sequence-builder", "range-explorer", "state-trace"].includes(currentBlock.kind) && currentState && (
-        <div className="mt-7"><InteractiveBlock key={currentState.kind === "state-trace" ? currentBlock.id : `${currentBlock.id}:${JSON.stringify(currentState)}`} block={currentBlock as Extract<typeof currentBlock, { kind: "prediction-choice" | "sequence-builder" | "range-explorer" | "state-trace" }>} state={currentState} busy={busy} feedback={feedback} tutor={tutor} onAction={(action) => sendAction(currentBlock.id, action)} /></div>
+        <div className={`mt-7 ${shakeTick > 0 && feedback?.verdict === "wrong" ? "animate-shake" : ""}`} onAnimationEnd={() => setShakeTick(0)}><InteractiveBlock key={currentState.kind === "state-trace" ? currentBlock.id : `${currentBlock.id}:${JSON.stringify(currentState)}`} block={currentBlock as Extract<typeof currentBlock, { kind: "prediction-choice" | "sequence-builder" | "range-explorer" | "state-trace" }>} state={currentState} busy={busy} held={busy || checkDeflated} accent={accent} edge={accentEdge} feedback={feedback} tutor={tutor} onAction={(action) => sendAction(currentBlock.id, action)} /></div>
       )}
 
-      {tutor && <aside aria-label="Maia runtime guidance" className="mt-4 rounded-xl border border-lapis/20 bg-lapis-soft p-5"><p className="text-xs font-semibold uppercase tracking-wide text-lapis-dark">Maia · bounded intervention</p><p className="mt-2 font-medium">{tutor.turn.message}</p>{tutor.counterexample && <p className="mt-2 text-sm text-ink-soft">Counterexample: [{tutor.counterexample.before.low}, {tutor.counterexample.before.high}] with midpoint {tutor.counterexample.before.mid}; the proposed [{tutor.counterexample.proposed.low}, {tutor.counterexample.proposed.high}] can repeat the same midpoint.</p>}<p className="mt-3 text-xs text-ink-soft">Maia may highlight or focus registered targets. The deterministic runtime still owns state and correctness.</p></aside>}
+      {/* Maia is live here: the deterministic tutor is intervening on a move
+          it just checked, so she appears redirecting — never decoratively. */}
+      {tutor && <aside aria-label="Maia runtime guidance" className="mt-4 rounded-[var(--radius-card)] border border-lapis/20 bg-lapis-soft p-5"><div className="flex items-start gap-3"><MaiaCharacter state="redirecting" size="inline" className="shrink-0" title="Maia redirecting" /><div className="min-w-0"><p className="text-label font-semibold uppercase tracking-wide text-lapis-dark">Maia · bounded intervention</p><p className="mt-2 font-medium">{tutor.turn.message}</p>{tutor.counterexample && <p className="mt-2 text-body-sm text-ink-soft">Counterexample: [{tutor.counterexample.before.low}, {tutor.counterexample.before.high}] with midpoint {tutor.counterexample.before.mid}; the proposed [{tutor.counterexample.proposed.low}, {tutor.counterexample.proposed.high}] can repeat the same midpoint.</p>}<p className="mt-3 text-micro text-ink-soft">Maia may highlight or focus registered targets. The deterministic runtime still owns state and correctness.</p></div></div></aside>}
 
-      {currentBlock && canAdvance && <button type="button" disabled={busy} onClick={advance} className="sticky bottom-3 mt-5 w-full rounded-xl bg-lapis px-6 py-3 font-semibold text-white shadow-[var(--shadow-2)] transition hover:bg-lapis-dark disabled:opacity-45 lg:static lg:shadow-none">{blockIndex === lessonBlocks.length - 1 ? "Finish lesson and unlock transfer" : "Continue"}</button>}
+      {currentBlock && canAdvance && <Pressable accent={accent} edge={accentEdge} disabled={busy} onClick={advance} className="sticky bottom-3 mt-5 min-h-12 w-full lg:static">{blockIndex === lessonBlocks.length - 1 ? "Finish lesson and unlock transfer" : "Continue"}</Pressable>}
 
-      {!currentBlock && session.transfer.status === "locked" && <section className="mt-7 rounded-xl border border-gold/30 bg-gold-soft p-7 text-center"><p className="text-sm font-semibold uppercase tracking-wide">Independent checkpoint</p><h2 className="mt-2 tracking-title text-2xl font-semibold">The lesson is complete. Your final challenge is ready.</h2><p className="mx-auto mt-3 max-w-xl text-ink-soft">Starting removes Maia, hints, solution reveal, and answer elimination. Exactly one scored answer is accepted.</p><button type="button" disabled={busy} onClick={() => void startLockedTransfer()} className="mt-5 rounded-lg bg-ink px-6 py-3 font-semibold text-white disabled:opacity-50">Start independent challenge</button></section>}
+      {/* The gate into the locked transfer. The energy language stops at this
+          door on purpose: a flat start control, no press celebration, so the
+          unassisted measurement never feels assisted. */}
+      {!currentBlock && session.transfer.status === "locked" && <section className="mt-7 rounded-[var(--radius-card)] border border-gold/30 bg-gold-soft p-7 text-center"><p className="text-label font-semibold uppercase tracking-wide">Independent checkpoint</p><h2 className="mt-2 tracking-title text-2xl font-semibold">The lesson is complete. Your final challenge is ready.</h2><p className="mx-auto mt-3 max-w-xl text-ink-soft">Starting removes Maia, hints, solution reveal, and answer elimination. Exactly one scored answer is accepted.</p><button type="button" disabled={busy} onClick={() => void startLockedTransfer()} className="mt-5 min-h-12 rounded-xl bg-ink px-6 py-3 font-semibold text-white disabled:opacity-50">Start independent challenge</button></section>}
 
-      {!currentBlock && transferBlock?.kind === "transfer-challenge" && session.transfer.status === "active" && <Suspense fallback={<div role="status" className="mt-7 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading transfer challenge…</div>}><JudgeDeferredPanel kind="transfer" prompt={transferBlock.prompt} responseKind={transferBlock.responseKind} options={transferBlock.options} answer={transferAnswer} valid={transferAnswerValid} touched={transferTouched} busy={busy} onAnswer={setTransferAnswer} onTouched={() => setTransferTouched(true)} onSubmit={submitTransfer} /></Suspense>}
+      {!currentBlock && transferBlock?.kind === "transfer-challenge" && session.transfer.status === "active" && <Suspense fallback={<div role="status" className="mt-7 rounded-xl bg-paper p-5 text-body-sm text-ink-soft">Loading transfer challenge…</div>}><JudgeDeferredPanel kind="transfer" prompt={transferBlock.prompt} responseKind={transferBlock.responseKind} options={transferBlock.options} answer={transferAnswer} valid={transferAnswerValid} touched={transferTouched} busy={busy} onAnswer={setTransferAnswer} onTouched={() => setTransferTouched(true)} onSubmit={submitTransfer} /></Suspense>}
 
-      {!currentBlock && session.transfer.status === "scored" && session.transfer.observation && <Suspense fallback={<div role="status" className="mt-7 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading evidence ledger…</div>}><JudgeDeferredPanel kind="evidence" session={session} reviewHref={reviewHref} onReset={() => setConfirmReset(true)} /></Suspense>}
+      {!currentBlock && session.transfer.status === "scored" && session.transfer.observation && <Suspense fallback={<div role="status" className="mt-7 rounded-xl bg-paper p-5 text-body-sm text-ink-soft">Loading evidence ledger…</div>}><JudgeDeferredPanel kind="evidence" session={session} reviewHref={reviewHref} accent={accent} edge={accentEdge} tint={accentTint} onReset={() => setConfirmReset(true)} /></Suspense>}
     </div>
   );
 }
