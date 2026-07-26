@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { subjectTint } from "@/lib/curriculum/subjects";
 import { washStyle, zoneForPath } from "@/lib/design/zones";
+import { JUDGE_SAMPLE_SUBJECT } from "@/lib/judge/subject";
 
 import AppIcon from "./AppIcon";
 import AppSidebar from "./AppSidebar";
@@ -95,8 +96,17 @@ export default function SiteShell({ children, courses, lessons }: { children: Re
     const landing = pathname === "/";
     return <div className="flex min-h-[100dvh] flex-col"><SiteHeader landing={landing} /><main id="main-content" tabIndex={-1} className="flex-1">{children}</main>{!landing && <PublicFooter />}</div>;
   }
-  // Focus chrome: the lesson floats as a sheet on a soft color wash.
-  if (focusRoute) return <div className="min-h-[100dvh] bg-paper [background-image:radial-gradient(52rem_34rem_at_12%_-4%,rgba(43,74,203,0.07),transparent),radial-gradient(44rem_30rem_at_96%_10%,rgba(199,145,20,0.06),transparent),radial-gradient(40rem_36rem_at_50%_110%,rgba(31,138,76,0.045),transparent)]"><header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/5 bg-surface/80 px-4 backdrop-blur"><Link href="/dashboard" className="flex items-center gap-2 text-body-sm font-semibold"><BrandMark className="h-8 w-8" />Museion</Link><Link href="/dashboard" className="min-h-11 rounded-lg px-3 text-body-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Leave lesson</Link></header><main id="main-content" tabIndex={-1}>{children}</main></div>;
+  // Focus chrome: the lesson floats as a sheet on a soft color wash. The
+  // judge canvas is subject-scoped, so it takes its zone wash instead of the
+  // lesson sheet's tri-tint: on `/judge` the sample lesson is the binary-search
+  // Computer Science artifact and the wash is that subject's tint, the same
+  // way a course page is washed with its course's subject; a generated course
+  // on `/learn/<runId>` declares no subject and takes the learn zone's own.
+  if (focusRoute) {
+    const judgeRoute = pathname === "/judge" || pathname.startsWith("/judge/") || pathname.startsWith("/learn/");
+    const judgeWash = judgeRoute ? washStyle(zoneForPath(pathname), pathname.startsWith("/judge") ? subjectTint(JUDGE_SAMPLE_SUBJECT) : undefined) : undefined;
+    return <div style={judgeWash} className={`min-h-[100dvh] bg-paper ${judgeRoute ? "" : "[background-image:radial-gradient(52rem_34rem_at_12%_-4%,rgba(43,74,203,0.07),transparent),radial-gradient(44rem_30rem_at_96%_10%,rgba(199,145,20,0.06),transparent),radial-gradient(40rem_36rem_at_50%_110%,rgba(31,138,76,0.045),transparent)]"}`}><header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/5 bg-surface/80 px-4 backdrop-blur"><Link href="/dashboard" className="flex items-center gap-2 text-body-sm font-semibold"><BrandMark className="h-8 w-8" />Museion</Link><Link href="/dashboard" className="min-h-11 rounded-lg px-3 text-body-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Leave lesson</Link></header><main id="main-content" tabIndex={-1}>{children}</main></div>;
+  }
 
   // First-time visitors entering the app shell are routed through onboarding.
 

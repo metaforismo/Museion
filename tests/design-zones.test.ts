@@ -8,6 +8,8 @@ describe("zoneForPath", () => {
     ["/library", "learn"],
     ["/review", "learn"],
     ["/courses/algebra-as-balance", "learn"],
+    ["/judge", "learn"],
+    ["/learn/some-run-id", "learn"],
     ["/progress", "evidence"],
     ["/create", "studio"],
     ["/create/review", "studio"],

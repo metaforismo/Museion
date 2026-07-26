@@ -14,7 +14,9 @@ const ZONE_ROUTES: { zone: Zone; prefixes: string[] }[] = [
   { zone: "evidence", prefixes: ["/progress"] },
   { zone: "studio", prefixes: ["/create"] },
   { zone: "account", prefixes: ["/settings", "/account"] },
-  { zone: "learn", prefixes: ["/dashboard", "/library", "/review", "/courses"] },
+  // `/judge` and `/learn` are the judge canvas — a lesson being learned, so
+  // they belong to the learn zone deliberately rather than by fallthrough.
+  { zone: "learn", prefixes: ["/dashboard", "/library", "/review", "/courses", "/judge", "/learn"] },
 ];
 
 const ZONE_TINT: Record<Zone, string | null> = {
