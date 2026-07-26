@@ -109,17 +109,22 @@ enforces that in three parts:
 - Arbitrary **absolute** sizes — `text-[13px]`, `text-[0.9em]`,
   `text-[length:…]`, `calc`/`clamp` — are banned outright. No allowlist.
 - Arbitrary **rem** sizes — `text-[0.82rem]` — are banned outside a shrinking
-  allowlist, which holds the lesson canvas and the marketing landing.
+  allowlist.
 - Tailwind's **named sizes below lead** — `text-xs` 12, `text-sm` 14,
   `text-base` 16 — are banned outside a second shrinking allowlist, seeded
-  from what the tree already carried. The app-shell chrome it was seeded with
-  is gone; what remains is the lesson canvas, the Judge canvas and the
-  landing, which are out of scope by design rather than un-swept.
+  from what the tree already carried.
 
-Both allowlists may only get shorter, and a staleness assertion forces a file
-off its list the moment it is clean. Adding an entry is a review failure, not a
-fix. The rule originally covered only the rem form, which is how a whole Studio
-surface built out of `text-sm` stayed invisible through fifteen tasks.
+The sweep is complete: both allowlists hold the same single entry,
+`src/components/LandingCoursePreview.tsx`. That file is the landing's working
+diorama of one learning trace — a miniature of the product, drawn at reduced
+scale so the whole move fits in a hero panel. Its off-scale sizes are the
+miniature's content, the way type inside a screenshot is content; sweeping it
+onto the scale would mean redrawing the diorama at product scale, which is a
+different picture. It stays listed as a decision, not as debt. Both allowlists
+may only get shorter, and a staleness assertion forces a file off its list the
+moment it is clean. Adding an entry is a review failure, not a fix. The rule
+originally covered only the rem form, which is how a whole Studio surface
+built out of `text-sm` stayed invisible through fifteen tasks.
 
 **Form controls take `lead`, and that is not a hierarchy decision.** iOS zooms
 the viewport when a field below 16px takes focus, so every `input`, `textarea`
@@ -139,10 +144,19 @@ The app has four zones, resolved from the route by `zoneForPath()`:
 
 | Zone | Routes | Wash |
 | --- | --- | --- |
-| learn | `/dashboard`, `/library`, `/review`, `/courses` | sky |
+| learn | `/dashboard`, `/library`, `/review`, `/courses`, `/judge`, `/learn` | sky |
 | evidence | `/progress` | mint |
 | studio | `/create` | peach |
 | account | `/settings`, `/account` | none |
+
+`/judge` and `/learn` sit in the learn zone deliberately, not by fallthrough:
+they are the judge canvas — a lesson being learned — and the sample lesson's
+subject supplies its own tint over the zone default, the same way any
+subject-scoped surface may. The studio zone also owns an accent pair,
+`STUDIO_ACCENT` / `STUDIO_DEEP` in `src/lib/design/zones.ts`: the physics
+entry, because peach is the studio wash and the physics accent is the one pair
+in the palette contrast-proven against that tint. Studio surfaces take their
+accent from there, so the zone cannot drift into per-surface re-derivations.
 
 A wash is two soft radial gradients of the zone tint over paper, anchored off
 the top corners — wayfinding you feel before you read. **Soft washes are
@@ -224,6 +238,12 @@ are the three *checked* text/fill pairs and nothing more:
   re-decide it.
 - **secondary** — surface fill, ink text, ink/12 edge, for the quieter action
   beside a primary.
+
+The grammar covers every surface: the landing's demos, the app shell, the
+course trail, the lesson canvas, the public judge demo, the Source Studio and
+the onboarding tour all press through this one component. It has exactly one
+deliberate silence — the judge canvas's locked transfer, which carries its own
+rule below.
 
 **Full saturation is a moment, not a mode.** Tints remain the resting language
 of every surface; the page's *primary action* takes the full accent fill, and
@@ -320,6 +340,39 @@ accent-filled check (with "completed" spoken to a screen reader), and every
 other node keeps its number. Walked ground, from the same completion record —
 no other state exists, because the record supports no other claim.
 
+## The studio spine: the trail's grammar at pipeline scale
+
+The Source Studio draws its three compiler stages — Source, Learning design,
+Compile — as a **horizontal** spine, the vertical trail's sibling. The two are
+the same node grammar answering two different questions. The trail draws
+*places on a learning path*: many nodes, walked ground, a "you are here", and
+the vertical snake gives the path room to be long. The spine draws *compiler
+stages above a working surface*: three fixed stages that read left to right the
+way the compiler actually runs, spending none of the vertical space the
+two-column workspace needs and implying no content depth the stages don't
+have. A vertical snake with three nodes would claim the studio is a place to
+wander; it is a machine to operate.
+
+The shared grammar, at pipeline scale: a done stage settles at 44px under a
+white check, the current stage stands at 56px inside the licensed
+`.path-halo`, stages ahead are quiet surface circles, and the connecting rail
+is ground-thick and fills only behind stages the runtime has satisfied. The
+spine stands directly on the peach wash, like ground — not boxed into a card.
+Everything speaks the studio accent, from `STUDIO_ACCENT` / `STUDIO_DEEP`.
+
+That single-accent voice is a rule, not a restraint: **a satisfied
+precondition is not a verdict.** A complete form, a normalized document, a
+connected account — these are states the runtime requires, not observations
+the engine checked, so they may never wear correct-green. Green enters the
+studio only when a compile actually reports engine-checked results. The same
+honesty keeps Compile from ever being drawn "done": a finished compile
+navigates to review before the spine could make the claim, so the claim is
+never made. And the loudness rule holds here as everywhere — Compile is the
+studio's one full-fill press, holding `.pressable-held` while the compiler
+runs; Normalize carries the full fill only until a document exists, then steps
+down to the secondary key (an edit invalidates the document and promotes it
+back). One loud press per view, at any moment.
+
 Shared primitives live in `src/components/ui`: `Card`, `Chip`, `ProgressRail`,
 `SectionHeader`, `StatTile`, `SubjectBadge`. Build the new surface out of these
 before you build a new one — the dashboard and the library drifted into two
@@ -391,6 +444,32 @@ Three triggers, in order of evidential strength:
 The moment blooms once on arrival and then holds still. A celebration that loops
 stops being about the thing it marks.
 
+### The locked transfer: the energy language stops at the gate
+
+The judge canvas — the public demo at `/judge`, and every generated run at
+`/learn` — speaks the full grammar: subject-accent presses for Continue and
+Check, the accent on the progress bar, checked outcomes on the canvas rules
+(correct blooms reserved green, wrong shakes with the key deflated through the
+beat), and Maia exactly once, beside the deterministic tutor's live
+intervention. Rejected or invalid actions stay a neutral note — reserved
+colours appear only on engine-checked verdicts, here as everywhere.
+
+Then the grammar falls silent, on purpose. The locked transfer is the one
+place the learner works unassisted — `LOCKED · ONE ATTEMPT`, `Maia 0 · hints 0
+· solutions 0` — and it is the strongest evidence the product ever records.
+Inside the transfer surface there is no Pressable, no Maia, no subject accent,
+no animation, no encouragement: a flat card without even a blur shadow (a flat
+card does not claim to float), the ledger chips, a plain bordered input at
+`lead`, a plain flat submit. The page chrome above it keeps stating facts —
+the finished progress bar, the sample chip — because facts are not
+assistance; but nothing inside the room presses, blooms, or cheers. The gate
+before it is equally flat, and the mood shift *is* the design: an energy language that reached inside would make an
+unassisted check feel assisted, and a measurement that feels assisted is a
+measurement the product can no longer stand behind. Austerity here is not the
+absence of design — it is the system's clearest statement that the juice marks
+help, and this is the room where help is off. Reserved colours return only
+with the verdict, under the normal checked rules.
+
 **Gamification stays prohibited.** No streaks, no points, no XP, no badges, no
 levels, no counters that only go up, no urgency. This is not a stylistic
 preference; it is the product's central honesty claim. A completed activity is
@@ -423,3 +502,7 @@ it is a claim the product cannot defend, and it does not ship.
 6. Three elevations. There is no fourth.
 7. Maia appears because of state, at a ladder size, still unless she is live.
 8. Celebrate only what was checked, and say what checked it.
+9. A satisfied precondition is not a verdict: green marks what the engine
+   checked, never a form that is merely complete.
+10. Where the product measures unassisted work, the energy language stays
+    outside the room.
