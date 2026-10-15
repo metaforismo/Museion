@@ -11,7 +11,7 @@
 .menu summary > span { display: grid; gap: 5px; }
 .menu i { display: block; height: 1.5px; width: 16px; border-radius: 2px; background: currentColor; }
 .menuPanel { position: absolute; top: calc(100% + 15px); right: 0; width: min(300px, calc(100vw - 36px)); padding: 16px; border-radius: 20px; background: #fff; border: 1px solid #dfe5ee; box-shadow: 0 14px 40px #213a651a; }
-.menuPanel p { margin: 2px 8px 10px; font-size: .7rem; font-weight: 650; color: #6c7c99; letter-spacing: .065em; text-transform: uppercase; }
+.menuPanel p { margin: 2px 8px 10px; font-size: .7rem; font-weight: 650; color: #566580; letter-spacing: .065em; text-transform: uppercase; }
 .menuPanel a { display: flex; align-items: center; justify-content: space-between; min-height: 44px; border-radius: 10px; padding: 10px; font-size: .9rem; }
 @media (hover: hover) and (pointer: fine) { .navLink:hover, .menuPanel a:hover, .menu summary:hover { background: #edf2fa; color: var(--color-ink); } .start:hover { background: var(--color-lapis-dark); } }
 @media (max-width: 900px) { .navLink { display: none; } .menu { display: block; } .inner { padding-inline: 16px; } }
