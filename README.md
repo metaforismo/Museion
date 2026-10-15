@@ -54,7 +54,7 @@ The `data/` directory is excluded from Git. Use an absolute path on a persistent
 
 Account sessions expire after 30 days and can be revoked by signing out. Saved progress, evidence and course artifacts survive a server restart. Temporary compiler jobs may expire; published personal courses remain available from their saved artifacts. Tests run with separate test databases and do not need personal data.
 
-This is a single Node instance with a persistent filesystem. A future deployment must provide HTTPS, writable persistent storage, backups and suitable operating controls. Ephemeral serverless disks and multiple app instances with independent local databases are not equivalent deployments. Legacy Sites/Cloudflare scripts remain historical integration paths; the new native SQLite runtime is not verified there.
+This is a single Node instance with a persistent filesystem. A future deployment must provide HTTPS, writable persistent storage, backups and suitable operating controls. Ephemeral serverless disks and multiple app instances with independent local databases are not equivalent deployments. Legacy Sites/Cloudflare scripts remain historical integration paths; the new native SQLite runtime is not verified there. Their `vinext` tooling is a development dependency and is excluded from the supported Node production installation; the legacy scripts require development dependencies and are not deployment instructions.
 
 ## Maia and optional AI
 

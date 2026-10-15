@@ -27,13 +27,12 @@
     "@hugeicons/core-free-icons": "^4.2.2",
     "@hugeicons/react": "^1.1.9",
     "drizzle-orm": "^0.45.2",
-    "next": "^16.2.6",
+    "next": "~16.3.8",
     "openai": "^6.47.0",
-    "pdfjs-dist": "^6.1.200",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-server-dom-webpack": "^19.2.6",
-    "vinext": "^0.0.50",
+    "pdfjs-dist": "~6.2.108",
+    "react": "~19.2.8",
+    "react-dom": "~19.2.8",
+    "react-server-dom-webpack": "~19.2.8",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -44,25 +43,24 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.2",
-    "@vitejs/plugin-rsc": "^0.5.26",
+    "@vitejs/plugin-rsc": "0.5.26",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.10",
+    "eslint-config-next": "~16.3.8",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "^8.0.13",
     "vitest": "^4.1.8",
-    "wrangler": "^4.92.0"
+    "wrangler": "^4.92.0",
+    "vinext": "^0.0.50"
   },
   "description": "Interactive learning platform with deterministic ground truth and a leak-gated Socratic AI tutor.",
   "engines": {
     "node": ">=22.13"
   },
   "overrides": {
-    "next": {
-      "postcss": "8.5.19"
-    }
+    "postcss": "^8.5.30"
   },
   "type": "module"
 }
