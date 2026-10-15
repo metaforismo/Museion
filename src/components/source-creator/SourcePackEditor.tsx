@@ -63,7 +63,7 @@ export default function SourcePackEditor({
       <p className="eyebrow">Your material</p>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="tracking-title text-xl font-semibold">Build one Source Pack</h2>
+          <h2 className="tracking-title text-xl font-semibold">Gather your study material</h2>
           <p className="mt-2 max-w-xl text-body-sm leading-6 text-ink-soft">Each item keeps its own role and provenance. References document where material came from; only the authorized text or file becomes course evidence.</p>
         </div>
         <span className="rounded-full bg-paper px-3 py-1.5 text-label font-semibold text-ink-soft">{materials.length}/8 materials</span>
@@ -73,7 +73,7 @@ export default function SourcePackEditor({
           the viewport on any focused input under 16px, and lead is the smallest
           step on the scale that clears that floor — so this is a size the
           constraint picked, not a hierarchy choice to tidy up later. */}
-      <label className="mt-5 block text-body-sm font-medium" htmlFor="source-title">Source Pack title</label>
+      <label className="mt-5 block text-body-sm font-medium" htmlFor="source-title">Name this collection</label>
       <input id="source-title" value={title} maxLength={200} disabled={disabled} onChange={(event) => onTitle(event.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-ink/15 bg-surface px-3 text-lead font-normal" />
 
       <ol className="mt-6 space-y-4" aria-label="Source Pack materials">

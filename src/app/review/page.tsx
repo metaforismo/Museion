@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import MaiaCharacter from "@/components/MaiaCharacter";
-import { Card, Chip, CountUpNumber, Pressable, SectionHeader } from "@/components/ui";
+import { Card, Chip, Pressable, SectionHeader } from "@/components/ui";
 import { buildDashboardSnapshot } from "@/lib/dashboard";
 import { buildRevisitPlan, formatDueDate, REVISIT_INTERVALS_DAYS } from "@/lib/revisit/scheduler";
 import { currentActor } from "@/lib/server/actor";
@@ -38,10 +38,10 @@ export default async function ReviewPage() {
       <header className="flex flex-col gap-4 border-b border-ink/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="eyebrow">Review</p>
-          <h1 className="mt-2 title-page">Revisit what the record can justify.</h1>
+          <h1 className="mt-2 title-page">Make it stick.</h1>
           <p className="mt-3 max-w-2xl text-body leading-6 text-ink-soft">
-            Due items come from registered misconceptions, assisted completions, and the spaced schedule —
-            an expanding ladder computed from recorded timestamps, never invented.
+            A small return to an idea can make a big difference.
+            These practice steps come from the work you have already done.
           </p>
         </div>
         {/* The queue length is the page's one honest urgency, so it is printed
@@ -51,17 +51,17 @@ export default async function ReviewPage() {
         {snapshot.reviewQueue.length > 0 && (
           <p className="flex items-baseline gap-2.5 self-start rounded-2xl border border-gold/30 bg-gold-soft px-5 py-3.5 sm:self-auto">
             <span className="text-3xl font-semibold leading-none tracking-title tabular-nums">
-              <CountUpNumber value={snapshot.reviewQueue.length} />
+              {snapshot.reviewQueue.length}
             </span>
             <span className="text-body-sm font-semibold text-ink">to revisit</span>
           </p>
         )}
       </header>
 
-      <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="mt-7 grid gap-6 ">
         <div className="min-w-0 space-y-8">
           <section aria-labelledby="queue-title">
-            <SectionHeader id="queue-title" title="Due now" />
+            <SectionHeader id="queue-title" title="Ready for another try" />
             {snapshot.reviewQueue.length ? (
               <ol className="space-y-3">
                 {/* The head of the queue is the page's next move, so it takes
@@ -119,14 +119,15 @@ export default async function ReviewPage() {
               <Card className="flex flex-wrap items-center gap-6 p-6" style={EMPTY_EDGE}>
                 <MaiaCharacter state="curious" size="hero" className="shrink-0" title="Maia, waiting for checked work" />
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-body font-semibold">No review signal yet.</h3>
+                  <h3 className="text-body font-semibold">You’re all caught up.</h3>
                   <p className="mt-2 text-body-sm leading-6 text-ink-soft">
-                    Complete checked work first. Your queue will stay empty rather than guessing.
+                    As you learn, the ideas worth revisiting will appear here.
+                    Choose a course and we’ll help you return to the tricky parts.
                   </p>
                   {/* Quiet on purpose: an empty queue is a good state, so the
                       move out of it is a secondary press, not an urgent one. */}
                   <Pressable href="/library" variant="secondary" className="mt-4">
-                    Choose a lesson
+                    Find a course
                   </Pressable>
                 </div>
               </Card>
@@ -136,7 +137,7 @@ export default async function ReviewPage() {
           {scheduled.length > 0 && (
             <section aria-labelledby="scheduled-title">
               <SectionHeader id="scheduled-title" title="Scheduled" meta={`${scheduled.length} waiting`} />
-              <p className="-mt-1 mb-3 text-body-sm text-ink-soft">Verified concepts waiting for their next unassisted check.</p>
+              <p className="-mt-1 mb-3 text-body-sm text-ink-soft">Ideas scheduled for their next independent practice.</p>
               <Card className="px-5">
                 <ol className="divide-y divide-ink/8">
                   {scheduled.map((item) => (
@@ -160,24 +161,11 @@ export default async function ReviewPage() {
           )}
         </div>
 
-        {/* The ink panel is the product's explainer surface, shared with Evidence.
-            It goes through Card so it takes the same radius and elevation as
-            every other panel instead of a one-off rounded-2xl. */}
-        <Card as="aside" tone="tinted" tint="var(--color-ink)" className="h-fit p-6 text-white" aria-labelledby="schedule-explainer-title">
-          <p id="schedule-explainer-title" className="text-label font-semibold uppercase tracking-[0.08em] text-gold">How the schedule works</p>
-          <ol className="mt-5 space-y-4">
-            {LADDER_STEPS.map(([heading, detail]) => (
-              <li key={heading}>
-                <strong className="block text-body-sm font-semibold">{heading}</strong>
-                <span className="mt-1 block text-body-sm leading-5 text-white/65">{detail}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-6 border-t border-white/15 pt-5 text-label leading-5 text-white/60">
-            Every date is computed from recorded timestamps in the learning record. Nothing here is a
-            streak, an urgency score, or a guess.
-          </p>
-        </Card>
+        <details className="rounded-3xl border border-ink/10 bg-surface p-5 sm:p-6">
+          <summary className="cursor-pointer text-body font-semibold">How the review schedule works</summary>
+          <ol className="mt-4 grid gap-4 sm:grid-cols-3">{LADDER_STEPS.map(([heading, detail]) => <li key={heading}><p className="text-body-sm font-semibold">{heading}</p><p className="mt-1 text-label leading-5 text-ink-soft">{detail}</p></li>)}</ol>
+          <p className="mt-4 border-t border-ink/10 pt-4 text-label leading-5 text-ink-soft">Dates come from your recorded work. A successful independent check spaces out the next review; a missed check brings the idea back sooner.</p>
+        </details>
       </div>
     </div>
   );

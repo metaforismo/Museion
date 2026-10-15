@@ -23,14 +23,14 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-working-rate",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["4/5"],
           description: "The learner selected the rate for working devices rather than faulty devices.",
           remediationFocus: "Name the event precisely, then count its cases over the full starting group.",
         },
         {
           id: "jumps-to-screen-result",
-          triggerAnswers: ["2"],
-          description: "The learner used a later evidence-conditioned value before considering the base rate.",
+          triggerAnswers: ["2/3"],
+          description: "The learner selected a proportion that does not describe the starting faulty-device count.",
           remediationFocus: "Keep the starting rate separate from what becomes true after a screen result is known.",
         },
       ],
@@ -78,13 +78,13 @@ const lesson = {
       misconceptions: [
         {
           id: "keeps-base-rate",
-          triggerAnswers: ["0"],
+          triggerAnswers: ["1/5"],
           description: "The learner repeated the starting fault rate after being told the device is flagged.",
           remediationFocus: "Evidence changes the comparison group; use the flagged total as the denominator.",
         },
         {
           id: "uses-screen-sensitivity",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["4/5"],
           description: "The learner used the fraction of faulty devices that were flagged rather than faults among flagged devices.",
           remediationFocus: "Ask which group is given. ‘Given flagged’ means start with all flagged devices.",
         },
@@ -116,8 +116,8 @@ const lesson = {
     {
       id: "practice-2",
       concept: "evidence-update",
-      prompt: "For that batch, what is P(flawed | flagged)? Write a fraction.",
-      answer: { kind: "expression", acceptedForms: ["2/3", "8/12"] },
+      prompt: "A batch has 50 products, including 10 flawed products. A check flags 8 flawed products and 4 working products. Given that a product is flagged, what is the probability it is flawed? Write a fraction.",
+      answer: { kind: "numeric", value: 2 / 3, tolerance: 0 },
       solution:
         "Eight of the 12 flagged products are flawed, so P(flawed | flagged) = 8/12 = 2/3.",
       misconceptions: [
@@ -134,7 +134,7 @@ const lesson = {
       id: "practice-3",
       concept: "base-rate",
       prompt:
-        "Near transfer: Which claim is justified by the 50-product record after a product is flagged?",
+        "In a batch of 50 products, 10 are flawed. A check flags 8 flawed products and 4 working products. Which claim is justified after a product is flagged?",
       answer: {
         kind: "multipleChoice",
         options: [
@@ -149,13 +149,13 @@ const lesson = {
       misconceptions: [
         {
           id: "turns-probability-into-certainty",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Every flagged product is flawed."],
           description: "The learner treated a high conditional probability as a guarantee.",
           remediationFocus: "A probability describes a proportion in the stated record; it does not erase the remaining cases.",
         },
         {
           id: "confuses-conditional-with-base-rate",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["About 2 out of 3 products in the whole batch were flawed."],
           description: "The learner applied the flagged-group proportion to the whole batch.",
           remediationFocus: "Always state the group named by the condition when interpreting a probability.",
         },

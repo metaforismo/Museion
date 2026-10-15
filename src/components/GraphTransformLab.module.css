@@ -1,0 +1,6 @@
+.lab { container-type: inline-size; }
+.controls { display: grid; gap: 12px; margin-top: 12px; }
+.parameters { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 480px) {
+  .parameters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

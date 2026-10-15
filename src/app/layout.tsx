@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/inter/wght.css";
+import "./fonts.css";
 import SiteShell from "@/components/SiteShell";
 import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
+import { SITE } from "@/lib/site/config";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(SITE.origin),
+  robots: SITE.indexing ? { index: true, follow: true } : { index: false, follow: false },
   title: { default: "Museion — reasoning, made visible", template: "%s · Museion" },
-  description: "Source-grounded interactive learning with deterministic truth and a leak-gated Socratic AI tutor.",
+  description: "Build understanding with interactive courses and Maia, a tutor who helps you think through the next step.",
   keywords: ["interactive learning", "Socratic tutor", "deterministic assessment", "source-grounded courses"],
   icons: { icon: [{ url: "/brand/museion-mark.svg", type: "image/svg+xml" }], shortcut: "/brand/museion-mark.svg" },
-  openGraph: { title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions.", siteName: "Museion", type: "website", images: [{ url: "/og.png", width: 1200, height: 630 }] },
-  twitter: { card: "summary_large_image", title: "Museion — reasoning, made visible", description: "The engine owns truth. Maia owns questions.", images: ["/og.png"] },
+  openGraph: { title: "Museion — reasoning, made visible", description: "Learn by doing. Think it through with Maia.", siteName: "Museion", type: "website", images: [{ url: "/og.png", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image", title: "Museion — reasoning, made visible", description: "Learn by doing. Think it through with Maia.", images: ["/og.png"] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

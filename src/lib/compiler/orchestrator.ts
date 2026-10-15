@@ -1,3 +1,4 @@
+import { tutorProviderErrorDiagnostic } from "@/lib/maia/provider-error";
 import type { SourceDocument } from "@/lib/source";
 import { validateInteractiveBlock, type InteractiveBlock } from "@/lib/runtime";
 
@@ -31,6 +32,7 @@ export class CompilerFailure extends Error {
     readonly stage: CompilerStage | "critic_after_repair",
     readonly issues: CompilerIssue[],
     readonly telemetry: CompilerStageTelemetry[],
+    readonly providerDiagnostic?: ReturnType<typeof tutorProviderErrorDiagnostic>,
   ) {
     super(`Compiler stopped at ${stage}`);
     this.name = "CompilerFailure";
@@ -122,7 +124,7 @@ export async function compileCourse(
       return result.output;
     } catch (error) {
       if (error instanceof CompilerFailure) throw error;
-      throw new CompilerFailure(stage, [blocking("provider_error", "$", error instanceof Error ? error.message.slice(0, 1_000) : "Unknown provider error")], telemetry);
+      throw new CompilerFailure(stage, [blocking("provider_error", "$", "The compiler stage did not return a valid structured result.")], telemetry, tutorProviderErrorDiagnostic(error));
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
       options.signal?.removeEventListener("abort", abortFromCaller);

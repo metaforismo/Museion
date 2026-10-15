@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-function grepCount(pattern: string, target: string): number {
+function grepCount(pattern: string, target: string, include: string[] = []): number {
   let output: string;
   try {
     // -e keeps patterns that start with "-" (e.g. "--font-serif-display") from
     // being parsed as grep options.
-    output = execFileSync("grep", ["-ro", "-e", pattern, target], { encoding: "utf8" });
+    output = execFileSync("grep", ["-ro", ...include.map((glob) => `--include=${glob}`), "-e", pattern, target], { encoding: "utf8" });
   } catch (error) {
     // grep exits 1 for "no matches" — the only failure that means zero. Exit 2
     // (missing path, bad pattern) or a spawn failure must not pass vacuously.
@@ -20,7 +20,9 @@ function grepCount(pattern: string, target: string): number {
 
 describe("Fraunces retirement", () => {
   it("has no font-display class usages left in src", () => {
-    expect(grepCount("font-display", "src")).toBe(0);
+    // Font-face's standard `font-display: swap` is unrelated to the retired
+    // Tailwind class. Class usages live in TS/TSX, not font-face declarations.
+    expect(grepCount("font-display", "src", ["*.ts", "*.tsx"])).toBe(0);
   });
 
   it("no longer defines the serif display token", () => {

@@ -28,7 +28,7 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-space-target-visible-means-ready",
-          triggerAnswers: ["[2, 12, 6, 9, 18]", "1"],
+          triggerAnswers: ["[2, 12, 6, 9, 18]"],
           description:
             "The learner chose an array because the target is easy to see, even though the values are not sorted.",
           remediationFocus:
@@ -36,7 +36,7 @@ const lesson = {
         },
         {
           id: "sh-space-descending-without-contract",
-          triggerAnswers: ["[18, 12, 9, 6, 2]", "2"],
+          triggerAnswers: ["[18, 12, 9, 6, 2]"],
           description:
             "The learner treated descending order as compatible with the course's increasing-order comparison rules.",
           remediationFocus:
@@ -63,7 +63,7 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-space-reverses-comparison-direction",
-          triggerAnswers: ["Only left of 15", "0"],
+          triggerAnswers: ["Only left of 15"],
           description:
             "The learner moved toward smaller values even though the target is greater than the middle value.",
           remediationFocus:
@@ -71,7 +71,7 @@ const lesson = {
         },
         {
           id: "sh-space-keeps-disproved-half",
-          triggerAnswers: ["On either side", "3"],
+          triggerAnswers: ["On either side"],
           description:
             "The learner did not use sorted order to rule out a complete half.",
           remediationFocus:
@@ -133,7 +133,7 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-space-lucky-hit-validates-method",
-          triggerAnswers: ["The discard rules are justified because 4 was found", "0"],
+          triggerAnswers: ["The discard rules are justified because 4 was found"],
           description:
             "The learner used one lucky result as evidence that the method's precondition holds.",
           remediationFocus:
@@ -141,7 +141,7 @@ const lesson = {
         },
         {
           id: "sh-space-unconditional-left-discard",
-          triggerAnswers: ["The entire left side is always safe to discard", "2"],
+          triggerAnswers: ["The entire left side is always safe to discard"],
           description:
             "The learner applied a discard direction without a valid ordering comparison.",
           remediationFocus:
@@ -168,7 +168,7 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-space-assumes-leftmost-contract",
-          triggerAnswers: ["Only index 1", "0"],
+          triggerAnswers: ["Only index 1"],
           description:
             "The learner assumed the algorithm must return the first duplicate even though that contract was not stated.",
           remediationFocus:
@@ -176,7 +176,7 @@ const lesson = {
         },
         {
           id: "sh-space-duplicates-treated-absent",
-          triggerAnswers: ["It must report absent", "3"],
+          triggerAnswers: ["It must report absent"],
           description:
             "The learner thought duplicate values make a sorted search invalid.",
           remediationFocus:
@@ -235,13 +235,13 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-space-boundary-reverses-side",
-          triggerAnswers: ["Indices right of the middle", "1"],
+          triggerAnswers: ["Indices right of the middle"],
           description: "The learner moved right for a target smaller than the middle value.",
           remediationFocus: "Smaller values lie to the left in the stated increasing order.",
         },
         {
           id: "sh-space-boundary-discarded",
-          triggerAnswers: ["No indices", "2"],
+          triggerAnswers: ["No indices"],
           description: "The learner discarded the boundary even though it remains a valid candidate.",
           remediationFocus: "A comparison with the middle removes the middle and one side, not every other index.",
         },
@@ -261,13 +261,13 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-space-absent-guessed-early",
-          triggerAnswers: ["Neither, absence is already proved", "3"],
+          triggerAnswers: ["Neither, absence is already proved"],
           description: "The learner concluded absence after one unequal comparison.",
           remediationFocus: "An unequal middle value removes only the disproved region; continue until no candidate remains.",
         },
         {
           id: "sh-space-absent-keeps-both",
-          triggerAnswers: ["Both", "2"],
+          triggerAnswers: ["Both"],
           description: "The learner kept the side whose values are all too small.",
           remediationFocus: "Use sorted order to eliminate every value at or left of 12.",
         },

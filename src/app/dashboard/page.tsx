@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { RepeatIcon, Files02Icon } from "@hugeicons/core-free-icons";
-
+import AppIcon from "@/components/AppIcon";
 import CoursePathCard from "@/components/CoursePathCard";
-import DashboardEmptyState from "@/components/DashboardEmptyState";
 import JourneyStats from "@/components/JourneyStats";
 import MaiaCharacter from "@/components/MaiaCharacter";
-import { Card, Chip, Pressable, ProgressRail, SectionHeader, cardClasses } from "@/components/ui";
+import MaiaNextStep from "@/components/MaiaNextStep";
+import styles from "@/components/product.module.css";
+import { Chip, Pressable, ProgressRail } from "@/components/ui";
 import { allLessons } from "@/lib/content";
 import { coursePaths } from "@/lib/curriculum";
-import { subjectColor, subjectDeep, subjectTint } from "@/lib/curriculum/subjects";
+import { subjectColor } from "@/lib/curriculum/subjects";
 import { buildDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard";
 import { evidenceTone } from "@/lib/design/evidence-tone";
 import { maiaStateForAction, MAIA_STATE_TITLE } from "@/lib/design/maia";
@@ -18,348 +18,63 @@ import { spreadPathsBySubject } from "@/lib/design/path-selection";
 import { currentActor } from "@/lib/server/actor";
 import { readLearnerPreferences } from "@/lib/server/preferences";
 
-export const metadata: Metadata = { title: "Home", description: "Your courses, review queue, evidence and next learning action." };
+export const metadata: Metadata = { title: "Your learning", description: "Your courses, practice and next step." };
 export const dynamic = "force-dynamic";
 
-const METHOD_MOVES = ["Ground", "Predict", "Interact", "Diagnose", "Explain", "Transfer", "Revisit"] as const;
-type MethodMove = (typeof METHOD_MOVES)[number];
+const ACTION_LABELS: Record<DashboardSnapshot["nextAction"]["kind"], string> = {
+  resume: "Continue learning", review: "Practice this concept", practice: "Start practice", launch: "Start learning", create: "Create a course",
+};
 
-function formatTemplate(value: string) {
-  return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-/** Which method move the recommended action actually exercises. */
-function activeMethodMove(action: DashboardSnapshot["nextAction"]): MethodMove {
-  if (action.kind === "review") return "Revisit";
-  if (action.kind === "resume") return "Interact";
-  if (action.kind === "launch") return "Predict";
-  return "Ground";
-}
-
-/**
- * The subject behind an in-app href, or null when it has none. Action hrefs
- * never carry a course id — they point at lessons, /judge, /review or
- * /create — so the lesson's own track is the only derivation that is ever
- * right. Guessing a subject for /judge would paint the page a colour the
- * recommendation does not have.
- */
-function subjectForHref(href: string): string | null {
-  const lessonId = /^\/lessons\/([^/?#]+)/.exec(href)?.[1];
-  if (!lessonId) return null;
-  return allLessons().find((lesson) => lesson.id === lessonId)?.track ?? null;
-}
-
-/** Unrecognised subjects collapse to the default palette entry: lapis on sky. */
-function accentFor(subject: string | null) {
-  return {
-    accent: subjectColor(subject ?? "default"),
-    tint: subjectTint(subject ?? "default"),
-    deep: subjectDeep(subject ?? "default"),
-  };
-}
-
-function evidenceState(state: DashboardSnapshot["evidence"][number]["state"]) {
-  if (state === "observed-guided") return "Observed in guided work";
-  if (state === "hint-free-practice") return "Hint-free practice completed";
-  return "Immediate near transfer";
-}
-
-/**
- * The seven moves, named at every width. Four per row on phones instead of
- * bare numerals: the method is the product's central claim, and "3" states
- * none of it.
- */
-function MethodSpine({ activeMove, accent }: { activeMove: MethodMove; accent: string }) {
-  const activeIndex = METHOD_MOVES.indexOf(activeMove);
-  return (
-    <ol
-      aria-label="The Museion Method"
-      className="flex flex-wrap justify-center border-t border-ink/8 bg-surface/55 sm:grid sm:grid-cols-7"
-    >
-      {METHOD_MOVES.map((move, index) => {
-        const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "upcoming";
-        return (
-          <li
-            key={move}
-            aria-current={state === "active" ? "step" : undefined}
-            className="flex basis-1/4 flex-col items-center gap-1.5 px-1 py-2.5 text-center"
-          >
-            <span
-              aria-hidden="true"
-              className="h-1 w-8 rounded-full bg-ink/10 sm:w-9"
-              style={state === "upcoming" ? undefined : { backgroundColor: accent, opacity: state === "done" ? 0.45 : 1 }}
-            />
-            <span className={`text-micro ${state === "active" ? "font-semibold text-ink" : "font-medium text-ink-soft"}`}>
-              {move}
-              {state === "active" && <span className="sr-only"> — current move</span>}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
-  );
+function SectionHeading({ id, title, href, action }: { id: string; title: string; href?: string; action?: string }) {
+  return <div className={styles.sectionHead}><h2 id={id} className={styles.sectionTitle}>{title}</h2>{href && <Link href={href} className={styles.link}>{action} <span aria-hidden="true">→</span></Link>}</div>;
 }
 
 function ActiveLearningCard({ item }: { item: DashboardSnapshot["activeLearning"][number] }) {
-  const subject = subjectForHref(item.href);
-  const { accent } = accentFor(subject);
-  return (
-    <Link href={item.href} className={`${cardClasses("quiet", true)} group flex flex-col p-5`}>
-      {/* Clustered, not spread. A lone resumed lesson makes this card the full
-          width of the column, and `justify-between` threw the provenance chip
-          and the subject to opposite edges of it. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Chip tone="neutral">{item.kind === "generated" ? "From your source" : "Museion Original"}</Chip>
-        {subject && <span className="truncate text-micro font-semibold" style={{ color: accent }}>{subject}</span>}
-      </div>
-      <h3 className="mt-3 text-lg font-semibold tracking-title">{item.title}</h3>
-      <p className="mt-1 text-body-sm text-ink-soft">{item.detail}</p>
-      <div className="mt-4">
-        <ProgressRail ratio={item.progress} accent={accent} label={`${item.title} progress`} />
-      </div>
-    </Link>
-  );
+  const lessonId = /^\/lessons\/([^/?#]+)/.exec(item.href)?.[1];
+  const subject = allLessons().find((lesson) => lesson.id === lessonId)?.track;
+  return <Link href={item.href} className={`${styles.card} ${styles.activeCard}`}>
+    <div className="flex items-center justify-between gap-3"><Chip tone="neutral">{item.kind === "generated" ? "From your source" : "Museion course"}</Chip><span aria-hidden="true" className="text-ink-soft">↗</span></div>
+    <h3 className={styles.activeTitle}>{item.title}</h3><p className={styles.rowDetail}>{item.detail}</p>
+    <div className="mt-4"><ProgressRail ratio={item.progress} accent={subjectColor(subject ?? "default")} label={`${item.title} progress`} /></div>
+  </Link>;
 }
 
 export default async function DashboardPage() {
-  const learnerId = (await currentActor()).ownerId;
-  const [snapshot, preferences] = await Promise.all([
-    buildDashboardSnapshot(learnerId),
-    readLearnerPreferences(),
-  ]);
-  const hasActivity = snapshot.activeLearning.length > 0;
-  const activeMove = activeMethodMove(snapshot.nextAction);
-  const heroMaiaState = maiaStateForAction(snapshot.nextAction.kind);
-  const heroSubject = subjectForHref(snapshot.nextAction.href);
-  const { accent: heroAccent, tint: heroTint, deep: heroDeep } = accentFor(heroSubject);
-  const greeting = preferences?.goal
-    ? `Working toward: ${preferences.goal}.`
-    : "Continue from recorded work, review a real signal, or build from a source you trust.";
+  const actor = await currentActor();
+  const preferences = await readLearnerPreferences();
+  const snapshot = await buildDashboardSnapshot(actor.ownerId, { suggestedCourseId: preferences?.suggestedCourseId });
+  const hasActivity = snapshot.activeLearning.length > 0 || snapshot.journey.lessonsCompleted > 0;
+  const firstName = actor.displayName?.trim().split(/\s+/)[0];
+  const heroState = maiaStateForAction(snapshot.nextAction.kind);
+  const selectedPaths = spreadPathsBySubject(coursePaths, snapshot.courseProgress, 3);
+  const greeting = hasActivity ? `Welcome back${firstName ? `, ${firstName}` : ""}.` : `Let’s begin${firstName ? `, ${firstName}` : ""}.`;
 
-  return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-      {/* Where the record is kept is a caveat, and caveats belong with the other
-          caveats. It used to be a lone pill floating at the right of the
-          greeting, surfacing a storage detail above the learner's first move;
-          `limitations` already states the same fact in the backend's own terms,
-          and the footer prints all of them. */}
-      <header>
-        <h1 className="title-page">Welcome back.</h1>
-        <p className="mt-2 max-w-2xl text-body leading-6 text-ink-soft">{greeting}</p>
-      </header>
+  return <div className={styles.page}>
+    <header className={styles.greeting}><div><p className={styles.eyebrow}>Your learning space</p><h1 className={styles.heading}>{greeting}</h1><p className={styles.subheading}>{preferences ? `A little closer to ${preferences.goal}.` : "One good question. One small discovery. Your next step starts here."}</p></div><Link href="/library" className={styles.link}>Explore courses <span aria-hidden="true">↗</span></Link></header>
 
-      {/* Mission — one compact, justified next move, in the colour of the subject
-          it belongs to. The accent edge carries the subject even for sky, whose
-          tint is close enough to the learn-zone wash to read as white. */}
-      <Card as="section" tone="solid" tint={heroTint} accent={heroAccent} className="mt-6 overflow-hidden" aria-labelledby="next-action-title">
-        <div className="flex items-stretch">
-          <div className="flex-1 p-5 sm:p-6">
-            {/* Two facts, not three. The method move was the middle token —
-                and the spine at the foot of this card already names it, in
-                position and in bold, which is the only place it means
-                anything. The subject stays: dropping it would leave the accent
-                carrying the subject on colour alone. */}
-            <p className="flex flex-wrap items-center gap-2 text-label font-semibold uppercase tracking-[0.08em]" style={{ color: heroAccent }}>
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: heroAccent }} />
-              <span>
-                Next move
-                {heroSubject && <> · <span className="text-ink-soft">{heroSubject}</span></>}
-              </span>
-            </p>
-            <h2 id="next-action-title" className="mt-2.5 max-w-2xl text-2xl font-semibold tracking-title sm:text-3xl">
-              {snapshot.nextAction.title}
-            </h2>
-            <p className="mt-1.5 max-w-2xl text-body leading-6 text-ink-soft">
-              {snapshot.nextAction.description} {snapshot.nextAction.reason}
-            </p>
-            {/* The page's one full-fill element: the hero CTA in the subject's
-                own accent, standing on its deep edge. Beside it, the review
-                queue — when it is real — takes the warm gold press with the
-                actual count and ink text (white on gold fails at 2.80:1),
-                compact so it reads as the second move, not a rival first. An
-                empty queue gets nothing: no fake urgency, no zero. */}
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Pressable href={snapshot.nextAction.href} accent={heroAccent} edge={heroDeep} className="group min-h-12 px-7">
-                Begin <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-              </Pressable>
-              {snapshot.reviewQueue.length > 0 && (
-                <Pressable href="/review" variant="attention" size="compact">
-                  {snapshot.reviewQueue.length} to revisit
-                </Pressable>
-              )}
-            </div>
-          </div>
-          <div className="relative hidden items-end pr-7 sm:flex">
-            {/* Name and pose come from one state: when the recommendation is a
-                review she is drawn thinking, and she must not be announced as
-                ready for a move. Her feet cross the method spine's top rule —
-                she stands on the path, rather than floating beside the copy. */}
-            <MaiaCharacter state={heroMaiaState} size="hero" className="relative z-10 -mb-2.5" title={MAIA_STATE_TITLE[heroMaiaState]} />
-          </div>
-        </div>
-
-        {/* Method strip — the active move is derived from the real recommendation */}
-        <MethodSpine activeMove={activeMove} accent={heroAccent} />
-      </Card>
-
-      {snapshot.journey.lessonsCompleted > 0 && (
-        <section aria-label="Your journey so far" className="mt-4">
-          <JourneyStats journey={snapshot.journey} />
-        </section>
-      )}
-
-      {/* The learner's own state, in two columns. The course grid used to live
-          in the left column and ran a thousand pixels past the foot of the
-          right one, which is how a page ends up with a dead 380px column beside
-          a scrolling grid. What is left here is the record — and the record has
-          two columns' worth of content, or none. */}
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(19rem,.6fr)]">
-        <div className="space-y-6">
-          {hasActivity && (
-            <section aria-labelledby="active-title">
-              <SectionHeader id="active-title" title="Continue learning" actionHref="/library" actionLabel="View library" />
-              {/* One resumed lesson is one card, not one card and a hole. */}
-              <div className={`grid gap-3 ${snapshot.activeLearning.length > 1 ? "sm:grid-cols-2" : ""}`}>
-                {snapshot.activeLearning.map((item) => (
-                  <ActiveLearningCard key={item.id} item={item} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          <section aria-labelledby="evidence-title">
-            <SectionHeader id="evidence-title" title="What the record supports" actionHref="/progress" actionLabel="Full evidence" />
-            {snapshot.evidence.length ? (
-              <Card className="grid gap-x-6 gap-y-0 px-5 sm:grid-cols-2">
-                {snapshot.evidence.slice(0, 6).map((item) => (
-                  <div key={`${item.concept}:${item.state}`} className="flex items-center justify-between gap-3 border-t border-ink/8 py-3 first:border-t-0 sm:[&:nth-child(2)]:border-t-0">
-                    <div className="min-w-0">
-                      <p className="text-body-sm font-medium">{item.concept}</p>
-                      <p className="mt-0.5 text-label text-ink-soft">{evidenceState(item.state)}</p>
-                    </div>
-                    <Chip tone={evidenceTone(item.result)}>{item.result}</Chip>
-                  </div>
-                ))}
-              </Card>
-            ) : (
-              <Card>
-                <DashboardEmptyState
-                  icon="evidence"
-                  title="No evidence has been recorded"
-                  description="Complete a checked learning move. Museion will record only the observation the engine can support."
-                  actionHref={snapshot.nextAction.href}
-                  actionLabel="Make the first checked move"
-                />
-              </Card>
-            )}
-          </section>
-        </div>
-
-        <aside className="space-y-6">
-          {/* No misconceptions is not a state worth a panel. The empty card
-              explained the rule for a panel that was not there and offered
-              "Choose a lesson", which is the path grid below. The count is a
-              fact about open items, so it is printed when there are any and
-              omitted at nought — a zero beside "Nothing needs correction yet"
-              said the same thing twice, one of them in numerals. */}
-          {snapshot.misconceptions.length > 0 && (
-            <section aria-labelledby="misconceptions-title">
-              {/* Gold reads as attention. The square is solid gold with an ink
-                  glyph (6.6:1): gold on gold-soft is 2.5:1 — under the 3:1 a
-                  meaningful graphic needs, and too pale to register as a state. */}
-              <SectionHeader
-                id="misconceptions-title"
-                title="Recent misconceptions"
-                icon={RepeatIcon}
-                accent="var(--color-ink)"
-                tint="var(--color-gold)"
-                meta={String(snapshot.misconceptions.length)}
-              />
-              <Card className="px-5">
-                <div className="divide-y divide-ink/8">
-                  {snapshot.misconceptions.slice(0, 3).map((item) => (
-                    <Link key={`${item.id}:${item.observedAt}`} href={item.href} className="block py-3.5">
-                      <p className="text-micro font-semibold uppercase tracking-[0.08em] text-ink-soft">{item.concept}</p>
-                      <p className="mt-1 line-clamp-2 text-body-sm leading-5 text-ink">{item.label}</p>
-                      <Chip tone={item.status === "corrected-in-session" ? "neutral" : "attention"} className="mt-2">
-                        {item.status === "corrected-in-session" ? "Corrected in session · worth rechecking" : "Not yet resolved"}
-                      </Chip>
-                    </Link>
-                  ))}
-                </div>
-                <Link href="/review" className="mb-4 mt-1 inline-flex text-body-sm font-semibold text-lapis-dark hover:underline hover:underline-offset-4">Open review</Link>
-              </Card>
-            </section>
-          )}
-
-          <section aria-labelledby="sources-title">
-            {/* Lapis reads as information — the same blue the product uses for
-                navigation and provenance. White on lapis is 5.4:1. */}
-            <SectionHeader
-              id="sources-title"
-              title="Recent sources"
-              icon={Files02Icon}
-              accent="var(--color-surface)"
-              tint="var(--color-lapis)"
-              actionHref={snapshot.recentSources.length > 0 ? "/create" : undefined}
-              actionLabel={snapshot.recentSources.length > 0 ? "Add source" : undefined}
-            />
-            {snapshot.recentSources.length ? (
-              <Card className="px-5">
-                <div className="divide-y divide-ink/8">
-                  {snapshot.recentSources.map((source) => (
-                    <Link key={source.id} href={source.href} className="block py-3.5">
-                      <p className="truncate text-body-sm font-medium">{source.title}</p>
-                      <p className="mt-1 text-label text-ink-soft">
-                        {source.pages} {source.pages === 1 ? "page" : "pages"} · {formatTemplate(source.templateId)}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </Card>
-            ) : (
-              <Card>
-                <DashboardEmptyState
-                  icon="source"
-                  title="No source has been compiled"
-                  description="Bring material you may use — provenance stays attached to the course."
-                  actionHref="/create"
-                  actionLabel="Open Source Studio"
-                />
-              </Card>
-            )}
-          </section>
-        </aside>
+    <section className={styles.hero} aria-labelledby="next-action-title">
+      <div className={styles.heroBody}><p className="flex items-center gap-2 text-label font-semibold uppercase tracking-[.08em] text-lapis-dark"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-lapis"/>{hasActivity ? "Picked up where you left off" : "Your first discovery"}</p>
+        <h2 id="next-action-title" className={styles.heroTitle}>{snapshot.nextAction.title}</h2><p className={styles.heroCopy}>{snapshot.nextAction.description}</p>
+        <div className={styles.heroActions}><Pressable href={snapshot.nextAction.href} accent="var(--color-ink)" edge="var(--color-ink)">{ACTION_LABELS[snapshot.nextAction.kind]} <span aria-hidden="true">→</span></Pressable>{snapshot.reviewQueue.length > 0 && snapshot.nextAction.kind !== "review" && <Link href="/review" className={styles.link}>{snapshot.reviewQueue.length} to revisit</Link>}</div>
+        <MaiaNextStep action={snapshot.nextAction} dailyMinutes={preferences?.dailyMinutes}/>
       </div>
+      <div className={styles.heroArt}><MaiaCharacter state={heroState} size="hero" title={MAIA_STATE_TITLE[heroState]} /></div>
+    </section>
 
-      {/* Six paths, across the full width, one per subject. The catalogue is
-          ten, and a home page that lists all ten has chosen nothing for the
-          learner — the sidebar already caps its own list for the same reason.
-          The link states the total, so the six read as a selection rather than
-          as everything Museion has. */}
-      <section aria-labelledby="paths-title" className="mt-6">
-        <SectionHeader
-          id="paths-title"
-          title={hasActivity ? "Explore another path" : "Choose a learning path"}
-          actionHref="/library"
-          actionLabel={`All ${coursePaths.length} paths`}
-        />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {spreadPathsBySubject(coursePaths, snapshot.courseProgress, 6).map((course) => (
-            <CoursePathCard key={course.id} course={course} progress={snapshot.courseProgress[course.id] ?? { completed: 0, total: course.lessonIds.length }} />
-          ))}
-        </div>
+    {snapshot.journey.lessonsCompleted > 0 && <section aria-label="Your progress so far" className="mt-5"><JourneyStats journey={snapshot.journey}/></section>}
+
+    <div className={styles.contentGrid}><div>
+      <section className={styles.section} aria-labelledby="learning-title"><SectionHeading id="learning-title" title="Your courses" href="/library" action="View library"/>
+        {snapshot.activeLearning.length > 0 ? snapshot.activeLearning.map((item) => <ActiveLearningCard key={item.id} item={item}/>) : <div className={`${styles.card} ${styles.empty}`}><span className={styles.emptyIcon} aria-hidden="true"><AppIcon name="library" className="h-5 w-5"/></span><h3 className={styles.emptyTitle}>Your next curiosity belongs here.</h3><p className={styles.emptyCopy}>Choose a course or bring something you want to understand. We’ll keep your place as you learn.</p><Link href="/library" className={`${styles.link} mt-3`}>Find your first course <span aria-hidden="true">→</span></Link></div>}
       </section>
+      {snapshot.evidence.length > 0 && <section className={styles.section} aria-labelledby="understanding-title"><SectionHeading id="understanding-title" title="What you’ve been working on" href="/progress" action="See progress"/><div className={styles.card}>{snapshot.evidence.slice(0,4).map((item) => <div key={`${item.concept}:${item.state}`} className={styles.row}><div><p className={styles.rowTitle}>{item.concept}</p><p className={styles.rowDetail}>{item.state === "hint-free-practice" ? "Practised without hints" : item.state === "immediate-transfer" ? "Checked in a new example" : "Worked through with guidance"}</p></div><Chip tone={evidenceTone(item.result)}>{item.result}</Chip></div>)}</div></section>}
+      {snapshot.reviewQueue.length > 0 && <section className={styles.section} aria-labelledby="review-title"><SectionHeading id="review-title" title="Worth another look" href="/review" action="See all"/><div className={styles.card}>{snapshot.reviewQueue.slice(0,2).map((item) => <Link href={item.href} key={item.id} className={styles.row}><div><h3 className={styles.rowTitle}>{item.concept}</h3><p className={styles.rowDetail}>{item.reason}</p></div><span aria-hidden="true">→</span></Link>)}</div></section>}
+    </div><aside>
+      <section className={`${styles.card} ${styles.tutorCard}`} aria-labelledby="maia-title"><div className={styles.tutorTop}><MaiaCharacter size="inline" state="curious" title="Maia"/><div><h2 id="maia-title" className={styles.tutorTitle}>A little help from Maia</h2><p className={styles.rowDetail}>Your thinking companion</p></div></div><p className={styles.emptyCopy}>Stuck on a step? Tell Maia what you’ve tried. She’ll help you see it differently, then leave the next move to you.</p><Link href={snapshot.nextAction.href} className={`${styles.link} mt-3`}>Learn together <span aria-hidden="true">→</span></Link></section>
+      <section className={`${styles.section} mt-6`} aria-labelledby="sources-title"><SectionHeading id="sources-title" title="Your sources"/>{snapshot.recentSources.length > 0 ? <div className={styles.card}>{snapshot.recentSources.slice(0,3).map((source) => <Link key={source.id} href={source.href} className={styles.row}><div className="min-w-0"><h3 className={`${styles.rowTitle} truncate`}>{source.title}</h3><p className={styles.rowDetail}>{source.pages} {source.pages === 1 ? "page" : "pages"}</p></div><span aria-hidden="true">↗</span></Link>)}</div> : <div className={`${styles.card} ${styles.empty}`}><h3 className={styles.emptyTitle}>Turn a source into a course.</h3><p className={styles.emptyCopy}>Bring your notes or a document. Build a guided path around what you want to learn.</p><Link href="/create" className={`${styles.link} mt-3`}>Add a source <span aria-hidden="true">→</span></Link></div>}</section>
+    </aside></div>
 
-      {/* The whole boundary, not its first sentence. `limitations` has always
-          held three — the mastery caveat, the retention caveat and one derived
-          from the storage backend — and the page printed one of them while the
-          storage fact was paraphrased into a pill at the top. This is the place
-          for all of it. */}
-      <p className="mt-10 max-w-3xl border-t border-ink/10 pt-4 text-label leading-5 text-ink-soft">
-        {snapshot.limitations.join(" ")}{" "}
-        <Link href="/progress" className="font-medium text-lapis-dark">Read the evidence boundary.</Link>
-      </p>
-    </div>
-  );
+    <section className={styles.pathSection} aria-labelledby="paths-title"><SectionHeading id="paths-title" title={hasActivity ? "Make room for a new curiosity" : "A few places to start"} href="/library" action="All courses"/><div className={styles.paths}>{selectedPaths.map((course) => <CoursePathCard key={course.id} course={course} progress={snapshot.courseProgress[course.id] ?? { completed:0,total:course.lessonIds.length }}/>)}</div></section>
+    <details className={styles.disclosure}><summary>How your progress is measured</summary><p>{snapshot.limitations.join(" ")} <Link href="/progress" className="font-medium text-lapis-dark">View your learning record.</Link></p></details>
+  </div>;
 }

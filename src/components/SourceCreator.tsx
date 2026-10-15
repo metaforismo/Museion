@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 
@@ -125,10 +126,13 @@ function errorMessage(error: unknown): string {
 
 function compilerErrorMessage(code: string | null): string {
   const messages: Record<string, string> = {
+    COMPILER_PROVIDER_UNAVAILABLE: "The course-building provider could not complete this request. Try again when a compatible free model is available.",
+    COMPILER_PROVIDER_INVALID_RESPONSE: "The provider returned an incomplete or invalid course stage. Try again; no course was published.",
     COMPILATION_REJECTED: "The generated course did not pass publication validation.",
     COMPILER_JOB_ALREADY_RUNNING: "A compilation is already running in this browser session.",
     COMPILER_RUN_QUOTA_EXCEEDED: "The local run history is full. Wait for older runs to expire, then try again.",
-    LIVE_COMPILER_NOT_CONFIGURED: "Live compilation is unavailable here. Connect Codex in Settings or use the verified replay.",
+    LIVE_COMPILER_NOT_CONFIGURED: "Course building isn’t connected. Prepare your material here, choose a course-building connection in Settings, or explore Museion Originals.",
+    LIVE_AI_DISABLED: "Course building is disabled on this server. You can prepare your material and explore Museion Originals.",
   };
   return messages[code ?? ""] ?? "Compilation stopped safely before publication.";
 }
@@ -145,7 +149,7 @@ export default function SourceCreator() {
   const architectTrigger = useRef<HTMLButtonElement>(null);
   const normalizationSeq = useRef(0);
   const suppressNextDraftSave = useRef(false);
-  const [title, setTitle] = useState("Binary Search Notes");
+  const [title, setTitle] = useState("My study notes");
   const [materials, setMaterials] = useState<CreatorMaterialDraft[]>([emptyTextMaterial()]);
   const [sourcePack, setSourcePack] = useState<SourcePack | null>(null);
   const [document, setDocument] = useState<SourceDocument | null>(null);
@@ -168,7 +172,18 @@ export default function SourceCreator() {
   const [draftReady, setDraftReady] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"loading" | "empty" | "saved" | "saving" | "error">("loading");
   const [architectOpen, setArchitectOpen] = useState(false);
+  const [compilerStatus, setCompilerStatus] = useState<"checking" | "available" | "unavailable" | "unknown">("checking");
   const activeJob = Boolean(job && ["queued", "running"].includes(job.status));
+  const canCompileThisSource = document?.sha256 === GOLDEN_SOURCE_SHA256 || compilerStatus === "available";
+
+  useEffect(() => {
+    let active = true;
+    void fetchWithTimeout("/api/ai/status", { cache: "no-store" }).then(async (response) => {
+      const status = await response.json().catch(() => null) as { compilerAvailable?: boolean } | null;
+      if (active) setCompilerStatus(response.ok && typeof status?.compilerAvailable === "boolean" ? status.compilerAvailable ? "available" : "unavailable" : "unknown");
+    }).catch(() => { if (active) setCompilerStatus("unknown"); });
+    return () => { active = false; };
+  }, []);
 
   const restoreDraft = (): boolean => {
     try {
@@ -473,6 +488,7 @@ export default function SourceCreator() {
 
   const compile = async () => {
     if (compileLock.current || !document || !sourcePack || !sourceAuthorized || !warningsAccepted || (job && ["queued", "running"].includes(job.status))) return;
+    if (!canCompileThisSource) { setError(compilerErrorMessage("LIVE_COMPILER_NOT_CONFIGURED")); return; }
     compileLock.current = true;
     setCompiling(true);
     setError(null);
@@ -586,16 +602,17 @@ export default function SourceCreator() {
           Start with a source you trust.
         </h1>
         <p className="mt-3 max-w-[62ch] text-body leading-6 text-ink-soft">
-          Museion first normalizes the source, fixes page boundaries and hashes
-          every page. Nothing is compiled until you can inspect that record.
+          Bring your notes, a document or a topic you want to understand.
+          Review the material, choose your goal and build a course around it.
         </p>
         {/* Check connection gates the whole live-compile path, so it takes a
             real press rather than a text link — secondary, because the studio's
             one full-fill press belongs to Compile. */}
         <Card tint="var(--color-lapis-soft)" className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-lapis/15 px-4 py-3 text-body-sm">
-          <span className="font-semibold text-lapis-dark">Source → validated course</span>
-          <span className="text-ink-soft">When live AI is connected, Museion designs the course in staged passes and publishes only after deterministic checks pass.</span>
-          <Pressable href="/settings" variant="secondary" size="compact">Check connection</Pressable>
+          <span className="font-semibold text-lapis-dark">{compilerStatus === "available" ? "Course building is connected" : compilerStatus === "checking" ? "Checking course building…" : compilerStatus === "unknown" ? "Course-building connection could not be checked" : "Course building isn’t connected yet"}</span>
+          <span className="text-ink-soft">{compilerStatus === "available" ? "Review your material, then build and check your course." : "You can still organise your material and choose a learning goal. Museion Originals are ready in your library."}</span>
+          <Pressable href="/settings" variant="secondary" size="compact">Course-building settings</Pressable>
+          {compilerStatus !== "available" && <Link href="/library" className="min-h-9 py-2 font-semibold text-lapis-dark underline underline-offset-4">Explore Originals</Link>}
         </Card>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm">
           <span
@@ -632,7 +649,7 @@ export default function SourceCreator() {
         steps={[
           { label: "Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", state: document ? "done" : "current" },
           { label: "Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", state: document && learningBriefReady ? "done" : document ? "current" : "upcoming" },
-          { label: "Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : document && learningBriefReady ? "Needs review" : "After learning design", state: document && learningBriefReady ? "current" : "upcoming" },
+          { label: "Compile", detail: activeJob ? "In progress" : !canCompileThisSource ? compilerStatus === "checking" ? "Checking connection" : "Not connected" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : document && learningBriefReady ? "Needs review" : "After learning design", state: document && learningBriefReady ? "current" : "upcoming" },
         ]}
       />
 
@@ -677,7 +694,7 @@ export default function SourceCreator() {
         >
           <SectionHeader
             id="normalized-record-title"
-            title="Normalized record"
+            title="Your material, ready to use"
             meta={document ? `${document.pages.length} ${document.pages.length === 1 ? "page" : "pages"}` : undefined}
           />
           {!document || !page ? (
@@ -769,7 +786,6 @@ export default function SourceCreator() {
               <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-body-sm text-ink-soft">Loading learning design…</div>}>
                 <SourceLearningDesign templateId={templateId} level={level} language={language} targetMinutes={targetMinutes} learnerGoal={learnerGoal} onTemplate={setTemplateId} onLevel={setLevel} onLanguage={setLanguage} onMinutes={setTargetMinutes} onGoal={setLearnerGoal} />
               </Suspense>
-              {document.sha256 === GOLDEN_SOURCE_SHA256 && <Pressable href="/create/review" variant="secondary" className="mt-5 w-full">Open checked golden review</Pressable>}
               {activeJob && job && <Card tone="tinted" tint="var(--color-ink)" className="mt-5 p-5 text-white" aria-live="polite">
                 <div className="flex items-center justify-between gap-3"><div><p className="text-label font-semibold uppercase tracking-[0.08em] text-white/60">3. Compile</p><p className="mt-1 text-body font-semibold">Building a grounded course</p><p className="mt-1 text-label text-white/60">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-body-sm tabular-nums">{job.completedStages}/{job.totalStages}</span></div>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${Math.max(7, (job.completedStages / job.totalStages) * 100)}%` }} /></div>
@@ -783,16 +799,16 @@ export default function SourceCreator() {
               <Pressable
                 accent={STUDIO_ACCENT}
                 edge={STUDIO_DEEP}
-                disabled={compiling || activeJob || !readyToCompile}
+                disabled={compiling || activeJob || !readyToCompile || !canCompileThisSource}
                 onClick={() => void compile()}
                 className={`sticky bottom-20 mt-3 min-h-12 w-full lg:static ${compiling || activeJob ? "pressable-held" : ""}`.trimEnd()}
               >
-                {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
+                {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create example course" : !canCompileThisSource ? "Course building not connected" : job?.retryable ? "Retry compilation" : "Create my course"}
               </Pressable>
               {!sourceAuthorized && <p className="mt-2 text-center text-label font-medium text-ink-soft">Confirm source authorization to continue.</p>}
               {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-label font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
               {sourceReady && !learningBriefReady && <p className="mt-2 text-center text-label font-medium text-wrong">Complete the language, duration and learner goal before compiling.</p>}
-              <p className="mt-1 text-center text-label text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
+              <p className="mt-1 text-center text-label text-ink-soft">{document.sha256 === GOLDEN_SOURCE_SHA256 ? "The included example can be built without a model connection." : !canCompileThisSource ? "Your material stays ready here. Connect course building in Settings when you want to continue." : "Only checked courses are saved."}</p>
             </>
           )}
         </Card>

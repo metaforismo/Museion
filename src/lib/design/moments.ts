@@ -15,25 +15,25 @@ export type MomentKind = (typeof MOMENT_KINDS)[number];
 
 const COPY: Record<MomentKind, { title: string; evidence: string }> = {
   transfer: {
-    title: "Transfer solved unaided",
+    title: "A new problem, solved on your own",
     // Verbatim from the observation the engine writes in
     // src/lib/evidence/transfer.ts: "correctly without Maia, hints, or a
     // solution reveal".
-    evidence: "no hints, no Maia, no solution reveal",
+    evidence: "You solved a related problem on your own: no hints, no Maia and no solution reveal.",
   },
   "course-complete": {
-    title: "Course path complete",
+    title: "You finished a course",
     // Completion means every lesson in the path was advanced to the end, and
     // a lesson cannot advance without a checked answer. It says nothing about
     // how many of those answers were right, and it must not.
-    evidence: "every lesson in this path recorded a checked move",
+    evidence: "Each lesson in this course recorded a checked step.",
   },
   "misconception-resolved": {
-    title: "Misconception corrected in session",
+    title: "You found a way through",
     // The record only supports "a later answer on the same step was correct,
     // within the same session". The dashboard chip for the same signal reads
     // "worth rechecking", so this line may not claim the concept has held.
-    evidence: "a later answer on the same step was correct — the delayed recheck is still owed",
+    evidence: "You tried again during this lesson and found a correct move. Come back for a recheck later.",
   },
 };
 

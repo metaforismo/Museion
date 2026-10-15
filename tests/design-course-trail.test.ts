@@ -2,16 +2,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import CourseTrail from "@/components/CourseTrail";
+import CourseLearningPath from "@/components/CourseLearningPath";
 
 import { buildTrail, trailComplete } from "@/lib/design/course-trail";
 
-/**
- * The course trail is the flagship of the energy pass, and the two claims it
- * must never break are honesty claims: every node state derives from the real
- * completion record, and nothing on the path is locked. The pure helper pins
- * the first; a source scan of the component pins the second, the same way the
- * Maia and pressable contracts are pinned in this repo without a render stack.
- */
+/** Node states follow the real record, while authored lessons remain open out of order. */
 
 const ids = ["one", "two", "three"] as const;
 
@@ -48,45 +46,69 @@ describe("trailComplete", () => {
   });
 });
 
-describe("the trail component's honesty and accessibility contract", () => {
-  const source = readFileSync(path.resolve("src/components/CourseTrail.tsx"), "utf8");
+describe("the shared path's progress and access contract", () => {
+  const lessons = ids.map((id) => ({ id, title: `Lesson ${id}`, description: `Explore ${id}.` }));
+  const renderTrail = (completed: string[]) => renderToStaticMarkup(createElement(CourseTrail, {
+    courseId: "course", subject: "Algebra", lessons, completed: new Set(completed),
+  }));
 
-  it("never draws a padlock — ahead nodes are quieter links, not locked content", () => {
-    // The comments may talk about the rule; the markup may not break it. What
-    // would break it is a lock glyph, so that is what the scan looks for.
-    expect(source).not.toMatch(/\w*Lock\w*Icon|🔒/);
+  it("keeps every authored lesson linked when nothing is recorded", () => {
+    const html = renderTrail([]);
+    for (const id of ids) expect(html).toContain(`/lessons/${id}?course=course`);
+    expect(html).not.toContain('data-state="locked"');
+    expect(html).not.toContain("Completed · revisit");
   });
 
-  it("marks the current node as the step the learner is standing on", () => {
-    expect(source).toContain('aria-current="step"');
+  it("gives one current step to the earliest gap, including out-of-order records", () => {
+    const html = renderTrail(["three"]);
+    expect(html.match(/aria-current="step"/g)).toHaveLength(1);
+    expect(html).toMatch(/aria-label="Lesson 1 of 3: Lesson one\. Up next" aria-current="step"/);
+    expect(html).toContain("Lesson 3 of 3: Lesson three. Completed");
+    expect(html).toContain("Explore one.");
   });
 
-  it("keeps Maia still and posed curious — a move is available, nothing more", () => {
-    expect(source).toContain('state="curious"');
-    expect(source).not.toMatch(/\banimated\b/);
+  it("marks completion without inventing a next step when every lesson is done", () => {
+    const html = renderTrail([...ids]);
+    expect(html).not.toContain('aria-current="step"');
+    expect(html.match(/data-state="done"/g)).toHaveLength(3);
+    expect(html).not.toContain("Start lesson");
   });
 
-  it("crowns the final node only from the completion record", () => {
-    // `crowned` must derive from trailComplete, which reads completedLessons.
-    expect(source).toMatch(/crowned = complete && index === total - 1/);
+  it("shows a real locked generated checkpoint without giving it a working action", () => {
+    const html = renderToStaticMarkup(createElement(CourseLearningPath, { nodes: [
+      { id: "lesson", title: "An idea", state: "current", href: "/learn/run?lesson=idea" },
+      { id: "transfer", title: "Independent challenge", kind: "challenge", state: "locked", href: "/forbidden", meta: "Finish the lesson first" },
+    ] }));
+    expect(html).toContain('data-state="locked"');
+    expect(html).toContain('aria-disabled="true"');
+    expect(html).toContain("Finish the lesson first");
+    expect(html).not.toContain('href="/forbidden"');
   });
 
-  it("keeps every lesson description on the page — the path replaces a list, it does not delete one", () => {
-    expect(source).toMatch(/lesson\.description/);
+  it("ignores an arrival hint for a lesson without recorded completion", () => {
+    const html = renderToStaticMarkup(createElement(CourseLearningPath, { justCompletedId: "one", nodes: [
+      { id: "one", title: "First idea", state: "current", href: "/learn/first" },
+    ] }));
+    expect(html).not.toMatch(/class="[^"]*arrived/);
+  });
+  it("does not paint a start or revisit control on an inert review preview", () => {
+    const html = renderToStaticMarkup(createElement(CourseLearningPath, { nodes: [
+      { id: "pending", title: "Review required", state: "current" },
+      { id: "finished", title: "Recorded activity", state: "done" },
+    ] }));
+    expect(html).not.toContain("Start lesson");
+    expect(html).not.toContain("revisit");
   });
 });
 
-describe("the halo in globals.css", () => {
-  const globals = readFileSync(path.resolve("src/app/globals.css"), "utf8");
+describe("the shared path's motion defaults", () => {
+  const css = readFileSync(path.resolve("src/components/CourseLearningPath.module.css"), "utf8");
 
-  it("breathes by opacity and scale only — no colour nobody contrast-checked, no shadow", () => {
-    const keyframes = /@keyframes path-halo \{[\s\S]*?\n\}/.exec(globals)?.[0] ?? "";
-    expect(keyframes).not.toBe("");
-    expect(keyframes).not.toMatch(/box-shadow|color-mix/);
+  it("gates hover feedback to a precise pointer", () => {
+    expect(css).toContain("@media (hover:hover) and (pointer:fine)");
   });
 
-  it("holds still under prefers-reduced-motion", () => {
-    const reduced = /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*$/.exec(globals)?.[0] ?? "";
-    expect(reduced).toContain(".path-halo");
+  it("keeps recorded arrival still under reduced motion", () => {
+    expect(css).toMatch(/@media \(prefers-reduced-motion:reduce\)[\s\S]*\.arrived \{ animation:none; \}/);
   });
 });

@@ -14,6 +14,7 @@ import {
 import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-state";
 
 import { CompilerFailure, compileCourse, type CompileAudience, type CompileResult } from "./orchestrator";
+import { OpenRouterCompilerProvider } from "./providers/openrouter";
 import { OpenAICompilerProvider } from "./providers/openai";
 import { GoldenReplayCompilerProvider } from "./providers/replay";
 import { CodexCompilerProvider } from "./providers/codex";
@@ -24,7 +25,7 @@ import type { CompilerStage } from "./contracts";
 import { computeMaterialCitationCoverage } from "./source-pack-coverage";
 import { sitesDatabase, sitesUploads } from "@/lib/sites/database";
 import { deleteRawUploadsForOwner } from "@/lib/server/upload-lifecycle";
-import { isSitesRuntime, runtimeValue } from "@/lib/sites/runtime";
+import { runtimeValue } from "@/lib/sites/runtime";
 
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 export const COMPILER_RUN_TTL_MS = 60 * 60 * 1_000;
@@ -123,7 +124,7 @@ export async function createCompilerRun(
     throw new Error("COMPILER_RUN_QUOTA_EXCEEDED");
   }
   const settings = getAiSettings();
-  if (document.sha256 !== GOLDEN_SOURCE_SHA256 && isSitesRuntime() && runtimeValue("MUSEION_LIVE_AI_ENABLED") === "0") {
+  if (document.sha256 !== GOLDEN_SOURCE_SHA256 && runtimeValue("MUSEION_LIVE_AI_ENABLED") === "0") {
     throw new Error("LIVE_AI_DISABLED");
   }
   if (document.sha256 !== GOLDEN_SOURCE_SHA256 && settings.provider === "offline") {
@@ -131,16 +132,18 @@ export async function createCompilerRun(
   }
   const provider = document.sha256 === GOLDEN_SOURCE_SHA256
     ? new GoldenReplayCompilerProvider()
-    : codexSelected()
+    : settings.provider === "openrouter-free"
+      ? new OpenRouterCompilerProvider()
+      : codexSelected()
       ? new CodexCompilerProvider(settings.familyFallback)
       : new OpenAICompilerProvider();
-  if (provider instanceof OpenAICompilerProvider && !provider.available()) {
+  if ((provider instanceof OpenAICompilerProvider || provider instanceof OpenRouterCompilerProvider) && !provider.available()) {
     throw new Error("LIVE_COMPILER_NOT_CONFIGURED");
   }
   const result = await compileCourse(document, provider, {
     audience,
     templateId,
-    timeoutMs: provider instanceof CodexCompilerProvider ? 190_000 : 60_000,
+    timeoutMs: provider instanceof CodexCompilerProvider ? 190_000 : provider instanceof OpenRouterCompilerProvider ? 130_000 : 60_000,
     signal: execution.signal,
     onStage: execution.onStage,
   });
@@ -459,6 +462,7 @@ export async function getPrivateCompilerRun(runId: string, ownerId: string): Pro
 
 export function compilerFailurePayload(error: unknown) {
   if (error instanceof CompilerFailure) {
+    if (error.providerDiagnostic) return { error: error.providerDiagnostic.errorCode === "provider_invalid_response" ? "COMPILER_PROVIDER_INVALID_RESPONSE" : "COMPILER_PROVIDER_UNAVAILABLE", stage: error.stage, provider: error.providerDiagnostic, telemetry: error.telemetry };
     return { error: "COMPILATION_REJECTED", stage: error.stage, issues: error.issues, telemetry: error.telemetry };
   }
   const code = error instanceof Error ? error.message : "COMPILATION_FAILED";

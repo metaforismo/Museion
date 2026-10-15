@@ -1,9 +1,9 @@
 /**
  * Server-only persistence boundary for deployment state.
  *
- * Local development and keyless CI deliberately use the bounded in-process
- * backend. A deployment opts into Supabase explicitly with
- * MUSEION_STATE_BACKEND=supabase; partial configuration fails closed.
+ * Local product development uses SQLite. Keyless unit tests deliberately
+ * isolate their state in the bounded memory backend; durability tests opt
+ * into a temporary database. Existing D1/Supabase adapters are retained.
  */
 
 export type StateNamespace = "compiler_run" | "judge_session" | "learner_profile" | "learner_session";
@@ -19,7 +19,7 @@ export interface StateRecord<T> {
 }
 
 export interface StateBackend {
-  readonly kind: "memory" | "supabase" | "d1";
+  readonly kind: "memory" | "supabase" | "d1" | "sqlite";
   get<T>(namespace: StateNamespace, id: string, ownerId: string): Promise<StateRecord<T> | undefined>;
   put<T>(record: StateRecord<T>): Promise<void>;
   compareAndPut<T>(record: StateRecord<T>, expectedUpdatedAt: string): Promise<boolean>;
@@ -29,6 +29,7 @@ export interface StateBackend {
 }
 
 import { sitesDatabase } from "@/lib/sites/database";
+import { sitesEnv } from "@/lib/sites/runtime";
 
 type StoredRecord = StateRecord<unknown>;
 
@@ -108,7 +109,7 @@ function fromD1Row<T>(row: D1StateRow): StateRecord<T> {
 }
 
 class D1StateBackend implements StateBackend {
-  readonly kind = "d1" as const;
+  constructor(readonly kind: "d1" | "sqlite" = "d1") {}
   private db() { const db = sitesDatabase(); if (!db) throw new Error("SITES_DATABASE_UNAVAILABLE"); return db; }
   async get<T>(namespace: StateNamespace, id: string, ownerId: string) {
     const row = await this.db().prepare("SELECT namespace,id,owner_id,payload,expires_at,created_at,updated_at FROM museion_state WHERE namespace=? AND id=? AND owner_id=? AND expires_at>? LIMIT 1").bind(namespace, id, ownerId, new Date().toISOString()).first<D1StateRow>();
@@ -246,9 +247,10 @@ class SupabaseStateBackend implements StateBackend {
 
 const memoryBackend = new MemoryStateBackend();
 const d1Backend = new D1StateBackend();
+const sqliteBackend = new D1StateBackend("sqlite");
 
 export function stateBackend(): StateBackend {
-  if (sitesDatabase()) return d1Backend;
+  if (sitesDatabase()) return sitesEnv()?.DB ? d1Backend : sqliteBackend;
   const selected = process.env.MUSEION_STATE_BACKEND?.trim() || "memory";
   if (selected === "memory") return memoryBackend;
   if (selected !== "supabase") throw new Error("INVALID_STATE_BACKEND");

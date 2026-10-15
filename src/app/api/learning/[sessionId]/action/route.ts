@@ -1,0 +1,25 @@
+import { NextResponse } from "next/server";
+
+import { dispatchJudgeAction, JudgeActionRequestSchema } from "@/lib/judge";
+import { currentActor } from "@/lib/server/actor";
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ sessionId: string }> },
+) {
+  const ownerId = (await currentActor()).ownerId;
+  const parsed = JudgeActionRequestSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid runtime action" }, { status: 400 });
+  try {
+    const { sessionId } = await params;
+    return NextResponse.json(await dispatchJudgeAction({ sessionId, ownerId, ...parsed.data }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "RUNTIME_ACTION_FAILED";
+    const status = message === "JUDGE_SESSION_NOT_FOUND"
+      ? 404
+      : ["TRANSFER_ALREADY_STARTED", "JUDGE_VERSION_CONFLICT", "JUDGE_COMMAND_ID_REUSED"].includes(message)
+        ? 409
+        : 400;
+    return NextResponse.json({ error: message }, { status });
+  }
+}

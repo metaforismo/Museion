@@ -1,15 +1,49 @@
 "use client";
+
+import Link from "next/link";
 import { useEffect, useState } from "react";
-interface AccountView { actor: { kind: "guest" | "account"; displayName: string | null } }
+import { clearLearnerBrowserState } from "@/lib/client/storage";
+import { readPublicAccount, type PublicAccountView } from "@/lib/client/public-account";
+import styles from "./SiteHeader.module.css";
+
 export default function AuthButton() {
-  const [account, setAccount] = useState<AccountView | null>(null);
-  useEffect(() => { let active = true; fetch("/api/account", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).then((value) => { if (active) setAccount(value); }).catch(() => {}); return () => { active = false; }; }, []);
-  // The full label is the only header item with no small-screen treatment, and
-  // it pushed the public header 16px past a 320px viewport into horizontal
-  // scroll. The short label keeps the affordance instead of hiding it.
-  //
-  // body-sm is the size the rest of the header row uses — the app shell puts
-  // this button directly beside "New course", and the two were a step apart.
-  if (!account || account.actor.kind === "guest") return <a href="/signin-with-chatgpt?return_to=/dashboard" className="inline-flex min-h-10 shrink-0 items-center rounded-full border border-ink/15 bg-surface px-3 text-body-sm font-semibold text-ink hover:border-ink/30"><span className="sm:hidden">Sign in</span><span className="hidden sm:inline">Sign in with ChatGPT</span></a>;
-  return <div className="flex items-center gap-2"><a href="/account" className="hidden max-w-36 truncate text-body-sm font-semibold text-ink-soft hover:text-ink sm:inline">{account.actor.displayName ?? "Account"}</a><a href="/signout-with-chatgpt?return_to=/" className="inline-flex min-h-10 items-center rounded-full border border-ink/15 px-3 text-body-sm font-semibold text-ink-soft hover:text-ink">Sign out</a></div>;
+  const [account, setAccount] = useState<PublicAccountView | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      controller.abort();
+      if (active) setUnavailable(true);
+    }, 6000);
+    readPublicAccount(controller.signal)
+      .then((value) => { if (active) setAccount(value); })
+      .catch(() => { if (active) setUnavailable(true); })
+      .finally(() => window.clearTimeout(timeout));
+    return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
+  }, []);
+
+  async function logout() {
+    setBusy(true); setError(false);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Logout failed");
+      clearLearnerBrowserState();
+      window.location.assign("/");
+    } catch { setBusy(false); setError(true); }
+  }
+
+  if (account?.actor.kind !== "account") return <div className={styles.accountControls}>
+    <Link href="/login" className={styles.accountButton} title={unavailable ? "Account status unavailable. Open sign in to check your account." : undefined}>Sign in</Link>
+    {unavailable && <span className="sr-only" role="status">Account status unavailable. You can still sign in.</span>}
+  </div>;
+
+  return <div className={styles.accountControls}>
+    <Link href="/account" className={styles.accountName}>{account.actor.displayName ?? "Account"}</Link>
+    <button type="button" disabled={busy} onClick={() => void logout()} className={styles.accountButton}>{busy ? "Signing out…" : error ? "Retry sign out" : "Sign out"}</button>
+    {error && <span className="sr-only" role="alert">Sign out failed. Please try again.</span>}
+  </div>;
 }

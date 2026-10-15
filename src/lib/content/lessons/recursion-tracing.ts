@@ -33,10 +33,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-trace-adds-on-way-down",
-          triggerAnswers: [
-            "immediately, on the way down, as soon as sumToN(n - 1) is called",
-            "0",
-          ],
+          triggerAnswers: ["immediately, on the way down, as soon as sumToN(n - 1) is called"],
           description:
             "The learner believed the addition executes as soon as the recursive call is issued, before the base case is even reached.",
           remediationFocus:
@@ -44,7 +41,7 @@ const lesson = {
         },
         {
           id: "rec-trace-precomputed-batch",
-          triggerAnswers: ["all at once, before any of the calls are made", "2"],
+          triggerAnswers: ["all at once, before any of the calls are made"],
           description:
             "The learner imagined all the additions happening together before any recursive call runs.",
           remediationFocus:
@@ -52,7 +49,7 @@ const lesson = {
         },
         {
           id: "rec-trace-single-final-addition",
-          triggerAnswers: ["only once, in the very last call to return", "3"],
+          triggerAnswers: ["only once, in the very last call to return"],
           description:
             "The learner believed only the outermost call performs an addition, as if intermediate calls contribute nothing.",
           remediationFocus:
@@ -141,7 +138,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-trace-ignores-base-case-change",
-          triggerAnswers: ["6", "0"],
+          triggerAnswers: ["6"],
           description:
             "The learner retraced the original, correct version and ignored that the base case's return value had changed from 0 to 1.",
           remediationFocus:
@@ -149,7 +146,7 @@ const lesson = {
         },
         {
           id: "rec-trace-assumes-total-breakage",
-          triggerAnswers: ["3", "2"],
+          triggerAnswers: ["3"],
           description:
             "The learner assumed a wrong base case invalidates the whole trace and defaulted to returning the top-level argument alone.",
           remediationFocus:
@@ -242,7 +239,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-trace-practice-multiplies-early",
-          triggerAnswers: ["before the recursive call factorial(n - 1) is made", "0"],
+          triggerAnswers: ["before the recursive call factorial(n - 1) is made"],
           description:
             "The learner believed the multiplication happens before the smaller subproblem has been solved.",
           remediationFocus:
@@ -250,7 +247,7 @@ const lesson = {
         },
         {
           id: "rec-trace-practice-outermost-only",
-          triggerAnswers: ["only for the outermost call, factorial(4) itself", "2"],
+          triggerAnswers: ["only for the outermost call, factorial(4) itself"],
           description:
             "The learner believed only the first call performs a multiplication, as though inner calls contribute nothing.",
           remediationFocus:

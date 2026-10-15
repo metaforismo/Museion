@@ -1,0 +1,19 @@
+.target { position: relative; }
+.target[data-maia-outlined] { outline: 2px solid color-mix(in srgb, var(--color-gold) 72%, transparent); outline-offset: 3px; }
+.target[data-maia-focus] { outline-width: 3px; }
+/* The question can span several lines; exact terms are marked by PromptWithMark. */
+.target[data-activity-target="prompt"] { outline: none; }
+.inline { border-radius: 6px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.marker { align-items: center; background: transparent; border: 0; border-radius: 0; color: var(--color-ink); display: inline-flex; font-size: 12px; height: 38px; justify-content: center; line-height: 1; pointer-events: none; position: absolute; right: 9px; top: -27px; width: 38px; z-index: 2; }
+.markerCharacter { height: 38px; object-fit: contain; width: 38px; filter: drop-shadow(0 3px 3px rgba(30,40,75,.12)); }
+.annotation { background: var(--color-gold-soft); border-left: 2px solid var(--color-gold); border-radius: 0 8px 8px 0; color: var(--color-ink); display: block; font-size: 13px; line-height: 1.65; max-width: 100%; overflow-wrap: anywhere; white-space: normal; margin-top: 12px; padding: 10px 12px; }
+.annotationLabel { color: var(--color-ink-soft); display: block; font-size: 11px; font-weight: 500; margin-bottom: 4px; }
+.annotationText { display: block; }
+.annotationText + .annotationText { margin-top: 6px; }
+.target[data-maia-pulse-only] .marker { animation: dismiss 200ms ease-out 1400ms forwards; }
+@media (prefers-reduced-motion: no-preference) {
+  .marker { animation: arrive 200ms cubic-bezier(.23,1,.32,1); }
+  .target[data-maia-pulse-only] .marker { animation: arrive 200ms cubic-bezier(.23,1,.32,1), dismiss 200ms ease-out 1400ms forwards; }
+}
+@keyframes arrive { from { opacity: 0; transform: translateY(5px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes dismiss { to { opacity: 0; visibility: hidden; } }

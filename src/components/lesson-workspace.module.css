@@ -1,0 +1,112 @@
+.workspace {
+  width: 100%;
+  min-height: 100dvh;
+  padding: 20px;
+  background: linear-gradient(135deg, #edf0fa 0%, #f5f4ed 65%, #eef4f8 100%);
+}
+.surface {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1500px;
+  min-height: calc(100dvh - 40px);
+  margin-inline: auto;
+  border: 1px solid rgb(24 33 56 / 8%);
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 8px 40px rgb(24 33 56 / 4%);
+}
+.chrome { padding: 16px 24px 20px; }
+.close {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--color-ink-soft);
+  font-size: 28px;
+  line-height: 1;
+  transition: background-color 160ms ease-out, color 160ms ease-out;
+}
+.close:focus-visible { outline: 2px solid var(--color-lapis); outline-offset: 3px; }
+.stage { display: grid; grid-template-columns: clamp(290px, 25vw, 360px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 24px; flex: 1; min-height: 0; padding: 0 24px 24px; }
+.activityColumn { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; }
+.companionColumn { grid-column: 1; grid-row: 1; min-width: 0; min-height: 0; }
+.activityCard { min-height: 100%; padding: clamp(24px, 3vw, 44px); border: 1px solid rgb(24 33 56 / 10%); border-radius: 22px; background: #fff; }
+.needsAnotherLook { border-color: #d7aa45; box-shadow: inset 0 0 0 1px rgb(215 170 69 / 15%); }
+.verified { border-color: var(--color-correct); box-shadow: inset 0 0 0 1px rgb(68 130 97 / 8%); }
+.prompt { outline: none; scroll-margin-top: 20px; margin: 4px auto 0; max-width: 52ch; text-align: center; font-size: clamp(18px, 1.6vw, 23px); line-height: 1.5; text-wrap: pretty; }
+.answerArea { margin-top: 32px; }
+.graphStage { width: 100%; max-width: 520px; margin-inline: auto; }
+.feedback { margin-top: 24px; padding: 16px; border-radius: 16px; outline: none; }
+.correctFeedback { background: #edf7f0; color: var(--color-ink); }
+.retryFeedback { background: #fcf7e9; color: var(--color-ink); }
+.verifiedIcon, .retryIcon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; font-size: 22px; }
+.verifiedIcon { background: #d7eedf; color: #286443; }
+.retryIcon { background: #f3e5ba; color: #7c5b18; }
+.companion { display: flex; flex-direction: column; min-width: 0; height: 100%; overflow: visible; border: 1px solid #eceef3; border-radius: 20px; background: #fbfbfd; }
+.companionHeader { display: flex; align-items: center; gap: 10px; padding: 10px 18px; flex-shrink: 0; }
+.aboutMaia { position: relative; }
+.aboutMaia > summary { display: grid; place-items: center; width: 36px; min-height: 44px; cursor: pointer; list-style: none; color: var(--color-ink-soft); letter-spacing: 2px; }
+.aboutMaia > summary::-webkit-details-marker { display: none; }
+.aboutMaia > div { position: absolute; right: 0; top: 44px; z-index: 30; width: min(264px, calc(100vw - 44px)); padding: 16px; border: 1px solid rgb(24 33 56 / 10%); border-radius: 14px; background: white; box-shadow: 0 8px 30px rgb(24 33 56 / 12%); color: var(--color-ink-soft); font-size: 14px; line-height: 1.5; }
+.conversationPane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.conversationScroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding: 8px 18px 20px; scrollbar-width: thin; }
+.conversationStack { display: flex; flex-direction: column; justify-content: flex-end; min-height: 100%; gap: 22px; }
+.authoredGuidance { position: relative; padding: 0; }
+.guidanceMessage { padding-right: 26px; font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+.dismissGuidance { position: absolute; right: -8px; top: -5px; display: grid; place-items: center; min-width: 32px; min-height: 32px; border-radius: 8px; font-size: 21px; color: var(--color-ink-soft); }
+.messageList { display: flex; flex-direction: column; gap: 22px; }
+.messageRow { display: flex; }
+.userRow { justify-content: flex-end; }
+.messageBubble { min-width: 0; max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.65; }
+.maiaBubble { color: var(--color-ink); }
+.userBubble { max-width: 92%; padding: 11px 14px; border-radius: 16px 16px 5px 16px; background: #eceef4; color: var(--color-ink); }
+.composerDock { display: flex; align-items: flex-end; gap: 8px; padding: 12px 12px 14px 8px; flex-shrink: 0; }
+.composerCharacter { width: 42px; height: 52px; object-fit: contain; flex-shrink: 0; margin-bottom: 5px; }
+.composer { min-width: 0; flex: 1; }
+.composerInput { border: 1px solid #dfe2e9; border-radius: 18px; background: white; padding: 10px; box-shadow: 0 2px 8px rgb(24 33 56 / 4%); transition: border-color 160ms ease-out, box-shadow 160ms ease-out; }
+.composerInput:focus-within { border-color: var(--color-lapis); box-shadow: 0 0 0 3px rgb(43 74 203 / 9%); }
+.messageInput { display: block; width: 100%; min-height: 48px; max-height: 180px; resize: none; background: transparent; border: 0; padding: 0; font-size: 16px; line-height: 24px; outline: none; }
+.messageInput::placeholder { color: var(--color-ink-soft); }
+.messageInput:disabled { opacity: .6; }
+.composerActions { display: flex; justify-content: flex-end; align-items: center; min-height: 36px; gap: 8px; margin-top: 8px; }
+.replyPending { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; }
+.replyPending span { width: 5px; height: 5px; border-radius: 50%; background: #8b919d; }
+@media (prefers-reduced-motion: no-preference) { .replyPending span { animation: pending 1200ms ease-in-out infinite; } .replyPending span:nth-child(2) { animation-delay: 150ms; } .replyPending span:nth-child(3) { animation-delay: 300ms; } }
+@keyframes pending { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+.jumpLatest { align-self: center; position: sticky; bottom: 0; border-radius: 20px; border: 1px solid #e1e6f5; padding: 8px 12px; color: var(--color-lapis-dark); background: white; font-size: 13px; font-weight: 600; }
+.chatToggle { min-height: 44px; padding-inline: 10px; border-radius: 12px; white-space: nowrap; font-size: 14px; font-weight: 600; color: var(--color-lapis-dark); }
+.compactInvitation { padding: 0 16px 16px; color: var(--color-ink-soft); font-size: 14px; line-height: 1.5; }
+@media (min-width: 1024px) {
+  .surface { height: calc(100dvh - 40px); }
+  .activityCard { padding: 24px 28px; }
+  .answerArea { margin-top: 24px; }
+  /* Match the authored 460:320 viewBox ratio so pointer-to-grid mapping remains exact. */
+  .graphStage svg { width: min(100%, 43.125dvh, 373.75px); height: auto; margin-inline: auto; }
+  .activityColumn { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 1px 4px 1px 1px; }
+}
+@media (max-width: 1023px) {
+  .workspace { padding: 12px; }
+  .surface { min-height: calc(100dvh - 24px); border-radius: 24px; }
+  .chrome { padding: 12px 16px 16px; }
+  .stage { display: flex; flex-direction: column; gap: 16px; padding: 0 16px 16px; }
+  .activityCard { padding: 28px 24px; min-height: auto; }
+  .companion { height: auto; }
+  .conversationPane { height: min(480px, 65dvh); min-height: 300px; }
+  .companionHeader { padding: 10px 14px; }
+}
+@media (max-width: 480px) {
+  .workspace { padding: 0; }
+  .surface { min-height: 100dvh; border-radius: 0; border: 0; box-shadow: none; }
+  .chrome { padding: 10px 12px 14px; }
+  .stage { padding: 0 12px 16px; gap: 14px; }
+  .activityCard { padding: 22px 14px; border-radius: 18px; }
+  .prompt { font-size: 18px; }
+  .answerArea { margin-top: 24px; }
+  .feedback { padding: 14px; }
+  .companionHeader { gap: 8px; }
+}
+@media (hover: hover) and (pointer: fine) { .close:hover, .dismissGuidance:hover, .chatToggle:hover { background: #edf0fa; color: var(--color-lapis-dark); } }
+@media (prefers-reduced-motion: reduce) { .close { transition: none; } }

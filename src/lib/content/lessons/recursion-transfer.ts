@@ -33,7 +33,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-transfer-wrong-identity-value",
-          triggerAnswers: ["if e == 0: return 0", "1"],
+          triggerAnswers: ["if e == 0: return 0"],
           description:
             "The learner assumed the base case should return 0, treating it like an 'empty' or default numeric value rather than the multiplicative identity.",
           remediationFocus:
@@ -41,7 +41,7 @@ const lesson = {
         },
         {
           id: "rec-transfer-base-case-off-by-one",
-          triggerAnswers: ["if e == 1: return b", "2"],
+          triggerAnswers: ["if e == 1: return b"],
           description:
             "The learner set the base case one step later than needed, at e == 1 instead of e == 0.",
           remediationFocus:
@@ -49,7 +49,7 @@ const lesson = {
         },
         {
           id: "rec-transfer-wrong-variable",
-          triggerAnswers: ["if b == 0: return 1", "3"],
+          triggerAnswers: ["if b == 0: return 1"],
           description:
             "The learner wrote a base case that checks b, the value that never changes across recursive calls, instead of e, the value that decreases.",
           remediationFocus:
@@ -112,7 +112,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-transfer-blames-missing-base-case",
-          triggerAnswers: ["the base case never returns a value", "0"],
+          triggerAnswers: ["the base case never returns a value"],
           description:
             "The learner claimed no base case exists, without noticing that 'if e == 0: return 1' is present and correctly written.",
           remediationFocus:
@@ -120,7 +120,7 @@ const lesson = {
         },
         {
           id: "rec-transfer-blames-multiplication",
-          triggerAnswers: ["multiplication cannot be used inside a recursive case", "2"],
+          triggerAnswers: ["multiplication cannot be used inside a recursive case"],
           description:
             "The learner attributed the non-termination to the use of multiplication rather than to the unchanged argument.",
           remediationFocus:
@@ -128,7 +128,7 @@ const lesson = {
         },
         {
           id: "rec-transfer-blames-wrong-base-case-variable",
-          triggerAnswers: ["the base case checks the wrong variable", "3"],
+          triggerAnswers: ["the base case checks the wrong variable"],
           description:
             "The learner claimed the base case tests the wrong variable, when e is in fact the correct variable to test — it just never reaches 0 here.",
           remediationFocus:
@@ -254,7 +254,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-transfer-practice-wrong-identity-again",
-          triggerAnswers: ["the base case should return 0, not 1", "1"],
+          triggerAnswers: ["the base case should return 0, not 1"],
           description:
             "The learner misdiagnosed the bug as an incorrect base-case value instead of noticing the direction the argument moves.",
           remediationFocus:
@@ -262,7 +262,7 @@ const lesson = {
         },
         {
           id: "rec-transfer-practice-blames-fixed-variable",
-          triggerAnswers: ["b changes with each call when it should stay fixed", "2"],
+          triggerAnswers: ["b changes with each call when it should stay fixed"],
           description:
             "The learner attributed the bug to b, which never actually changes across calls.",
           remediationFocus:

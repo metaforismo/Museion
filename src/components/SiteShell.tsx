@@ -6,18 +6,20 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { subjectTint } from "@/lib/curriculum/subjects";
 import { washStyle, zoneForPath } from "@/lib/design/zones";
-import { JUDGE_SAMPLE_SUBJECT } from "@/lib/judge/subject";
+import styles from "./product.module.css";
 
 import AppIcon from "./AppIcon";
 import AppSidebar from "./AppSidebar";
 import AppCommandPalette, { type SearchableCourse, type SearchableLesson } from "./AppCommandPalette";
 import BrandMark from "./BrandMark";
-import OnboardingRedirect from "./OnboardingRedirect";
 import SiteHeader from "./SiteHeader";
 import AuthButton from "./AuthButton";
+import PublicFooterNav from "./PublicFooterNav";
+import { PUBLIC_CONTENT_PATHS, AUTH_PAGE_PATHS } from "@/lib/site/public-routes";
 
-const PUBLIC_ROUTES = new Set(["/", "/welcome", "/about", "/privacy", "/terms"]);
-const FOCUS_PREFIXES = ["/lessons/", "/learn/", "/judge"];
+const PUBLIC_ROUTES = new Set(PUBLIC_CONTENT_PATHS);
+const AUTH_ROUTES = new Set(AUTH_PAGE_PATHS);
+const FOCUS_PREFIXES = ["/lessons/", "/learn/"];
 const SIDEBAR_KEY = "museion-sidebar-collapsed";
 
 /**
@@ -34,7 +36,7 @@ function courseWashTint(pathname: string, courses: SearchableCourse[]): string |
 }
 
 function PublicFooter() {
-  return <footer className="border-t border-ink/10 bg-surface py-7 text-body-sm text-ink-soft"><div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"><p className="flex items-center gap-2"><BrandMark className="h-7 w-7" /><span>Museion — a house for reasoning from sources.</span></p><nav aria-label="Legal" className="flex gap-4 text-label font-medium"><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></nav></div></footer>;
+  return <footer className="border-t border-ink/10 bg-surface py-7 text-body-sm text-ink-soft"><div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"><p className="flex items-center gap-2"><BrandMark className="h-7 w-7" /><span>A little closer to understanding.</span></p><PublicFooterNav className="flex flex-wrap gap-x-5 gap-y-2 text-label font-medium [&_a]:inline-flex [&_a]:min-h-10 [&_a]:items-center"/></div></footer>;
 }
 
 function MobileBottomNav() {
@@ -42,7 +44,7 @@ function MobileBottomNav() {
   const items = [
     ["/dashboard", "Home", "home"], ["/library", "Library", "library"], ["/review", "Review", "review"], ["/create", "Create", "source"],
   ] as const;
-  return <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-ink/10 bg-surface/95 px-1 pb-[max(.35rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">{items.map(([href, label, icon]) => { const active = pathname === href || pathname.startsWith(`${href}/`); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-13 flex-col items-center justify-center gap-0.5 rounded-lg text-micro font-medium transition ${active ? "text-lapis-dark" : "text-ink-soft"}`}><span className={`grid h-7 w-12 place-items-center rounded-full transition ${active ? "bg-lapis-soft/70" : ""}`}><AppIcon name={icon} className="h-5 w-5" /></span>{label}</Link>; })}</nav>;
+  return <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-ink/10 bg-surface/95 px-1 pb-[max(.35rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur lg:hidden">{items.map(([href, label, icon]) => { const active = pathname === href || pathname.startsWith(`${href}/`); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-13 flex-col items-center justify-center gap-0.5 rounded-lg text-micro font-medium transition-colors ${active ? "text-lapis-dark" : "text-ink-soft"}`}><span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${active ? "bg-lapis-soft/70" : ""}`}><AppIcon name={icon} className="h-5 w-5" /></span>{label}</Link>; })}</nav>;
 }
 
 export default function SiteShell({ children, courses, lessons }: { children: ReactNode; courses: SearchableCourse[]; lessons: SearchableLesson[] }) {
@@ -54,8 +56,10 @@ export default function SiteShell({ children, courses, lessons }: { children: Re
   const closeButton = useRef<HTMLButtonElement>(null);
   const mobileDrawer = useRef<HTMLElement>(null);
   const publicRoute = PUBLIC_ROUTES.has(pathname);
+  const authRoute = AUTH_ROUTES.has(pathname);
   const focusRoute = FOCUS_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   const openSearch = () => setSearchOpen(true);
+  const closeNavigation = () => { setSidebarOpen(false); requestAnimationFrame(() => menuButton.current?.focus()); };
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -65,14 +69,14 @@ export default function SiteShell({ children, courses, lessons }: { children: Re
   }, []);
   useEffect(() => {
     const handleSearchShortcut = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
+      if (!publicRoute && !authRoute && pathname !== "/welcome" && (event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
         event.preventDefault();
         setSearchOpen((value) => !value);
       }
     };
     window.addEventListener("keydown", handleSearchShortcut);
     return () => window.removeEventListener("keydown", handleSearchShortcut);
-  }, []);
+  }, [publicRoute, authRoute, pathname]);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setSidebarOpen(false));
     return () => cancelAnimationFrame(frame);
@@ -88,38 +92,32 @@ export default function SiteShell({ children, courses, lessons }: { children: Re
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden"; closeButton.current?.focus(); document.addEventListener("keydown", handleKeyboard);
-    return () => { document.body.style.overflow = ""; document.removeEventListener("keydown", handleKeyboard); };
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", handleKeyboard); };
   }, [sidebarOpen]);
+
+  if (authRoute) return <div className={styles.authShell}><main id="main-content" tabIndex={-1}>{children}</main></div>;
+
+  if (pathname === "/welcome") return <div className={styles.authShell}><header className="flex h-18 items-center justify-between border-b border-ink/8 px-5 sm:px-8"><Link href="/" className="flex items-center gap-2.5 font-semibold"><BrandMark className="h-8 w-8"/>Museion</Link><AuthButton/></header><main id="main-content" tabIndex={-1}>{children}</main></div>;
 
   if (publicRoute) {
     const landing = pathname === "/";
     return <div className="flex min-h-[100dvh] flex-col"><SiteHeader landing={landing} /><main id="main-content" tabIndex={-1} className="flex-1">{children}</main>{!landing && <PublicFooter />}</div>;
   }
-  // Focus chrome: the lesson floats as a sheet on a soft color wash. The
-  // judge canvas is subject-scoped, so it takes its zone wash instead of the
-  // lesson sheet's tri-tint: on `/judge` the sample lesson is the binary-search
-  // Computer Science artifact and the wash is that subject's tint, the same
-  // way a course page is washed with its course's subject; a generated course
-  // on `/learn/<runId>` declares no subject and takes the learn zone's own.
-  if (focusRoute) {
-    const judgeRoute = pathname === "/judge" || pathname.startsWith("/judge/") || pathname.startsWith("/learn/");
-    const judgeWash = judgeRoute ? washStyle(zoneForPath(pathname), pathname.startsWith("/judge") ? subjectTint(JUDGE_SAMPLE_SUBJECT) : undefined) : undefined;
-    return <div style={judgeWash} className={`min-h-[100dvh] bg-paper ${judgeRoute ? "" : "[background-image:radial-gradient(52rem_34rem_at_12%_-4%,rgba(43,74,203,0.07),transparent),radial-gradient(44rem_30rem_at_96%_10%,rgba(199,145,20,0.06),transparent),radial-gradient(40rem_36rem_at_50%_110%,rgba(31,138,76,0.045),transparent)]"}`}><header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/5 bg-surface/80 px-4 backdrop-blur"><Link href="/dashboard" className="flex items-center gap-2 text-body-sm font-semibold"><BrandMark className="h-8 w-8" />Museion</Link><Link href="/dashboard" className="min-h-11 rounded-lg px-3 text-body-sm font-medium text-ink-soft hover:bg-paper hover:text-ink">Leave lesson</Link></header><main id="main-content" tabIndex={-1}>{children}</main></div>;
-  }
+  if (focusRoute) return <div style={washStyle("learn")} className="min-h-[100dvh] bg-paper"><main id="main-content" tabIndex={-1}>{children}</main></div>;
 
-  // First-time visitors entering the app shell are routed through onboarding.
+  // Signup enters /welcome; normal navigation remains direct and predictable.
 
   const toggle = () => setCollapsed((value) => { const next = !value; try { localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0"); } catch { /* storage is optional */ } return next; });
-  return <div style={washStyle(zoneForPath(pathname), courseWashTint(pathname, courses))} className={`min-h-[100dvh] bg-paper bg-fixed lg:grid lg:grid-rows-[auto_minmax(0,1fr)] ${collapsed ? "lg:grid-cols-[4.5rem_minmax(0,1fr)]" : "lg:grid-cols-[17rem_minmax(0,1fr)]"}`}>
-    <OnboardingRedirect />
-    <aside aria-label="Application navigation" className="hidden border-r border-ink/10 bg-surface transition-[width] lg:row-span-2 lg:block"><div className="sticky top-0 h-[100dvh]"><AppSidebar collapsed={collapsed} courses={courses} onToggle={toggle} /></div></aside>
+  return <div style={washStyle(zoneForPath(pathname), courseWashTint(pathname, courses))} className={`${styles.shell} min-h-[100dvh] bg-paper bg-fixed lg:grid lg:grid-rows-[auto_minmax(0,1fr)] ${collapsed ? "lg:grid-cols-[4.5rem_minmax(0,1fr)]" : "lg:grid-cols-[17rem_minmax(0,1fr)]"}`}>
+    <aside aria-label="Application navigation" className="hidden border-r border-ink/8 bg-surface lg:row-span-2 lg:block"><div className="sticky top-0 h-[100dvh]"><AppSidebar collapsed={collapsed} courses={courses} onToggle={toggle} /></div></aside>
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-ink/10 bg-surface/95 px-4 backdrop-blur lg:col-start-2 lg:px-6">
-      <button ref={menuButton} type="button" aria-label="Open navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)} className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-ink/15 lg:hidden"><span aria-hidden="true" className="grid gap-1"><span className="h-px w-4 bg-ink"/><span className="h-px w-4 bg-ink"/><span className="h-px w-4 bg-ink"/></span></button>
-      <button type="button" onClick={openSearch} aria-label="Search Museion" className="hidden h-10 w-full max-w-sm min-w-0 items-center gap-2.5 rounded-xl border border-ink/10 bg-paper/70 px-3.5 text-left transition hover:border-ink/20 hover:bg-paper lg:flex"><AppIcon name="search" className="h-4 w-4 shrink-0 text-ink-soft"/><span className="min-w-0 flex-1 truncate text-body-sm text-ink-soft">Search courses and concepts</span><kbd className="shrink-0 rounded border border-ink/10 bg-surface px-1.5 py-0.5 text-micro text-ink-soft">⌘ K</kbd></button>
-      <div className="ml-auto flex items-center gap-2"><AuthButton /><button type="button" onClick={openSearch} aria-label="Search Museion" className="grid min-h-11 min-w-11 place-items-center rounded-lg text-ink-soft hover:bg-paper hover:text-ink lg:hidden"><AppIcon name="search" className="h-5 w-5"/></button><Link href="/create" className="inline-flex min-h-11 items-center rounded-xl bg-ink px-3.5 text-body-sm font-semibold text-white hover:bg-lapis-dark">New course</Link></div>
+      <button ref={menuButton} type="button" aria-label="Open navigation" aria-expanded={sidebarOpen} aria-controls="mobile-app-navigation" onClick={() => setSidebarOpen(true)} className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-ink/15 lg:hidden"><span aria-hidden="true" className="grid gap-1"><span className="h-px w-4 bg-ink"/><span className="h-px w-4 bg-ink"/><span className="h-px w-4 bg-ink"/></span></button>
+      <button type="button" onClick={openSearch} aria-label="Search Museion" className="hidden h-10 w-full max-w-sm min-w-0 items-center gap-2.5 rounded-xl border border-ink/8 bg-paper/70 px-3.5 text-left transition-colors hover:border-ink/20 hover:bg-paper lg:flex"><AppIcon name="search" className="h-4 w-4 shrink-0 text-ink-soft"/><span className="min-w-0 flex-1 truncate text-body-sm text-ink-soft">Find a course or concept</span><kbd className="shrink-0 rounded border border-ink/10 bg-surface px-1.5 py-0.5 text-micro text-ink-soft">⌘ K</kbd></button>
+      <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-3"><AuthButton /><button type="button" onClick={openSearch} aria-label="Search Museion" className="grid min-h-11 min-w-11 place-items-center rounded-lg text-ink-soft hover:bg-paper hover:text-ink lg:hidden"><AppIcon name="search" className="h-5 w-5"/></button><Link href="/create" className="inline-flex min-h-11 items-center rounded-xl bg-ink px-3.5 text-body-sm font-semibold text-white transition-colors hover:bg-lapis-dark active:scale-[.97]"><span className="min-[360px]:hidden">Create</span><span className="hidden min-[360px]:inline">New course</span></Link></div>
     </header>
-    {sidebarOpen && <div className="fixed inset-0 z-40 lg:hidden"><button type="button" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="absolute inset-0 bg-ink/30"/><aside ref={mobileDrawer} id="mobile-app-navigation" aria-label="Application navigation" className="relative h-full w-[min(20rem,88vw)] border-r border-ink/10 bg-surface shadow-[var(--shadow-3)]"><button ref={closeButton} type="button" onClick={() => setSidebarOpen(false)} className="absolute right-3 top-3 z-10 min-h-11 rounded-lg px-3 text-body-sm font-medium text-ink-soft">Close</button><AppSidebar courses={courses} onNavigate={() => setSidebarOpen(false)} /></aside></div>}
-    <main id="main-content" tabIndex={-1} className="min-w-0 pb-20 lg:col-start-2 lg:pb-0">{children}</main><MobileBottomNav /><AppCommandPalette courses={courses} lessons={lessons} open={searchOpen} onClose={() => setSearchOpen(false)} />
+    {sidebarOpen && <div className="fixed inset-0 z-40 lg:hidden"><button type="button" aria-label="Close navigation" onClick={closeNavigation} className="absolute inset-0 bg-ink/30"/><aside ref={mobileDrawer} id="mobile-app-navigation" role="dialog" aria-modal="true" aria-label="Application navigation" className="relative h-full w-[min(20rem,88vw)] border-r border-ink/10 bg-surface shadow-[var(--shadow-3)]"><button ref={closeButton} type="button" onClick={closeNavigation} className="absolute right-3 top-3 z-10 min-h-11 rounded-lg px-3 text-body-sm font-medium text-ink-soft">Close</button><AppSidebar courses={courses} onNavigate={() => setSidebarOpen(false)} /></aside></div>}
+    <main id="main-content" tabIndex={-1} inert={sidebarOpen ? true : undefined} className="min-w-0 pb-20 lg:col-start-2 lg:pb-0">{children}</main><MobileBottomNav /><AppCommandPalette courses={courses} lessons={lessons} open={searchOpen} onClose={() => setSearchOpen(false)} />
   </div>;
 }

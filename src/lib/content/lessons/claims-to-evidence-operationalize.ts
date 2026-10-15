@@ -27,14 +27,14 @@ const lesson = {
       misconceptions: [
         {
           id: "substitutes-opinion-for-outcome",
-          triggerAnswers: ["0"],
+          triggerAnswers: ["Visitors say the map looks modern."],
           description: "The learner selected an opinion about the map rather than a measure of finding time.",
           remediationFocus:
             "Ask what a recorder could see or time in the same way for each attempt.",
         },
         {
           id: "uses-team-belief-as-evidence",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The team feels confident about the map."],
           description: "The learner treated the creators’ confidence as evidence that the outcome changed.",
           remediationFocus:
             "Separate a prediction or belief from an observation collected under a stated rule.",
@@ -65,14 +65,14 @@ const lesson = {
       misconceptions: [
         {
           id: "selects-interested-designers",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Only the designers who made the map."],
           description: "The learner narrowed the group to people invested in the map’s success.",
           remediationFocus:
             "State who is affected by the claim before deciding who should supply evidence.",
         },
         {
           id: "selects-only-experts",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Only visitors who already know every shelf location."],
           description: "The learner chose a subgroup with unusually strong prior knowledge.",
           remediationFocus:
             "Check whether a proposed group leaves out ordinary users covered by the claim.",
@@ -103,7 +103,7 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-unstated-impression",
-          triggerAnswers: ["0", "2"],
+          triggerAnswers: ["Record whether the visitor seems pleased.","Record the researcher’s first impression after each visit."],
           description: "The learner selected a subjective judgment without a shared recording rule.",
           remediationFocus:
             "Specify what is counted or timed, the unit, and the start and stop points.",
@@ -136,13 +136,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-manager-opinion",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Whether the cafeteria manager likes the new line."],
           description: "The learner substituted a stakeholder’s view for a waiting-time measure.",
           remediationFocus: "Return to the exact outcome word in the claim and ask how to record it.",
         },
         {
           id: "uses-design-detail",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["How colourful the lunch signs are."],
           description: "The learner measured a feature of the setting rather than the claimed outcome.",
           remediationFocus: "Distinguish a possible cause from the outcome the claim says changed.",
         },
@@ -172,13 +172,13 @@ const lesson = {
       misconceptions: [
         {
           id: "selects-installer",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Only the person who installed the racks."],
           description: "The learner chose a single invested person instead of the affected group.",
           remediationFocus: "Match the population to the people named by the claim.",
         },
         {
           id: "selects-unaffected-group",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Students who never travel to school by bike."],
           description: "The learner selected people outside the activity the claim describes.",
           remediationFocus: "Check whether each proposed person could experience the stated change.",
         },
@@ -208,13 +208,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-aesthetic-judgment",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Record whether the guide thinks the label is elegant."],
           description: "The learner chose a judgment about the label rather than evidence of identification.",
           remediationFocus: "Name the learner action the claim says changed, then record that action.",
         },
         {
           id: "uses-unrelated-preference",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Ask visitors whether they have ever liked museums."],
           description: "The learner selected a background preference unrelated to the stated outcome.",
           remediationFocus: "Keep the measure aligned with the particular claim being evaluated.",
         },

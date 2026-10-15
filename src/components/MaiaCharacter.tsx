@@ -4,28 +4,12 @@ import { MAIA_SIZES, type MaiaSize, type MaiaState } from "@/lib/design/maia";
 
 export type { MaiaState };
 
-/**
- * Pixel-accurate poses traced from the Maia character sheet. Each
- * animated SVG carries its own idle motion (breathing, blinking,
- * pose-specific accents, entrance pop) behind a prefers-reduced-motion
- * media query, so a plain <img> is all the runtime needs; swapping
- * `state` replays the entrance. `animated={false}` serves the static
- * trace instead — pixel-identical to the animated file at rest.
- */
-const ANIMATED_SRC: Record<MaiaState, string> = {
-  attentive: "/brand/maia/animated/maia-neutral.svg",
-  curious: "/brand/maia/animated/maia-curious.svg",
-  thinking: "/brand/maia/animated/maia-thinking.svg",
-  celebrating: "/brand/maia/animated/maia-celebrating.svg",
-  redirecting: "/brand/maia/animated/maia-pointing.svg",
-};
-
 const STATIC_SRC: Record<MaiaState, string> = {
-  attentive: "/brand/maia/maia-neutral.svg",
-  curious: "/brand/maia/maia-curious.svg",
-  thinking: "/brand/maia/maia-thinking.svg",
-  celebrating: "/brand/maia/maia-celebrating.svg",
-  redirecting: "/brand/maia/maia-pointing.svg",
+  attentive: "/brand/maia/maia-book-attentive.webp",
+  curious: "/brand/maia/maia-book-curious.webp",
+  thinking: "/brand/maia/maia-book-thinking.webp",
+  celebrating: "/brand/maia/maia-book-celebrating.webp",
+  redirecting: "/brand/maia/maia-book-redirecting.webp",
 };
 
 /**
@@ -49,12 +33,15 @@ export default function MaiaCharacter({
   "src" | "alt" | "title"
 >) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- self-hosted animated SVG; next/image offers no optimization for it
+    // eslint-disable-next-line @next/next/no-img-element -- small optimized local WebP; one shared character contract
     <img
-      src={(animated ? ANIMATED_SRC : STATIC_SRC)[state]}
+      src={STATIC_SRC[state]}
       alt={title ?? ""}
       aria-hidden={title ? undefined : true}
-      className={className ? `object-contain ${className}` : "object-contain"}
+      className={`maia-character object-contain ${className ?? ""}`}
+      data-state={state}
+      data-animated={animated ? "true" : undefined}
+      decoding="async"
       style={size ? { height: MAIA_SIZES[size], width: "auto", ...style } : style}
       {...props}
     />

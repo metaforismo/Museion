@@ -20,8 +20,8 @@ const GROUPS: { label: string; items: { href: string; label: string; icon: typeo
     { href: "/review", label: "Review", icon: RepeatIcon },
   ] },
   { label: "Your work", items: [
-    { href: "/create", label: "Source Studio", icon: Files02Icon },
-    { href: "/progress", label: "Evidence", icon: ChartUpIcon },
+    { href: "/create", label: "Create a course", icon: Files02Icon },
+    { href: "/progress", label: "Progress", icon: ChartUpIcon },
   ] },
 ];
 
@@ -35,8 +35,8 @@ function isActive(pathname: string, href: string) {
  * of drifting apart. One active treatment too: a filled lapis pill that is
  * actually visible, replacing the 3.5% ink tint nobody could see.
  */
-const ROW = "group relative flex min-h-11 items-center gap-2.5 rounded-xl transition duration-200 active:translate-y-px";
-const ROW_ACTIVE = "bg-lapis-soft text-lapis-dark";
+const ROW = "group relative flex min-h-11 items-center gap-2.5 rounded-xl transition-colors duration-150";
+const ROW_ACTIVE = "bg-lapis-soft text-lapis-dark ring-1 ring-inset ring-lapis/10";
 const ROW_IDLE = "text-ink-soft hover:bg-paper hover:text-ink";
 const SLOT = "grid h-7 w-7 shrink-0 place-items-center";
 const SECTION = "px-2.5 pb-1.5 text-label font-semibold uppercase tracking-[0.12em] text-ink-soft";
@@ -70,7 +70,7 @@ function useSidebarState(): SidebarState {
 }
 
 function GuidanceStatus({ guidance, collapsed }: { guidance: Guidance | null; collapsed: boolean }) {
-  const label = guidance === "live" ? "Live guidance connected" : "Offline verified guidance";
+  const label = guidance === "live" ? "Maia is connected" : "Guided lessons available";
   // The row keeps its height before the state resolves so the footer never jumps.
   if (!guidance) return <p aria-hidden="true" className="h-7" />;
   const dot = <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${guidance === "live" ? "bg-correct" : "bg-ink/30"}`} />;
@@ -96,7 +96,7 @@ export default function AppSidebar({
   const pathname = usePathname();
   const state = useSidebarState();
   const settingsActive = isActive(pathname, "/settings");
-  const { visible, hiddenCount } = orderSidebarPaths(courses, state.progress, 6);
+  const { visible, hiddenCount } = orderSidebarPaths(courses, state.progress, 4);
   // The meter lane appears only once it carries information. A learner who has
   // started nothing gets six clean rows, not six empty ticks.
   const meters = visible.some((course) => (state.progress[course.id]?.completed ?? 0) > 0);
@@ -144,7 +144,7 @@ export default function AppSidebar({
 
         {visible.length > 0 && (
           <section aria-label="Paths" className="mt-6 border-t border-ink/8 pt-4">
-            {!collapsed && <p className={SECTION}>Paths</p>}
+            {!collapsed && <p className={SECTION}>Your paths</p>}
             <ol className="space-y-0.5">
               {visible.map((course) => {
                 const href = `/courses/${course.id}`;
@@ -190,11 +190,11 @@ export default function AppSidebar({
                   <Link
                     href="/library"
                     onClick={onNavigate}
-                    title={`View all ${courses.length} paths`}
+                    title={`View all ${courses.length} courses`}
                     className={`${ROW} text-body-sm font-medium ${ROW_IDLE} ${collapsed ? "justify-center px-0" : "px-2"}`}
                   >
                     <span aria-hidden="true" className={`${SLOT} rounded-lg bg-ink/[0.05] text-label font-semibold tabular-nums`}>+{hiddenCount}</span>
-                    <span className={collapsed ? "sr-only" : "truncate"}>View all {courses.length} paths</span>
+                    <span className={collapsed ? "sr-only" : "truncate"}>All {courses.length} courses</span>
                   </Link>
                 </li>
               )}
@@ -220,7 +220,7 @@ export default function AppSidebar({
               type="button"
               onClick={onToggle}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={`hidden min-h-11 items-center justify-center rounded-xl text-ink-soft transition hover:bg-paper hover:text-ink lg:flex ${collapsed ? "w-full" : "w-11 shrink-0"}`}
+              className={`hidden min-h-11 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-paper hover:text-ink lg:flex ${collapsed ? "w-full" : "w-11 shrink-0"}`}
             >
               <AppIcon name="collapse" className={`h-[1.15rem] w-[1.15rem] transition-transform ${collapsed ? "rotate-180" : ""}`} />
             </button>

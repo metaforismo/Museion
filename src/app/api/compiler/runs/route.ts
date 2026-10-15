@@ -13,7 +13,7 @@ import { consumeUsage } from "@/lib/server/usage";
 
 export async function POST(request: Request) {
   let actor;
-  try { actor = await requireAccountActor(); } catch { return NextResponse.json({ error: "CHATGPT_SIGN_IN_REQUIRED", signIn: "/signin-with-chatgpt?return_to=/create" }, { status: 401 }); }
+  try { actor = await requireAccountActor(); } catch { return NextResponse.json({ error: "SIGN_IN_REQUIRED", signIn: "/login?next=/create" }, { status: 401 }); }
   const parsed = CompilerRunRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVALID_COMPILER_REQUEST" }, { status: 400 });
   if (!await consumeUsage(actor.ownerId, "compiler")) return NextResponse.json({ error: "DAILY_COMPILER_QUOTA_EXCEEDED", retryable: true }, { status: 429 });

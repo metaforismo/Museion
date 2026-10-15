@@ -29,17 +29,17 @@ describe("subject helpers", () => {
 
 describe("subjectObjectSrc", () => {
   it.each([
-    ["Algebra", "/landing/subject-mathematics-v2.png"],
-    ["Arithmetic", "/landing/subject-arithmetic-v2.png"],
-    ["Computer Science", "/landing/subject-computer-science-v2.png"],
-    ["Physics", "/landing/subject-physics-v2.png"],
-    ["Biology", "/landing/subject-biology-v2.png"],
-    ["Research Methods", "/landing/subject-research-v2.png"],
+    ["Algebra", "/landing/product/course-algebra-as-balance.webp"],
+    ["Arithmetic", "/landing/product/course-probability-as-evidence.webp"],
+    ["Computer Science", "/landing/product/course-search-by-halving.webp"],
+    ["Physics", "/landing/product/course-forces-and-motion.webp"],
+    ["Biology", "/landing/product/course-natural-selection.webp"],
+    ["Research Methods", "/landing/product/course-claims-to-evidence.webp"],
   ])("maps %s to its clay object", (subject, expected) => {
     expect(subjectObjectSrc(subject)).toBe(expected);
   });
 
   it("falls back to the mathematics object for unknown subjects", () => {
-    expect(subjectObjectSrc("Nonsense")).toBe("/landing/subject-mathematics-v2.png");
+    expect(subjectObjectSrc("Nonsense")).toBe("/landing/product/course-algebra-as-balance.webp");
   });
 });

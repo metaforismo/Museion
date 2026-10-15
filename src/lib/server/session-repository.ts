@@ -50,7 +50,7 @@ export async function persistSession(session: LearnerSession, ownerId: string, e
 export async function ownedSession(sessionId: string, ownerId: string): Promise<LearnerSession | undefined> {
   const db = sitesDatabase();
   if (!db) return memoryGetSession(sessionId, ownerId);
-  const row = await db.prepare("SELECT state_json,owner_id FROM lesson_sessions WHERE id=? AND owner_id=? AND expires_at>? LIMIT 1").bind(sessionId, ownerId, new Date().toISOString()).first<SessionRow>();
+  const row = await db.prepare("SELECT state_json,owner_id FROM lesson_sessions WHERE id=? AND owner_id=? AND (expires_at>? OR (lesson_id LIKE 'generated:%' AND mode='lesson' AND json_extract(state_json,'$.stepIndex') >= json_array_length(state_json,'$.lesson.steps'))) LIMIT 1").bind(sessionId, ownerId, new Date().toISOString()).first<SessionRow>();
   if (!row) return undefined;
   return LearnerSession.fromState(JSON.parse(row.state_json) as LearnerSessionState);
 }
@@ -67,6 +67,31 @@ export async function sessionsFor(ownerId: string): Promise<LearnerSession[]> {
   if (!db) return memoryListSessions(ownerId);
   const rows = await db.prepare("SELECT state_json FROM lesson_sessions WHERE owner_id=? AND expires_at>? ORDER BY updated_at DESC LIMIT 20").bind(ownerId, new Date().toISOString()).all<{ state_json: string }>();
   return (rows.results ?? []).map((row) => LearnerSession.fromState(JSON.parse(row.state_json) as LearnerSessionState));
+}
+
+/** Resume only this account's unfinished run of the exact lesson and mode.
+ * Practice retains its server-shuffled lesson, never an authored lesson run. */
+export async function unfinishedSessionFor(ownerId: string, lessonId: string, mode: SessionMode): Promise<LearnerSession | undefined> {
+  const storedLessonId = mode === "practice" ? `${lessonId}::practice` : lessonId;
+  const db = sitesDatabase();
+  if (!db) return memoryListSessions(ownerId).find((session) => session.lesson.id === storedLessonId && session.mode === mode && !session.complete);
+  const row = await db.prepare("SELECT state_json FROM lesson_sessions WHERE owner_id=? AND lesson_id=? AND mode=? AND expires_at>? AND json_extract(state_json,'$.stepIndex') < json_array_length(state_json,'$.lesson.steps') ORDER BY updated_at DESC,created_at DESC,rowid DESC LIMIT 1").bind(ownerId, storedLessonId, mode, new Date().toISOString()).first<{ state_json: string }>();
+  return row ? LearnerSession.fromState(JSON.parse(row.state_json) as LearnerSessionState) : undefined;
+}
+
+/** A new empty attempt must not erase observed course progress or a completed
+ * result. Completed generated-course observations remain until account/course
+ * removal; the expiry still applies to unfinished work. Exact account/lesson/
+ * mode lookup also avoids the recent-list limit. */
+export async function courseEvidenceSessionFor(ownerId: string, lessonId: string, mode: SessionMode = "lesson"): Promise<LearnerSession | undefined> {
+  const storedLessonId = mode === "practice" ? `${lessonId}::practice` : lessonId;
+  const db = sitesDatabase();
+  if (!db) return memoryListSessions(ownerId)
+    .filter((session) => session.lesson.id === storedLessonId && session.mode === mode)
+    .sort((left, right) => right.stepIndex - left.stepIndex || (right.events.at(-1)?.ts ?? 0) - (left.events.at(-1)?.ts ?? 0))[0];
+  const row = await db.prepare("SELECT state_json FROM lesson_sessions WHERE owner_id=? AND lesson_id=? AND mode=? AND (expires_at>? OR (lesson_id LIKE 'generated:%' AND mode='lesson' AND json_extract(state_json,'$.stepIndex') >= json_array_length(state_json,'$.lesson.steps'))) ORDER BY json_extract(state_json,'$.stepIndex') DESC,updated_at DESC,created_at DESC,rowid DESC LIMIT 1")
+    .bind(ownerId, storedLessonId, mode, new Date().toISOString()).first<{ state_json: string }>();
+  return row ? LearnerSession.fromState(JSON.parse(row.state_json) as LearnerSessionState) : undefined;
 }
 
 export async function persistCompletion(ownerId: string, lessonId: string, mode: SessionMode): Promise<void> {

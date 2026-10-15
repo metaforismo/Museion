@@ -15,7 +15,7 @@ const runtime = (persistence: string) => ({
 });
 
 describe("dashboard runtime contract", () => {
-  it.each(["process-local", "hybrid", "synced"])("accepts persistence %s", (persistence) => {
+  it.each(["process-local", "local-durable", "hybrid", "synced"])("accepts persistence %s", (persistence) => {
     expect(DashboardSnapshotSchema.shape.runtime.safeParse(runtime(persistence)).success).toBe(true);
   });
 

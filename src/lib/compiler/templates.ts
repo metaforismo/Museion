@@ -17,7 +17,7 @@ export const COURSE_TEMPLATES = {
   "exam-practice": {
     name: "Exam Practice",
     description: "Worked reasoning, retrieval checks, common errors, and an unassisted challenge.",
-    requiredKinds: ["prediction-choice", "state-trace"],
+    requiredKinds: ["prediction-choice"],
     instructions: "Prioritize retrieval, common-error discrimination, and a precise exam-style transfer challenge.",
   },
   "teach-it-back": {

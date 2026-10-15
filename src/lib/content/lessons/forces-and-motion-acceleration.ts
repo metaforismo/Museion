@@ -27,7 +27,7 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-acc-force-equals-accel",
-          triggerAnswers: ["nothing is wrong; force in newtons always equals acceleration in m/s² directly", "0"],
+          triggerAnswers: ["nothing is wrong; force in newtons always equals acceleration in m/s² directly"],
           description:
             "The learner treated the numeric value of force as automatically equal to acceleration, ignoring mass entirely.",
           remediationFocus:
@@ -35,7 +35,7 @@ const lesson = {
         },
         {
           id: "fm-acc-multiplies-for-a",
-          triggerAnswers: ["the claim is backwards: acceleration equals force times mass, so a = 10 × m", "2"],
+          triggerAnswers: ["the claim is backwards: acceleration equals force times mass, so a = 10 × m"],
           description: "The learner rearranged the second law incorrectly, multiplying by mass instead of dividing by it.",
           remediationFocus: "Solve a = F / m by dividing the net force by the mass, not multiplying.",
         },
@@ -143,13 +143,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-acc-mass-changes-with-location",
-          triggerAnswers: ["its mass becomes less than 10 kg, because it feels lighter", "0"],
+          triggerAnswers: ["its mass becomes less than 10 kg, because it feels lighter"],
           description: "The learner treated mass as the same quantity as weight, which does depend on location.",
           remediationFocus: "Mass (kg) is the amount of matter and is constant; weight (N) is a force that depends on local gravity.",
         },
         {
           id: "fm-acc-weight-never-changes",
-          triggerAnswers: ["both its mass and its weight stay exactly the same everywhere", "2"],
+          triggerAnswers: ["both its mass and its weight stay exactly the same everywhere"],
           description: "The learner assumed weight is a fixed property of the object rather than a force that depends on local gravity.",
           remediationFocus:
             "Weight = mass × local gravitational acceleration, so weight changes whenever gravitational acceleration changes, even though mass does not.",
@@ -275,13 +275,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-acc-practice-force-equals-accel",
-          triggerAnswers: ["true; force and acceleration are always numerically equal", "0"],
+          triggerAnswers: ["true; force and acceleration are always numerically equal"],
           description: "The learner treated force and acceleration as always numerically equal, ignoring mass.",
           remediationFocus: "Divide by the object's mass to find acceleration; do not assume the numbers match.",
         },
         {
           id: "fm-acc-practice-multiplies-mass",
-          triggerAnswers: ["false; acceleration is force multiplied by mass", "2"],
+          triggerAnswers: ["false; acceleration is force multiplied by mass"],
           description: "The learner multiplied instead of divided when solving for acceleration.",
           remediationFocus: "Isolating a in F = ma requires dividing by m, not multiplying.",
         },
@@ -306,13 +306,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-acc-practice-mass-weight-same",
-          triggerAnswers: ["mass and weight are the same physical quantity, just in different units", "0"],
+          triggerAnswers: ["mass and weight are the same physical quantity, just in different units"],
           description: "The learner treated mass and weight as the same quantity in different units.",
           remediationFocus: "Mass is measured in kilograms and is constant; weight is a force, measured in newtons, and depends on gravity.",
         },
         {
           id: "fm-acc-practice-weight-fixed",
-          triggerAnswers: ["weight is whatever a scale shows and never depends on gravity", "2"],
+          triggerAnswers: ["weight is whatever a scale shows and never depends on gravity"],
           description: "The learner assumed weight never depends on gravity.",
           remediationFocus: "Weight = mass × local gravitational acceleration; it changes wherever gravitational acceleration changes.",
         },

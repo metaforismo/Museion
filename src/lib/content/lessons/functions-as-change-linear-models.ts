@@ -68,13 +68,13 @@ const lesson = {
       misconceptions: [
         {
           id: "extends-model-without-bound",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["It proves the supply will rise by 2 every day forever."],
           description: "The learner turned a local model into a guarantee about all future inputs.",
           remediationFocus: "Keep the model’s context, input range, and assumptions visible when interpreting a prediction.",
         },
         {
           id: "treats-model-as-measurement-proof",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["It proves every earlier count was exact."],
           description: "The learner confused a model’s rule with proof that every observed count was exact.",
           remediationFocus: "A model summarizes a relationship; it does not remove uncertainty or measurement limits.",
         },
@@ -97,7 +97,7 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-initial-value-as-change",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["it increases by 20"],
           description: "The learner interpreted the constant term as the rate of change.",
           remediationFocus: "The sign and size of the x coefficient, not the constant, describe change per input unit.",
         },

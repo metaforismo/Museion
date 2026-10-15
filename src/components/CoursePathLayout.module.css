@@ -1,0 +1,5 @@
+.layout { display:grid; grid-template-columns:minmax(0,340px) minmax(0,1fr); align-items:start; gap:48px; margin-top:24px; }
+.overview { position:sticky; top:88px; min-width:0; }
+.path { min-width:0; scroll-margin-top:24px; }
+@media (max-width:1100px) { .layout { grid-template-columns:minmax(0,290px) minmax(0,1fr); gap:28px; } }
+@media (max-width:850px) { .layout { grid-template-columns:1fr; gap:28px; } .overview { position:static; } }

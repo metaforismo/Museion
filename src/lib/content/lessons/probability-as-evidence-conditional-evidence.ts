@@ -12,7 +12,7 @@ const lesson = {
       id: "step-1",
       concept: "evidence-subgroup",
       prompt:
-        "A library tracks 100 books. Forty have a review slip, and 10 of those 40 are science books. If you already know a selected book has a review slip, what number belongs in the denominator?",
+        "A library tracks 100 books: 20 are science books. Forty books have a review slip, and 10 of those 40 are science books. If you already know a selected book has a review slip, what number belongs in the denominator?",
       answer: { kind: "numeric", value: 40, tolerance: 0 },
       solution:
         "The phrase ‘given that it has a review slip’ restricts the comparison to the 40 books with slips. Conditional probability changes the reference group before we count favourable cases.",
@@ -40,24 +40,24 @@ const lesson = {
       id: "step-2",
       concept: "conditional-probability",
       prompt:
-        "Using the same library record, what is P(science | review slip)?",
+        "In this library, 10 of the 40 books with review slips are science books, and there are 20 science books in all. What is P(science | review slip)?",
       answer: {
         kind: "multipleChoice",
-        options: ["1/10", "1/4", "2/5"],
+        options: ["1/10", "1/4", "1/2"],
         correctIndex: 1,
       },
       solution:
         "Within the 40 books with review slips, 10 are science books. So P(science | review slip) = 10/40 = 1/4. The vertical bar means the evidence on the right has already restricted the group.",
       misconceptions: [
         {
-          id: "uses-overlap-as-denominator",
-          triggerAnswers: ["0"],
-          description: "The learner treated the overlap count as both numerator and denominator.",
-          remediationFocus: "Keep the overlap in the numerator and the known-evidence group in the denominator.",
+          id: "uses-whole-library-for-conditional-chance",
+          triggerAnswers: ["1/10"],
+          description: "The learner divided the 10 science-with-slip books by all 100 books, ignoring the condition.",
+          remediationFocus: "Keep the overlap in the numerator and the 40 books with slips in the denominator.",
         },
         {
           id: "reverses-condition",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["1/2"],
           description: "The learner reasoned about review slips among science books rather than science books among review slips.",
           remediationFocus: "Read from right to left after the bar: first choose from the evidence subgroup, then ask what fraction has the event.",
         },
@@ -117,7 +117,7 @@ const lesson = {
     {
       id: "practice-2",
       concept: "conditional-probability",
-      prompt: "For those folders, what is P(visual design | tested tag)?",
+      prompt: "A collection has 30 project folders. Twelve have a tested tag; three of those tagged folders are visual-design folders. What is P(visual design | tested tag)?",
       answer: {
         kind: "multipleChoice",
         options: ["1/10", "1/4", "2/5"],
@@ -128,7 +128,7 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-total-projects",
-          triggerAnswers: ["0"],
+          triggerAnswers: ["1/10"],
           description: "The learner treated the chance as three out of all 30 folders.",
           remediationFocus: "The tag is given, so the comparison is only among tagged folders.",
         },
@@ -140,7 +140,7 @@ const lesson = {
       concept: "conditional-probability",
       prompt:
         "Near transfer: A quality check flags 9 of 15 weather reports with a photo. Six of the flagged reports are later confirmed relevant. What is P(relevant | flagged)? Write a fraction.",
-      answer: { kind: "expression", acceptedForms: ["2/3", "6/9"] },
+      answer: { kind: "numeric", value: 2 / 3, tolerance: 0 },
       solution:
         "Once a report is known to be flagged, there are 9 possible reports in the reference group and 6 relevant ones. The probability is 6/9 = 2/3. This describes this recorded check, not a guarantee about every future check.",
       misconceptions: [

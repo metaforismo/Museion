@@ -10,6 +10,7 @@
 
 import type { Lesson, Step } from "./types";
 import { verify } from "../engine/verifier";
+import { allowedAuthoredUiTargets } from "../maia/ui-targets";
 
 export function validateLesson(lesson: Lesson): string[] {
   const issues: string[] = [];
@@ -72,6 +73,9 @@ export function validateLesson(lesson: Lesson): string[] {
         // Highlights may only point at what is already on screen: a term
         // must literally occur in this surface's prompt, and a graph
         // region only exists on a graph step.
+        if (misconception.attentionTargetId && !allowedAuthoredUiTargets(candidate).includes(misconception.attentionTargetId)) {
+          issues.push(`${label}: misconception "${misconception.id}" attention target is not rendered by this activity`);
+        }
         const highlight = misconception.highlight;
         if (highlight?.kind === "term" && !candidate.prompt.includes(highlight.text)) {
           issues.push(

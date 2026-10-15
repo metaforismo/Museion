@@ -16,10 +16,10 @@ export default function CoursePathCatalog({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-2xl">
           <p className="eyebrow">Museion Originals</p>
-          <h2 id="museion-courses-title" className="title-panel mt-1.5">Follow a designed reasoning path.</h2>
+          <h2 id="museion-courses-title" className="title-panel mt-1.5">Find something worth understanding.</h2>
           <p className="mt-2 text-body-sm leading-6 text-ink-soft">
-            Museion-authored sequences across math, physics, biology, and computer science — every lesson
-            diagnoses specific misconceptions, and the checker&apos;s truth stays private.
+            Small, interactive courses in math, science and computing.
+            Explore an idea, test your thinking, then try it in a new way.
           </p>
         </div>
         <Link

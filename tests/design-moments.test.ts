@@ -35,7 +35,7 @@ describe("momentCopy", () => {
     // same step was correct within the same session; the dashboard's own chip
     // calls it "worth rechecking".
     const copy = momentCopy("misconception-resolved");
-    expect(`${copy.title} ${copy.evidence}`).toContain("session");
+    expect(`${copy.title} ${copy.evidence}`).toContain("during this lesson");
     expect(copy.evidence).toContain("recheck");
   });
 

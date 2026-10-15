@@ -33,10 +33,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-base-assumes-auto-stop",
-          triggerAnswers: [
-            "it prints 3, 2, 1, 0, and then stops on its own",
-            "0",
-          ],
+          triggerAnswers: ["it prints 3, 2, 1, 0, and then stops on its own"],
           description:
             "The learner assumed the recursion halts once the values look 'small' (like reaching 0), without an explicit check that stops it.",
           remediationFocus:
@@ -44,7 +41,7 @@ const lesson = {
         },
         {
           id: "rec-base-single-call-only",
-          triggerAnswers: ["it prints 3 once and returns immediately", "2"],
+          triggerAnswers: ["it prints 3 once and returns immediately"],
           description:
             "The learner treated the recursive call as if it were never actually executed, as though the function only runs its first line.",
           remediationFocus:
@@ -52,7 +49,7 @@ const lesson = {
         },
         {
           id: "rec-base-assumes-implicit-halt",
-          triggerAnswers: ["it stops because n eventually becomes undefined", "3"],
+          triggerAnswers: ["it stops because n eventually becomes undefined"],
           description:
             "The learner assumed the recursion would run out of valid input and stop on its own, as if negative numbers were undefined for the function.",
           remediationFocus:
@@ -84,10 +81,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-base-reorders-base-case",
-          triggerAnswers: [
-            "the base case is written in the wrong order, before the print statement",
-            "0",
-          ],
+          triggerAnswers: ["the base case is written in the wrong order, before the print statement"],
           description:
             "The learner attributed the bug to the base case's position in the code rather than to the unchanged argument.",
           remediationFocus:
@@ -95,7 +89,7 @@ const lesson = {
         },
         {
           id: "rec-base-blames-print",
-          triggerAnswers: ["print statements block a function from returning", "2"],
+          triggerAnswers: ["print statements block a function from returning"],
           description:
             "The learner attributed the non-termination to an unrelated statement (print) rather than to the recursive call's argument.",
           remediationFocus:
@@ -103,7 +97,7 @@ const lesson = {
         },
         {
           id: "rec-base-wants-two-base-cases",
-          triggerAnswers: ["the function needs two separate base cases to work", "3"],
+          triggerAnswers: ["the function needs two separate base cases to work"],
           description:
             "The learner assumed the fix requires additional stopping conditions rather than fixing the argument passed to the existing one.",
           remediationFocus:
@@ -238,7 +232,7 @@ const lesson = {
       misconceptions: [
         {
           id: "rec-base-practice-assumes-terminates",
-          triggerAnswers: ["yes, it terminates immediately", "0"],
+          triggerAnswers: ["yes, it terminates immediately"],
           description:
             "The learner assumed any base case guarantees termination, without checking whether the recursive call actually makes progress toward it.",
           remediationFocus:
@@ -246,10 +240,7 @@ const lesson = {
         },
         {
           id: "rec-base-practice-assumes-wraparound",
-          triggerAnswers: [
-            "yes, once n grows large enough it wraps back around to 0",
-            "2",
-          ],
+          triggerAnswers: ["yes, once n grows large enough it wraps back around to 0"],
           description:
             "The learner assumed that an ever-growing number would eventually cycle back to 0.",
           remediationFocus:
@@ -257,7 +248,7 @@ const lesson = {
         },
         {
           id: "rec-base-practice-blames-base-case-var",
-          triggerAnswers: ["no, because the base case checks the wrong variable", "3"],
+          triggerAnswers: ["no, because the base case checks the wrong variable"],
           description:
             "The learner correctly sensed something was wrong but blamed the base case's condition rather than the recursive call's argument.",
           remediationFocus:

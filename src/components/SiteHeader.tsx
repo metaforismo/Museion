@@ -2,37 +2,23 @@ import Link from "next/link";
 
 import BrandMark from "./BrandMark";
 import AuthButton from "./AuthButton";
+import PublicMenu from "./PublicMenu";
+import styles from "./SiteHeader.module.css";
 
 export default function SiteHeader({ landing = false }: { landing?: boolean }) {
-  return (
-    <header className={landing ? "sticky top-0 z-40 bg-[#f7fbff]/90 px-3 py-2 backdrop-blur-xl" : "border-b border-ink/10 bg-paper"}>
-      {/* The gaps tighten below sm because brand + sign-in + Open Museion is a
-          319px row at their full values, and a 320px viewport then scrolls
-          sideways. Above sm the row has room and the spacing is unchanged. */}
-      <div className={`mx-auto flex w-full items-center justify-between gap-3 sm:gap-6 ${landing ? "min-h-14 max-w-5xl rounded-full border border-ink/[.06] bg-white/90 px-4 shadow-[var(--shadow-2)] sm:px-5" : "min-h-18 max-w-7xl px-4 sm:px-6 lg:px-8"}`}>
-        <Link href="/" aria-label="Museion home" className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <BrandMark className={landing ? "h-8 w-8 shrink-0" : "h-10 w-10 shrink-0"} />
-          <span className={landing ? "text-body font-bold tracking-title" : "text-lg font-semibold tracking-title"}>Museion</span>
-        </Link>
-        {/* One size for the whole nav row. Library and About used to sit a step
-            below Create for no reason anyone could name, which read as a
-            rendering fault rather than a hierarchy. */}
-        <nav aria-label="Public navigation" className="flex items-center gap-1 sm:gap-2">
-          <Link href={landing ? "/#how-it-works" : "/library"} className="hidden min-h-11 items-center px-3 text-body-sm font-medium text-ink-soft hover:text-ink sm:inline-flex">
-            {landing ? "How it works" : "Library"}
-          </Link>
-          <Link href={landing ? "/#library" : "/about"} className="hidden min-h-11 items-center px-3 text-body-sm font-medium text-ink-soft hover:text-ink md:inline-flex">
-            {landing ? "Courses" : "About"}
-          </Link>
-          {!landing && <Link href="/create" className="hidden min-h-11 items-center px-3 text-body-sm font-medium text-ink-soft hover:text-ink sm:inline-flex">
-            Create
-          </Link>}
-          <AuthButton />
-          <Link href="/dashboard" className={`inline-flex min-h-10 items-center bg-ink px-4 text-body-sm font-semibold text-white hover:bg-lapis-dark ${landing ? "rounded-full shadow-[0_3px_0_rgba(0,0,0,.14)]" /* a hard 3px offset, not elevation — the landing's chunky-button device. Deliberately outside the --shadow-1/2/3 ladder, which governs depth. */ : "rounded-lg"}`}>
-            Open Museion
-          </Link>
+  return <header className={styles.header} data-surface={landing ? "landing" : "document"}>
+    <div className={styles.inner}>
+      <Link href="/" aria-label="Museion home" className={styles.brand}><BrandMark className="h-8 w-8 shrink-0"/><span>Museion</span></Link>
+      <div className={styles.navigation}>
+        <nav aria-label="Public navigation" className="flex items-center">
+          <Link href="/#how-it-works" className={styles.navLink}>How it works</Link>
+          <Link href="/#library" className={styles.navLink}>Courses</Link>
+          <Link href="/help" className={styles.navLink}>Help</Link>
         </nav>
+        <AuthButton/>
+        <Link href="/signup" className={styles.start}>Start learning</Link>
+        <PublicMenu/>
       </div>
-    </header>
-  );
+    </div>
+  </header>;
 }

@@ -15,14 +15,14 @@ async function cleanupExpired(ownerId: string) {
   await db.prepare(`DELETE FROM uploads WHERE id IN (${rows.results.map(() => "?").join(",")})`).bind(...rows.results.map((row) => row.id)).run();
 }
 export async function GET() {
-  let actor; try { actor = await requireAccountActor(); } catch { return NextResponse.json({ error: "CHATGPT_SIGN_IN_REQUIRED" }, { status: 401 }); }
+  let actor; try { actor = await requireAccountActor(); } catch { return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 }); }
   const db = sitesDatabase(); if (!db) return NextResponse.json({ error: "SITES_STORAGE_UNAVAILABLE" }, { status: 503 });
   await cleanupExpired(actor.ownerId);
   const rows = await db.prepare("SELECT id,filename,media_type,byte_length,sha256,status,expires_at,created_at FROM uploads WHERE owner_id=? ORDER BY created_at DESC").bind(actor.ownerId).all();
   return NextResponse.json({ uploads: rows.results ?? [] }, { headers: { "Cache-Control": "no-store" } });
 }
 export async function POST(request: Request) {
-  let actor; try { actor = await requireAccountActor(); } catch { return NextResponse.json({ error: "CHATGPT_SIGN_IN_REQUIRED" }, { status: 401 }); }
+  let actor; try { actor = await requireAccountActor(); } catch { return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 }); }
   const db = sitesDatabase(); if (!db) return NextResponse.json({ error: "SITES_STORAGE_UNAVAILABLE" }, { status: 503 });
   const form = await request.formData().catch(() => null); const file = form?.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "FILE_REQUIRED" }, { status: 400 });

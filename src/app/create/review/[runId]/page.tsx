@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import CourseLearningPath from "@/components/CourseLearningPath";
+import CoursePathLayout from "@/components/CoursePathLayout";
+import { courseEvidenceSessionFor } from "@/lib/server/session-repository";
+import { generatedLessonId } from "@/lib/compiler/lesson-adapter";
 import { getCompilerRun } from "@/lib/compiler";
 import { COURSE_TEMPLATES } from "@/lib/compiler/templates";
 import { currentActor } from "@/lib/server/actor";
@@ -10,6 +14,7 @@ export const metadata: Metadata = { title: "Review compilation run" };
 
 const SUPPORTED_LEARNER_BLOCKS = new Set([
   "explanation",
+  "guided-response",
   "prediction-choice",
   "sequence-builder",
   "range-explorer",
@@ -48,6 +53,8 @@ export default async function CompilationRunReview({
     1,
     Math.ceil(lessonBlocks.reduce((total, block) => total + block.estimatedSeconds, 0) / 60),
   );
+  const saved = await courseEvidenceSessionFor(ownerId, generatedLessonId(run.runId));
+  const guidedActivityCount = lessonBlocks.filter((block) => block.kind !== "explanation").length;
   const accepted = run.validation.status === "accepted" && run.validation.blockingIssueCount === 0;
 
   return (
@@ -178,72 +185,27 @@ export default async function CompilationRunReview({
           <p className="eyebrow">Learning sequence</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-title">What the learner will do</h2>
           <p className="mt-2 text-body leading-6 text-ink-soft">
-            Blocks appear in the exact authored order. Generated pedagogy is visible;
-            correct answers and evaluator truth stay server-side.
+            Activities follow the compiled order. Source evidence stays available during learning;
+            answer specifications remain private until each activity is solved.
           </p>
         </div>
-        <ol className="mt-7 divide-y divide-ink/10">
-          {lessonBlocks.map((block, index) => (
-            <li key={block.id} className="grid gap-3 py-5 sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
-              <span className="font-mono text-body-sm font-semibold tabular-nums text-lapis-dark">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <div>
-                <p className="text-body font-semibold">{block.accessibilityLabel}</p>
-                <p className="mt-1 text-body-sm text-ink-soft">
-                  {block.kind.replaceAll("-", " ")} · {Math.ceil(block.estimatedSeconds / 60)} min
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-label font-semibold">
-                  <span className="rounded-md bg-lapis-soft px-2 py-1 text-lapis-dark">
-                    Generated pedagogy
-                  </span>
-                  {block.citations.length > 0 && (
-                    <span className="rounded-md bg-gold-soft px-2 py-1 text-ink">
-                      Source-grounded
-                    </span>
-                  )}
-                </div>
-                {block.citations.length > 0 && (
-                  <details className="mt-4 rounded-xl border border-ink/10 bg-paper px-4 py-3">
-                    <summary className="cursor-pointer text-body-sm font-semibold text-lapis-dark">
-                      Inspect linked source evidence
-                    </summary>
-                    <ul className="mt-4 space-y-4">
-                      {block.citations.map((citation) => {
-                        const span = run.sourceGraph.spans[citation.spanId];
-                        if (!span) return null;
-                        return (
-                          <li key={`${block.id}-${citation.spanId}`} className="border-l-2 border-gold pl-4">
-                            <p className="text-label font-semibold uppercase tracking-[0.08em] text-ink-soft">
-                              {citation.purpose} · page {span.pageNumber}
-                            </p>
-                            <blockquote className="mt-2 text-body-sm leading-6">“{span.exactText}”</blockquote>
-                            <a href={`#citation-${citation.spanId}`} className="mt-2 inline-block text-label font-semibold text-lapis-dark underline-offset-4 hover:underline">
-                              Open in citation record
-                            </a>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </details>
-                )}
-              </div>
-              <span className="self-start rounded-full bg-lapis-soft px-2.5 py-1 text-micro font-medium text-lapis-dark">
-                {block.citations.length} citation{block.citations.length === 1 ? "" : "s"}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div className="mt-7">
+          <CoursePathLayout overview={<div><p className="eyebrow">From your source</p><h3 className="mt-3 text-xl font-semibold">{run.artifact.title}</h3><p className="mt-3 text-body-sm leading-6 text-ink-soft">{run.artifact.bigQuestion}</p><p className="mt-4 text-label text-ink-soft">Generated answer specifications need your review. Recorded activity is evidence of practice.</p></div>}>
+            <CourseLearningPath title="Your learning path" subject="Your sources" nodes={[
+              { id: lesson.id, title: lesson.title, description: run.artifact.bigQuestion, meta: `${guidedActivityCount} activities · ${totalMinutes} min`, kind: "lesson", state: saved && saved.stepIndex >= guidedActivityCount ? "done" : "current", href: accepted && learnerCompatible && (!saved || saved.stepIndex < guidedActivityCount) ? `/learn/${run.runId}` : undefined, actionLabel: saved ? "Continue learning" : "Start learning" },
+              ...transferBlocks.map((block, index) => ({ id: block.id, title: "Independent challenge", description: block.kind === "explanation" ? block.body : block.prompt, meta: "Without Maia or hints", kind: "challenge" as const, state: saved && saved.stepIndex > guidedActivityCount + index ? "done" as const : saved && saved.stepIndex === guidedActivityCount + index ? "current" as const : "locked" as const, href: accepted && learnerCompatible && saved && saved.stepIndex === guidedActivityCount + index ? `/learn/${run.runId}` : undefined, actionLabel: "Continue challenge" })),
+            ]} />
+          </CoursePathLayout>
+        </div>
 
         {transferBlocks.length > 0 && (
           <aside className="mt-7 border-l-2 border-gold pl-5" aria-labelledby="transfer-review-title">
-            <p className="text-label font-semibold uppercase tracking-[0.08em] text-ink-soft">Locked transfer</p>
+            <p className="text-label font-semibold uppercase tracking-[0.08em] text-ink-soft">{saved?.complete ? "Challenge completed" : saved && saved.stepIndex >= guidedActivityCount ? "Challenge available" : "Locked challenge"}</p>
             <h3 id="transfer-review-title" className="mt-2 text-xl font-semibold tracking-title">
               Unassisted observation after the lesson
             </h3>
             <p className="mt-2 max-w-2xl text-body-sm leading-6 text-ink-soft">
-              Transfer remains separate from Maia, hints, and solutions. It opens only
-              after the guided sequence is complete.
+              {saved?.complete ? "Your first independent response stays recorded separately from later practice." : saved && saved.stepIndex >= guidedActivityCount ? "Continue the challenge without Maia or hints." : "Complete the guided lesson to open this challenge without Maia or hints."}
             </p>
             <ul className="mt-4 space-y-2 text-body-sm">
               {transferBlocks.map((block) => (

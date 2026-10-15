@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import ActivityTarget from "@/components/ActivityTarget";
+import styles from "./lesson-workspace.module.css";
+import { authoredUiActions } from "@/lib/maia/ui-targets";
+import { guidanceMatchesScope, type MaiaGuidance } from "@/lib/maia/proactive";
+import type { TutorUiAction } from "@/lib/maia/contracts";
+import InteractiveBlock from "@/components/blocks/InteractiveBlock";
+import { conceptLabel } from "@/lib/learning/concept-label";
+import type { RuntimeState, RuntimeAction } from "@/lib/runtime";
 import GraphTransformLab from "@/components/GraphTransformLab";
 import MaiaCharacter from "@/components/MaiaCharacter";
 import MaiaPanel, { type MaiaOutbox } from "@/components/MaiaPanel";
@@ -21,6 +29,7 @@ import {
   RequestTimeoutError,
 } from "@/lib/client/fetch-with-timeout";
 import { sessionStorageKey } from "@/lib/client/storage";
+import { openLessonSession } from "@/lib/client/open-lesson-session";
 import type { MisconceptionHighlight, PublicLesson, PublicStep } from "@/lib/content/types";
 import type { LabActivity } from "@/lib/maia/activity";
 import type { CourseLessonContext } from "@/lib/curriculum";
@@ -58,38 +67,6 @@ interface PlayerProps {
   courseContext?: CourseLessonContext;
 }
 
-// React's development Strict Mode mounts effects twice. Share an in-flight
-// creation per lesson/mode so concurrent mounts cannot mint two anonymous
-// learner cookies and orphan the first session.
-const pendingSessionCreations = new Map<
-  string,
-  Promise<SessionStateResponse | null>
->();
-
-function createSessionOnce(
-  storeKey: string,
-  lessonId: string,
-  mode: SessionMode,
-): Promise<SessionStateResponse | null> {
-  const pending = pendingSessionCreations.get(storeKey);
-  if (pending) return pending;
-
-  const creation = fetchWithTimeout("/api/sessions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lessonId, mode }),
-  })
-    .then(async (response) => {
-      if (!response.ok) return null;
-      return (await response.json()) as SessionStateResponse;
-    })
-    .finally(() => {
-      pendingSessionCreations.delete(storeKey);
-    });
-  pendingSessionCreations.set(storeKey, creation);
-  return creation;
-}
-
 export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   // The authoritative lesson comes from the session (shuffled in
@@ -99,6 +76,9 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   const [sessionVersion, setSessionVersion] = useState(0);
   const [complete, setComplete] = useState(false);
   const [stats, setStats] = useState<SessionStats | null>(null);
+  const [runtimeState, setRuntimeState] = useState<RuntimeState | null>(null);
+  const [runtimeLastAction, setRuntimeLastAction] = useState<RuntimeAction | null>(null);
+  const [runtimeNote, setRuntimeNote] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [showSolution, setShowSolution] = useState(false);
   const [hints, setHints] = useState<string[]>([]);
@@ -109,20 +89,28 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   const [retryMutation, setRetryMutation] = useState<RetryableMutation | null>(null);
   const [recoveryNeeded, setRecoveryNeeded] = useState(false);
   const [outbox, setOutbox] = useState<MaiaOutbox | null>(null);
+  const [visibleGuidance, setVisibleGuidance] = useState<MaiaGuidance | null>(null);
+  const [proactiveGuidance, setProactiveGuidance] = useState<MaiaGuidance | null>(null);
+  const [tutorMarks, setTutorMarks] = useState<{ stepId: string; variantIndex: number; version: number; actions: TutorUiAction[] } | null>(null);
   const [initialChat, setInitialChat] = useState<ChatMessage[]>([]);
-  const [shakeTick, setShakeTick] = useState(0);
   // Holds the Check pressable down through the wrong-answer beat: the key
   // deflates with the shake, then springs back. Timer-driven rather than
   // animation-driven so reduced motion (animation: none) still releases it.
   const [checkDeflated, setCheckDeflated] = useState(false);
   const [variantIndex, setVariantIndex] = useState(0);
+  const [lastAttempt, setLastAttempt] = useState<SessionStateResponse["lastAttempt"]>(null);
+  const [restoredControlsKey, setRestoredControlsKey] = useState(0);
   const [answerFocusRequest, setAnswerFocusRequest] = useState(0);
   const [chatSyncKey, setChatSyncKey] = useState(0);
   const outboxSeq = useRef(0);
   const actionInFlight = useRef(false);
   const feedbackRef = useRef<HTMLDivElement>(null);
-  const backHref = courseContext ? `/courses/${courseContext.courseId}` : "/library";
-  const backLabel = courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
+  const activityColumnRef = useRef<HTMLElement>(null);
+  const promptRef = useRef<HTMLParagraphElement>(null);
+  const previousActivity = useRef<string | null>(null);
+  const activityJustChanged = useRef(false);
+  const backHref = lesson.generatedFrom ? `/create/review/${lesson.generatedFrom.runId}` : courseContext ? `/courses/${courseContext.courseId}` : "/library";
+  const backLabel = lesson.generatedFrom ? "Back to course review" : courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
   // The subject's press pair for the Check control — accent fill with its
   // deep edge, both from the palette. Components never darken a colour.
   const accent = subjectColor(activeLesson.track);
@@ -158,6 +146,9 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   }, []);
 
   const applyState = useCallback((state: SessionStateResponse) => {
+    setRuntimeState(state.runtimeState ?? null);
+    setRuntimeLastAction(state.runtimeLastAction ?? null);
+    setRuntimeNote(null);
     setActiveLesson(state.lesson);
     setStepIndex(state.stepIndex);
     setSessionVersion(state.sessionVersion);
@@ -174,56 +165,43 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
     );
     setHints(state.revealedHints);
     setVariantIndex(state.activeVariantIndex ?? 0);
+    setLastAttempt(state.lastAttempt ?? null);
+    setRestoredControlsKey((key) => key + 1);
     setInitialChat(state.chatHistory);
+    setProactiveGuidance(state.proactiveGuidance ?? null);
     setSessionId(state.sessionId);
     setRequestError(null);
     setRetryMutation(null);
     setRecoveryNeeded(false);
   }, []);
 
-  // Open a session: resume from localStorage when the server still
-  // remembers it, otherwise start fresh.
+  // Local pointers are only a cache. Recover durable account-owned work
+  // before creating a run, including after sign-out or on another browser.
   useEffect(() => {
     let cancelled = false;
     const storeKey = sessionStorageKey(lesson.id, mode);
-
-    async function createSession(): Promise<void> {
-      const state = await createSessionOnce(storeKey, lesson.id, mode).catch(() => null);
-      if (!state) {
-        if (!cancelled) setRequestError("The lesson session could not be created. Try reloading the page.");
-        return;
-      }
-      if (cancelled) return;
-      localStorage.setItem(storeKey, state.sessionId);
-      applyState(state);
-    }
+    const forceNew = new URL(window.location.href).searchParams.get("restart") === "1";
+    let savedSessionId: string | null = null;
+    try { savedSessionId = localStorage.getItem(storeKey); } catch { /* Browser storage is optional. */ }
 
     async function open(): Promise<void> {
       try {
-        const saved = localStorage.getItem(storeKey);
-        if (saved) {
-          const res = await fetchWithTimeout(`/api/sessions/${saved}`);
-          if (res.ok) {
-            const state = (await res.json()) as SessionStateResponse;
-            if (!cancelled) applyState(state);
-            return;
-          }
-          if (res.status === 404 || res.status === 410) {
-            localStorage.removeItem(storeKey);
-          } else {
-            throw new Error("SESSION_TEMPORARILY_UNAVAILABLE");
-          }
+        const state = await openLessonSession(lesson.id, mode, { savedSessionId, forceNew });
+        if (cancelled) return;
+        try { localStorage.setItem(storeKey, state.sessionId); } catch { /* The server keeps the session. */ }
+        if (forceNew) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("restart");
+          window.history.replaceState(window.history.state, "", url);
         }
-        await createSession();
+        applyState(state);
       } catch {
         if (!cancelled) setRequestError("The lesson session could not be opened. Try reloading the page.");
       }
     }
 
     void open();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [lesson.id, mode, applyState]);
 
   // Display the authored variant the engine says is active. Identity
@@ -236,9 +214,26 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
       : baseStep;
   }, [activeLesson, stepIndex, variantIndex]);
 
+  const activityIdentity = step && sessionId ? `${sessionId}:${step.id}:${variantIndex}` : null;
   useEffect(() => {
+    if (!activityIdentity || previousActivity.current === activityIdentity) return;
+    const hadActivity = previousActivity.current !== null;
+    previousActivity.current = activityIdentity;
+    activityJustChanged.current = hadActivity;
+    activityColumnRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    if (hadActivity) {
+      promptRef.current?.focus({ preventScroll: true });
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        promptRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+      }
+    }
+  }, [activityIdentity]);
+
+  useEffect(() => {
+    if (activityJustChanged.current) { activityJustChanged.current = false; return; }
     if (!feedback) return;
     feedbackRef.current?.focus({ preventScroll: true });
+    feedbackRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [feedback]);
 
   const deflateTimer = useRef(0);
@@ -281,6 +276,11 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         setRetryMutation(null);
         setRecoveryNeeded(false);
         setSessionVersion(outcome.sessionVersion);
+        setRuntimeState(outcome.runtimeState ?? null);
+        if (outcome.intermediate) { setRuntimeNote("That move checks out. Continue the activity."); setProactiveGuidance(outcome.proactiveGuidance ?? null); setFeedback(null); return; }
+        if (outcome.runtimeAccepted === false) { setRuntimeNote(outcome.runtimeMessage ?? "Check this move against the current activity state."); setFeedback(null); setProactiveGuidance(outcome.proactiveGuidance ?? null); return; }
+        setRuntimeNote(null);
+        setProactiveGuidance(outcome.proactiveGuidance ?? null);
         setVariantIndex(outcome.activeVariantIndex ?? 0);
         if (outcome.correct) {
           setFeedback({
@@ -291,7 +291,6 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
           setShowSolution(false);
         } else {
           setFeedback({ kind: "wrong", attempts: outcome.attemptsOnStep, highlight: outcome.misconceptionHighlight ?? null });
-          setShakeTick((t) => t + 1);
           // The wrong beat: the Check key stays deflated through the shake,
           // then springs back. Timer-driven so reduced motion (animation:
           // none, no animationend) still releases it.
@@ -453,9 +452,21 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
     }
   }, [applyState, beginAction, finishAction, sessionId]);
 
+  const receiveTutorMarks = useCallback((actions: TutorUiAction[], version: number) => {
+    if (step) setTutorMarks({ stepId: step.id, variantIndex, version, actions: authoredUiActions(step, actions) });
+  }, [step, variantIndex]);
+  const guidanceScope = { sessionId: sessionId ?? "", stepId: step?.id ?? "", variantIndex, sessionVersion, independent: mode === "practice" };
+  const scopedGuidance = proactiveGuidance && visibleGuidance?.id === proactiveGuidance.id && guidanceMatchesScope(guidanceScope, visibleGuidance) ? visibleGuidance : null;
+  const uiActions = step ? authoredUiActions(step, [
+    ...(scopedGuidance?.uiActions ?? []),
+    ...(tutorMarks?.stepId === step.id && tutorMarks.variantIndex === variantIndex && tutorMarks.version === sessionVersion ? tutorMarks.actions : []),
+  ]) : [];
+
   const restartPractice = useCallback(() => {
-    localStorage.removeItem(sessionStorageKey(lesson.id, mode));
-    window.location.reload();
+    try { localStorage.removeItem(sessionStorageKey(lesson.id, mode)); } catch { /* Browser storage is optional. */ }
+    const url = new URL(window.location.href);
+    url.searchParams.set("restart", "1");
+    window.location.assign(url);
   }, [lesson.id, mode]);
 
   if (!sessionId) {
@@ -494,8 +505,8 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
   }
 
   return (
-    <div className="w-full px-4 py-8 pb-32 lg:pb-48">
-      <div className="mx-auto min-w-0 max-w-4xl">
+    <div className={styles.workspace}>
+      <div className={styles.surface}>
         {requestError && (
           <div role="alert" className="mb-5 border-l-2 border-wrong bg-wrong-soft/70 px-4 py-3">
             <p className="text-body-sm font-medium text-wrong">{requestError}</p>
@@ -527,15 +538,13 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         )}
         {/* Slim chrome: back, continuous progress, phase + step. The lesson
             title lives here small — the activity is the page, Koji-style. */}
-        <div className="mb-5">
+        <header className={styles.chrome}>
           <div className="flex items-center gap-3 sm:gap-4">
             <Link
               href={backHref}
-              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-2 text-body-sm font-semibold text-ink-soft transition hover:bg-surface hover:text-lapis-dark"
+              className={styles.close} aria-label={backLabel}
             >
-              <span aria-hidden="true">←</span>
-              <span className="hidden sm:inline">{backLabel}</span>
-              <span className="sr-only sm:hidden">{backLabel}</span>
+              <span aria-hidden="true">×</span>
             </Link>
             {/* One segment per step: green = verified done, blue = where you
                 are now, quiet = still ahead. Koji functional colors. */}
@@ -545,7 +554,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
               aria-label="Lesson progress"
               aria-valuemin={0}
               aria-valuemax={activeLesson.steps.length}
-              aria-valuenow={Math.min(stepIndex + 1, activeLesson.steps.length)}
+              aria-valuenow={Math.min(stepIndex + (feedback?.kind === "correct" ? 1 : 0), activeLesson.steps.length)}
             >
               {activeLesson.steps.map((progressStep, segmentIndex) => {
                 const solvedCount = Math.min(stepIndex + (feedback?.kind === "correct" ? 1 : 0), activeLesson.steps.length);
@@ -553,7 +562,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                 return (
                   <span
                     key={progressStep.id}
-                    className={`h-2 min-w-0 flex-1 rounded-full transition-colors duration-500 ${
+                    className={`h-1.5 min-w-0 flex-1 rounded-full transition-colors duration-200 ${
                       state === "done" ? "bg-correct" : state === "current" ? "bg-lapis" : "bg-ink/8"
                     }`}
                   />
@@ -564,12 +573,12 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
               {/* The Museion Method move this moment exercises, derived from real state. */}
               <span className="rounded-full bg-lapis-soft px-2.5 py-0.5 text-label font-semibold text-lapis-dark">
                 {feedback?.kind === "wrong"
-                  ? "Diagnose"
+                  ? "Try again"
                   : feedback?.kind === "correct"
-                    ? "Explain"
+                    ? "Checked"
                     : mode === "practice"
-                      ? "Revisit"
-                      : "Predict"}
+                      ? "Practice"
+                      : "Your turn"}
               </span>
               <span className="hidden text-label text-ink-soft sm:inline">
                 Step {Math.min(stepIndex + 1, activeLesson.steps.length)} of {activeLesson.steps.length}
@@ -592,45 +601,58 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
               so this is not the independent transfer checkpoint.
             </p>
           )}
-        </div>
+        </header>
 
-        {/* Step card. The shake retriggers via class, never by remounting —
-            remounting would wipe in-progress lab state on a wrong answer. */}
+        <div className={styles.stage}>
+        <section ref={activityColumnRef} className={styles.activityColumn} aria-label="Lesson activity">
+        {/* Keep the activity mounted after a checked attempt so lab inputs stay intact. */}
         {step && (
           <div
             key={step.id}
             aria-busy={busy}
-            onAnimationEnd={() => setShakeTick(0)}
-            className={`rounded-[2rem] border border-ink/8 bg-surface p-6 shadow-[var(--shadow-2)] sm:p-10 ${
-              shakeTick > 0 && feedback?.kind === "wrong" ? "animate-shake" : "animate-fade-up"
-            }`}
+            className={`${styles.activityCard} ${feedback?.kind === "wrong" ? styles.needsAnotherLook : feedback?.kind === "correct" ? styles.verified : ""}`}
           >
             {variantIndex > 0 && (
               <p className="mx-auto mb-3 w-fit rounded-full bg-lapis-soft px-3 py-1 text-center text-label font-semibold text-lapis-dark animate-pop-in">
                 Fresh numbers, same idea — variation {variantIndex}
               </p>
             )}
-            <p className="mx-auto max-w-2xl text-center text-lg leading-relaxed sm:text-xl sm:leading-8">
+            {step.explanation?.map((item, index) => <details key={`${step.id}:explanation:${index}`} className="mb-5 rounded-xl border border-ink/10 bg-surface px-5 py-4" open><summary className="font-semibold">{item.title}</summary><p className="mt-3 whitespace-pre-line text-body-sm leading-7 text-ink-soft">{item.body}</p></details>)}
+            {step.assistancePolicy === "none" && <p className="mb-3 text-label font-semibold text-ink">Independent challenge · use your own reasoning.</p>}
+            <p ref={promptRef} tabIndex={-1} className={styles.prompt}>
+              <ActivityTarget as="span" targetId="prompt" actions={uiActions} label="Lesson question">
               <PromptWithMark
                 prompt={step.prompt}
                 highlight={feedback?.kind === "wrong" ? feedback.highlight : null}
               />
+              </ActivityTarget>
             </p>
 
-            <div className="mt-8">
-              <AnswerControl
-                key={`${step.id}:${variantIndex}`}
+            <div className={styles.answerArea}>
+              {step.runtime && runtimeState ? <InteractiveBlock
+                key={step.id}
+                embedded lastAction={runtimeLastAction} block={step.runtime} state={runtimeState} busy={busy || feedback?.kind === "correct"}
+                held={pendingAction === "answer" || checkDeflated} accent={accent} edge={accentEdge}
+                feedback={runtimeNote ? { message: runtimeNote, verdict: "note" } : null} tutor={null} uiActions={uiActions}
+                onDraftChange={(action) => reportLabState({ kind: "runtime", blockId: step.runtime!.id, action })}
+                onAction={async (action) => { await submitAnswer(JSON.stringify(action)); }}
+              /> : <AnswerControl
+                key={`${step.id}:${variantIndex}:${restoredControlsKey}`}
                 step={step}
+                initialAnswer={lastAttempt?.stepId === step.id && lastAttempt.variantIndex === variantIndex ? lastAttempt.answer : null}
                 accent={accent}
                 edge={accentEdge}
                 disabled={busy || feedback?.kind === "correct"}
+                solved={feedback?.kind === "correct"}
                 checking={pendingAction === "answer"}
                 held={pendingAction === "answer" || checkDeflated}
                 focusRequest={answerFocusRequest}
                 graphHighlight={feedback?.kind === "wrong" && feedback.highlight?.kind === "graph-region" ? feedback.highlight.param : null}
+                uiActions={uiActions}
                 onLabState={reportLabState}
                 onSubmit={submitAnswer}
-              />
+              />}
+              {step.citations?.length ? <details className="mt-5 text-body-sm text-ink-soft"><summary className="cursor-pointer font-medium">Source evidence</summary>{step.citations.map((citation, index) => <blockquote key={index} className="mt-3 border-l-2 border-ink/15 pl-3"><p>{citation.quote}</p><cite className="mt-1 block text-label not-italic">{citation.label}</cite></blockquote>)}</details> : null}
             </div>
 
             {/* Checked-correct is the one moment the canvas goes full
@@ -642,18 +664,15 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                 tabIndex={-1}
                 role="status"
                 aria-live="polite"
-                className="mt-5 rounded-2xl bg-correct p-4 text-white outline-none animate-verified-bloom sm:p-5"
+                className={`${styles.feedback} ${styles.correctFeedback}`}
               >
                 <div className="flex flex-wrap items-center gap-4">
-                  <MaiaCharacter state="celebrating" className="h-16 w-14 shrink-0" title="Maia celebrating" />
+                  <span className={styles.verifiedIcon} aria-hidden="true">✓</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-lg font-semibold">Correct — nice reasoning.</p>
-                      <span className="animate-pop-in whitespace-nowrap rounded-full bg-surface px-2.5 py-0.5 text-micro font-bold text-correct [animation-delay:0.15s]">
-                        +1 verified move
-                      </span>
+                      <p className="text-lg font-semibold">That’s correct.</p>
                     </div>
-                    <p className="mt-0.5 text-body-sm text-white/90">Adaptive support updated.</p>
+
                   </div>
                   {!complete && (
                     <Pressable
@@ -670,7 +689,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                   <div className="mt-2">
                     <button
                       onClick={() => setShowSolution((s) => !s)}
-                      className="text-body-sm font-medium text-white underline-offset-2 hover:underline"
+                      className="text-body-sm font-medium text-ink underline-offset-2 hover:underline"
                     >
                       {showSolution ? "Hide why it works" : "See why it works"}
                     </button>
@@ -681,7 +700,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                     )}
                   </div>
                 )}
-                {mode === "lesson" && !complete && (
+                {mode === "lesson" && step.assistancePolicy !== "none" && !complete && (
                   <SelfExplain
                     key={step.id}
                     onSend={(text) => sendToMaia(selfExplainMessage(text), step.id)}
@@ -695,24 +714,21 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                 ref={feedbackRef}
                 tabIndex={-1}
                 role="alert"
-                className="mt-5 rounded-2xl border-2 border-wrong/20 bg-wrong-soft p-4 outline-none sm:p-5"
+                className={`${styles.feedback} ${styles.retryFeedback}`}
               >
                 <div className="flex items-start gap-4">
-                  <MaiaCharacter state="redirecting" className="mt-1 h-16 w-14 shrink-0" title="Maia redirecting" />
+                  <span className={styles.retryIcon} aria-hidden="true">↻</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-3">
-                      <p className="text-lg font-semibold text-wrong">Not yet — stay with it.</p>
-                      <span className="font-mono text-label text-wrong/80">Attempt {feedback.attempts}</span>
+                      <p className="text-lead font-semibold text-ink">Not yet.</p>
+                      <span className="text-label text-ink-soft">Attempt {feedback.attempts}</span>
                     </div>
-                    <p className="mt-1 text-body-sm leading-6 text-ink-soft">
-                      Checked by code, not by a model. A different line of reasoning will get there.
-                    </p>
                     {feedback.highlight && (feedback.highlight.kind === "graph-region" || step.prompt.includes(feedback.highlight.text)) && (
-                      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-2.5 py-1 text-label font-semibold text-ink animate-pop-in">
+                      <p className="sr-only">
                         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-gold" />
                         {feedback.highlight.kind === "term"
-                          ? "Maia marked the part to re-read"
-                          : `Maia marked the ${feedback.highlight.param} control — watch what it moves`}
+                          ? "Review the marked part of the question."
+                          : `Attention is on the ${feedback.highlight.param} control.`}
                       </p>
                     )}
                     <div className="mt-4 flex flex-wrap gap-2.5">
@@ -726,6 +742,7 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
                       </Pressable>
                       <Pressable
                         variant="secondary"
+                        hidden={step.assistancePolicy === "none"}
                         aria-label="ask Maia why"
                         onClick={() => sendToMaia(ASK_WHY_MESSAGE, step.id)}
                         className="px-5"
@@ -739,12 +756,10 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
             )}
 
             {/* Hint ladder: lesson mode only. Practice remains hint-free, while Maia is available. */}
-            {mode === "lesson" && (
+            {mode === "lesson" && step.assistancePolicy !== "none" && (
               <div className="mt-6 border-t border-ink/10 pt-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-body-sm font-medium text-ink-soft">
-                    Hint ladder
-                  </span>
+                  <span className="sr-only">Hints</span>
                   <button
                     onClick={() => void requestHint()}
                     disabled={busy || feedback?.kind === "correct"}
@@ -781,10 +796,16 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
             )}
           </div>
         )}
-      </div>
+        </section>
 
-      <MaiaPanel
+        <div className={styles.companionColumn}>
+      {step?.assistancePolicy === "none" ? <aside className="rounded-2xl border border-ink/10 bg-surface p-6"><MaiaCharacter state="attentive" size="inline" /><p className="mt-3 text-body-sm text-ink-soft">Maia will wait while you complete this challenge.</p></aside> : <MaiaPanel
         key={`${sessionId}:${chatSyncKey}`}
+        proactiveGuidance={proactiveGuidance}
+        variantIndex={variantIndex}
+        independent={mode === "practice"}
+        onUiActions={receiveTutorMarks}
+        onGuidanceChange={setVisibleGuidance}
         sessionId={sessionId}
         stepId={step?.id ?? ""}
         sessionVersion={sessionVersion}
@@ -792,7 +813,10 @@ export default function LessonPlayer({ lesson, mode, courseContext }: PlayerProp
         outbox={outbox}
         getActivity={getLabActivity}
         initialMessages={initialChat}
-      />
+      />}
+        </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -816,10 +840,10 @@ function CompletionScreen({
   // only, since practice does not complete a lesson — so the trail can play
   // the arrival. The course page re-validates the param against the real
   // learner record before animating anything.
-  const backHref = courseContext
+  const backHref = lesson.generatedFrom ? `/create/review/${lesson.generatedFrom.runId}` : courseContext
     ? `/courses/${courseContext.courseId}${practiceDone ? "" : `?completed=${lesson.id}`}`
     : "/library";
-  const backLabel = courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
+  const backLabel = lesson.generatedFrom ? "Back to course review" : courseContext ? `Back to ${courseContext.courseTitle}` : "Back to Library";
   // The one full-fill press on this screen takes the subject's own accent,
   // standing on its deep edge from the palette.
   const accent = subjectColor(lesson.track);
@@ -854,6 +878,8 @@ function CompletionScreen({
         </dl>
       )}
 
+      {stats?.independentTransfer?.map((observation) => <p key={observation.stepId} className="mt-5 rounded-xl bg-surface px-4 py-3 text-body-sm text-ink-soft">First independent response: {observation.firstResponseCorrect ? "matched the course specification" : "did not match the course specification"}. Later attempts are practice and keep this observation unchanged.</p>)}
+
       <div className="mt-5 border-l-2 border-gold pl-4 text-body-sm leading-6 text-ink-soft">
         {practiceDone
           ? "This records one completed hint-free practice run. Maia remained available, so this is not an unassisted transfer observation."
@@ -877,14 +903,14 @@ function CompletionScreen({
           {Object.entries(stats.conceptMastery).map(([concept, mastery]) => (
             <div key={concept} className="mb-3 last:mb-0">
               <div className="mb-1 flex justify-between text-body-sm">
-                <span>{concept}</span>
+                <span>{conceptLabel(concept)}</span>
                 <span className="text-ink-soft">
                   {(mastery * 100).toFixed(0)}%
                 </span>
               </div>
               <div
                 role="progressbar"
-                aria-label={`${concept} adaptive support estimate`}
+                aria-label={`${conceptLabel(concept)} adaptive support estimate`}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(mastery * 100)}
@@ -942,7 +968,7 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
 
   if (sent) {
     return (
-      <p className="mt-3 text-body-sm text-white/90 animate-fade-up">
+      <p className="mt-3 text-body-sm text-ink-soft animate-fade-up">
         Sent to Maia — check her reply in the panel, then continue.
       </p>
     );
@@ -956,11 +982,11 @@ function SelfExplain({ onSend }: { onSend: (text: string) => void }) {
         onSend(text.trim());
         setSent(true);
       }}
-      className="mt-3 border-t border-white/25 pt-3"
+      className="mt-3 border-t border-correct/15 pt-3"
     >
       <label
         htmlFor="self-explain"
-        className="text-body-sm font-medium text-white"
+        className="text-body-sm font-medium text-ink"
       >
         Lock it in: why did that work, in one sentence?
       </label>
@@ -1009,27 +1035,33 @@ function PromptWithMark({ prompt, highlight }: { prompt: string; highlight: Misc
 
 function AnswerControl({
   step,
+  initialAnswer,
   accent,
   edge,
   disabled,
+  solved,
   checking,
   held,
   focusRequest,
   graphHighlight,
+  uiActions,
   onLabState,
   onSubmit,
 }: {
   step: PublicStep;
+  initialAnswer?: string | null;
   /** Subject accent fill for the Check pressable — `subjectColor(track)`. */
   accent: string;
   /** Its deep edge — `subjectDeep(track)`. */
   edge: string;
   disabled: boolean;
+  solved?: boolean;
   checking: boolean;
   /** Keeps the Check pressable pressed: while checking, and through the wrong-answer beat. */
   held: boolean;
   focusRequest: number;
   graphHighlight: "a" | "h" | "k" | null;
+  uiActions: readonly TutorUiAction[];
   onLabState?: (activity: LabActivity) => void;
   onSubmit: (answer: string) => void;
 }) {
@@ -1045,9 +1077,12 @@ function AnswerControl({
     return (
       <RecursionCodeLab
         lab={step.lab}
+        initialAnswer={initialAnswer}
+        uiActions={uiActions}
         accent={accent}
         edge={edge}
         disabled={disabled}
+        solved={solved}
         checking={checking}
         held={held}
         onStateChange={(state) => onLabState?.({ kind: "recursion", slots: state.slots })}
@@ -1057,15 +1092,17 @@ function AnswerControl({
   }
 
   if (step.kind === "graph" && step.graph) {
-    // Centered column like every other control — a full-width lab pushed
-    // its submit button under Maia's floating bubble on tall viewports.
+    // Keep the graph readable while leaving room for its Check control.
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className={styles.graphStage}>
         <GraphTransformLab
           graph={step.graph}
+          initialAnswer={initialAnswer}
+          uiActions={uiActions}
           accent={accent}
           edge={edge}
           disabled={disabled}
+          solved={solved}
           checking={checking}
           held={held}
           highlight={graphHighlight}
@@ -1148,9 +1185,9 @@ function AnswerControl({
         onChange={(e) => setValue(e.target.value)}
         disabled={disabled}
         maxLength={1_000}
-        placeholder={step.kind === "expression" ? "e.g. 5/6" : "Your answer"}
+        placeholder={step.kind === "expression" || /\bfraction\b/i.test(step.prompt) ? "e.g. 5/6" : "Your answer"}
         aria-label="Your answer"
-        inputMode={step.kind === "numeric" ? "decimal" : "text"}
+        inputMode={step.kind === "numeric" && !/\bfraction\b/i.test(step.prompt) ? "decimal" : "text"}
         className="w-full min-w-0 rounded-2xl border-2 border-ink/12 bg-surface px-5 py-3 text-center font-mono text-lg tabular-nums outline-none transition focus:border-lapis disabled:opacity-60 sm:w-52"
       />
       <Pressable

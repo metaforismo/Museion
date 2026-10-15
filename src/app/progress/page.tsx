@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import JourneyStats from "@/components/JourneyStats";
 import MaiaCharacter from "@/components/MaiaCharacter";
-import ProgressRing from "@/components/ProgressRing";
 import VerifiedMoment from "@/components/VerifiedMoment";
 import { Card, Chip, Pressable, SectionHeader, SubjectBadge } from "@/components/ui";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
@@ -13,13 +12,13 @@ import { evidenceTone } from "@/lib/design/evidence-tone";
 import { verifiedMomentFor } from "@/lib/design/moments";
 import { currentActor } from "@/lib/server/actor";
 
-export const metadata: Metadata = { title: "Evidence", description: "Recorded learning observations and their explicit limits." };
+export const metadata: Metadata = { title: "Progress", description: "Recorded learning observations and their explicit limits." };
 export const dynamic = "force-dynamic";
 
 const STATE_COPY = {
-  "observed-guided": ["Observed in guided work", "A checked response was recorded during a supported lesson."],
-  "hint-free-practice": ["Hint-free practice completed", "A practice run used no deterministic hint ladder; Maia may still have been available."],
-  "immediate-transfer": ["Immediate near transfer", "A one-attempt check used a new surface and no assistance."],
+  "observed-guided": ["Worked through with guidance", "An answer was checked during a guided lesson."],
+  "hint-free-practice": ["Practised without lesson hints", "No lesson hints were used. Maia may still have been available."],
+  "immediate-transfer": ["Tried independently", "A new related problem, one attempt, without assistance."],
 } as const;
 
 const LADDER = [
@@ -41,11 +40,10 @@ export default async function EvidencePage() {
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <header className="flex flex-col gap-4 border-b border-ink/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="eyebrow">Evidence</p>
-          <h1 className="mt-2 title-page">What Museion observed—and no more.</h1>
+          <p className="eyebrow">Progress</p>
+          <h1 className="mt-2 title-page">See what you’re building.</h1>
           <p className="mt-3 max-w-3xl text-body leading-6 text-ink-soft">
-            The record separates guided work, hint-free practice and immediate near transfer. None of
-            these alone establishes retained mastery.
+            See the ideas you have practised, the steps you worked through and what could use another look.
           </p>
         </div>
         {/* The one press this page offers follows the record: a non-empty
@@ -87,8 +85,7 @@ export default async function EvidencePage() {
             meta={`${conceptMap.groups.length} ${conceptMap.groups.length === 1 ? "subject" : "subjects"}`}
           />
           <p className="-mt-1 mb-3 max-w-3xl text-body-sm leading-5 text-ink-soft">
-            Rings show the adaptive support estimate that tunes scaffolding — a signal for what to
-            revisit, never a grade.
+            A growing collection of ideas you have explored. Return to a lesson whenever you want to give it another try.
           </p>
           <div className="grid gap-4 lg:grid-cols-2">
             {conceptMap.groups.map((group) => {
@@ -112,16 +109,10 @@ export default async function EvidencePage() {
                     {group.entries.map((entry) => (
                       <li key={entry.concept}>
                         <Link href={`/lessons/${entry.lessonId}`} className="group flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-paper">
-                          <ProgressRing
-                            completed={Math.round(entry.estimate * 100)}
-                            total={100}
-                            size={38}
-                            color={accent}
-                            centerLabel={`${Math.round(entry.estimate * 100)}%`}
-                          />
+                          <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
                           <span className="min-w-0">
                             <span className="block truncate text-body-sm font-medium transition group-hover:text-lapis-dark">{entry.label}</span>
-                            <span className="block text-micro text-ink-soft">support: {entry.support}</span>
+                            <span className="block truncate text-label text-ink-soft">{entry.lessonTitle}</span>
                           </span>
                         </Link>
                       </li>
@@ -144,7 +135,7 @@ export default async function EvidencePage() {
                     className="inline-flex min-h-9 items-center gap-2 rounded-full border border-gold/40 bg-surface px-3.5 text-label font-medium transition hover:border-gold hover:text-lapis-dark"
                   >
                     <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: subjectColor(entry.subject) }} />
-                    {entry.label} · {Math.round(entry.estimate * 100)}%
+                    {entry.label}
                   </Link>
                 ))}
               </div>
@@ -169,7 +160,6 @@ export default async function EvidencePage() {
                     <article key={`${item.concept}:${item.state}`} className="grid gap-3 py-4 sm:grid-cols-[minmax(9rem,.7fr)_minmax(13rem,1fr)_auto] sm:items-center">
                       <div className="min-w-0">
                         <h3 className="text-body-sm font-semibold">{item.concept}</h3>
-                        <p className="mt-1 text-label text-ink-soft">Suggested support: {item.support}</p>
                       </div>
                       <div className="min-w-0">
                         <p className="text-body-sm font-medium">{copy[0]}</p>
@@ -190,43 +180,26 @@ export default async function EvidencePage() {
               <div className="min-w-0 flex-1">
                 <h3 className="text-body font-semibold">No observations yet.</h3>
                 <p className="mt-2 text-body-sm leading-6 text-ink-soft">
-                  Museion will not display a readiness score before it has checked work.
+                  Start a course and try your first learning step. Your work will appear here.
                 </p>
                 {/* Quiet on purpose: an empty record is a starting point, not
                     a deficit, so the way in is a secondary press. */}
                 <Pressable href="/library" variant="secondary" className="mt-4">
-                  Choose a lesson
+                  Find a course
                 </Pressable>
               </div>
             </Card>
           )}
         </section>
 
-        {/* Same ink explainer surface as Review, through Card so both take the
-            one card radius and elevation. */}
-        <Card as="aside" tone="tinted" tint="var(--color-ink)" className="h-fit p-6 text-white" aria-labelledby="ladder-title">
-          <p id="ladder-title" className="text-label font-semibold uppercase tracking-[0.08em] text-gold">Evidence ladder</p>
-          <ol className="mt-5 space-y-4">
-            {LADDER.map(([heading, detail, unmeasured]) => (
-              <li key={heading} className={unmeasured ? "border-t border-white/15 pt-4" : undefined}>
-                <p className={`text-body-sm font-semibold ${unmeasured ? "text-white/60" : ""}`}>{heading}</p>
-                <p className="mt-1 text-label leading-5 text-white/60">{detail}</p>
-              </li>
-            ))}
-          </ol>
-        </Card>
       </div>
 
-      <section className="mt-7" aria-labelledby="limitations-title">
-        <SectionHeader id="limitations-title" title="Current evidence boundary" />
-        <Card tint="var(--color-gold-soft)" className="border-gold/25 p-5 sm:p-6">
-          <ul className="grid gap-3 text-body-sm leading-6 text-ink lg:grid-cols-3">
-            {snapshot.limitations.map((item) => (
-              <li key={item} className="border-l-2 border-gold pl-3">{item}</li>
-            ))}
-          </ul>
-        </Card>
-      </section>
+      <details className="mt-7 rounded-3xl border border-ink/10 bg-surface p-5 sm:p-6">
+        <summary className="cursor-pointer text-body font-semibold">How to read your progress</summary>
+        <p className="mt-4 max-w-3xl text-body-sm leading-6 text-ink-soft">Finishing a lesson and understanding an idea independently are different observations. Here is what the record can show.</p>
+        <ol className="mt-4 grid gap-4 sm:grid-cols-2">{LADDER.map(([heading, detail]) => <li key={heading}><p className="text-body-sm font-semibold">{heading}</p><p className="mt-1 text-label leading-5 text-ink-soft">{detail}</p></li>)}</ol>
+        <ul className="mt-5 space-y-2 border-t border-ink/10 pt-4 text-label leading-5 text-ink-soft">{snapshot.limitations.map(item => <li key={item}>{item}</li>)}</ul>
+      </details>
     </div>
   );
 }

@@ -2,9 +2,8 @@ import { subjectKey } from "@/lib/curriculum/subjects";
 import type { SubjectKey } from "@/lib/design/palette";
 
 /**
- * Clay objects already shipped for the landing and previously unused by the
- * app. Grids and the sidebar use these; bespoke per-course art is reserved
- * for course detail heroes, where nothing sits beside it to look inconsistent.
+ * The product artwork shares one daylight clay material, palette and scale.
+ * Subject objects, course covers and landing previews use this same manifest.
  */
 
 /**
@@ -12,23 +11,27 @@ import type { SubjectKey } from "@/lib/design/palette";
  * not a silently wrong illustration at runtime.
  */
 const SUBJECT_OBJECT: Record<SubjectKey, string> = {
-  algebra: "/landing/subject-mathematics-v2.png",
-  arithmetic: "/landing/subject-arithmetic-v2.png",
-  cs: "/landing/subject-computer-science-v2.png",
-  research: "/landing/subject-research-v2.png",
-  physics: "/landing/subject-physics-v2.png",
-  biology: "/landing/subject-biology-v2.png",
-  default: "/landing/subject-mathematics-v2.png",
+  algebra: "/landing/product/course-algebra-as-balance.webp",
+  arithmetic: "/landing/product/course-probability-as-evidence.webp",
+  cs: "/landing/product/course-search-by-halving.webp",
+  research: "/landing/product/course-claims-to-evidence.webp",
+  physics: "/landing/product/course-forces-and-motion.webp",
+  biology: "/landing/product/course-natural-selection.webp",
+  default: "/landing/product/course-algebra-as-balance.webp",
 };
 
-/** Course ids with bespoke illustrations. The other four fall back to a tinted wash hero. */
+/** Course artwork, shared across marketing and the learning workspace. */
 export const COURSE_ART: Record<string, string> = {
-  "algebra-as-balance": "/landing/course-algebra-balance.png",
-  "search-by-halving": "/landing/course-search-halving.png",
-  "probability-as-evidence": "/landing/course-probability-evidence.png",
-  "functions-as-change": "/landing/course-functions-change.png",
-  "claims-to-evidence": "/landing/course-claims-evidence.png",
-  "samples-to-conclusions": "/landing/course-samples-conclusions.png",
+  "algebra-as-balance": "/landing/product/course-algebra-as-balance.webp",
+  "search-by-halving": "/landing/product/course-search-by-halving.webp",
+  "probability-as-evidence": "/landing/product/course-probability-as-evidence.webp",
+  "functions-as-change": "/landing/product/course-functions-as-change.webp",
+  "claims-to-evidence": "/landing/product/course-claims-to-evidence.webp",
+  "samples-to-conclusions": "/landing/product/course-samples-to-conclusions.webp",
+  "natural-selection": "/landing/product/course-natural-selection.webp",
+  "forces-and-motion": "/landing/product/course-forces-and-motion.webp",
+  "recursion-foundations": "/landing/product/course-search-by-halving.webp",
+  "proportional-reasoning": "/landing/product/course-algebra-as-balance.webp",
 };
 
 export function subjectObjectSrc(subject: string): string {

@@ -3,8 +3,10 @@ export interface PublicAiDiagnosticStatus {
   installed: boolean;
   authenticated: boolean;
   codexVersion: string | null;
-  provider: "codex" | "offline" | "openai-api";
+  provider: "codex" | "offline" | "openai-api" | "openrouter-free";
   familyFallback: boolean;
+  compilerAvailable?: boolean;
+  compilerUnavailableReason?: string | null;
   models: {
     compiler: Record<string, string>;
     tutor: string;
@@ -30,5 +32,6 @@ export function sanitizedAiDiagnostics(
     familyFallback: status.familyFallback,
     degradedReason: status.degradedReason,
     models: status.models,
+    ...(typeof status.compilerAvailable === "boolean" ? { compilerAvailable: status.compilerAvailable, compilerUnavailableReason: status.compilerUnavailableReason ?? null } : {}),
   };
 }

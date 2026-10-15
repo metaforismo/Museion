@@ -100,6 +100,16 @@ describe("Maia pre-delivery gate", () => {
     expect(delivery.source).toBe("deterministic");
   });
 
+  it("delivers live annotations only onto currently rendered authored targets", async () => {
+    const provider = new FakeProvider([{ ...safeTurn, uiActions: [{ kind: "annotate", targetId: "prompt", text: "Keep the sides balanced." }] }]);
+    const learner = session();
+    const delivery = await maiaRespond(learner, "Can you mark where to look?", provider);
+    expect(provider.calls).toBe(1);
+    expect(delivery.source).toBe("openai-api");
+    expect(delivery.turn.uiActions).toEqual([{ kind: "annotate", targetId: "prompt", text: "Keep the sides balanced." }]);
+    expect(tutorSafetyIssues(learner.activeStep, delivery.turn, ["prompt"])).toEqual([]);
+  });
+
   it("uses deterministic guidance without calling an unavailable provider", async () => {
     const provider = new FakeProvider([safeTurn], false);
 
@@ -107,6 +117,22 @@ describe("Maia pre-delivery gate", () => {
 
     expect(provider.calls).toBe(0);
     expect(delivery.source).toBe("deterministic");
+  });
+
+  it("explains lesson-hint mode once, then keeps follow-up replies focused on learning", async () => {
+    const provider = new FakeProvider([safeTurn], false);
+    const learner = session();
+    const first = await maiaRespond(learner, "Give me a nudge", provider);
+    const next = await maiaRespond(learner, "What should I try next?", provider);
+    expect(first.turn.message).toContain("Live tutoring isn't available right now.");
+    expect(next.turn.message).not.toContain("Live tutoring");
+    expect(first.source).toBe("deterministic");
+    expect(next.source).toBe("deterministic");
+    expect(provider.calls).toBe(0);
+    for (const delivery of [first, next]) {
+      expect(delivery.turn.message).not.toContain("verified hint ladder");
+      expect(delivery.turn.message).not.toContain("The answer is 6");
+    }
   });
 
   it("does not consume a hint after the learner has solved the step", async () => {

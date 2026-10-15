@@ -6,7 +6,7 @@ const lesson = {
   track: "Arithmetic",
   description:
     "Discover why fractions need a common denominator before they can be added, and how to find one.",
-  concepts: ["common-denominator", "equivalent-fractions"],
+  concepts: ["common-denominator", "equivalent-fractions", "same-whole"],
   steps: [
     {
       id: "step-1",
@@ -27,7 +27,7 @@ const lesson = {
         },
       ],
       hints: [
-        "Imagine half a pizza and a third of a pizza. Are the slices the same size?",
+        "Imagine half and a third of two identical pizzas. Are the slices the same size?",
         "What would 1/2 + 1/2 be? Why does that addition feel safe while 1/2 + 1/3 doesn't?",
       ],
     },
@@ -58,7 +58,7 @@ const lesson = {
       concept: "equivalent-fractions",
       prompt:
         "Rewrite both fractions in sixths and add them. Give the result as a fraction in the form a/b.",
-      answer: { kind: "expression", acceptedForms: ["5/6"] },
+      answer: { kind: "numeric", value: 5 / 6, tolerance: 0 },
       solution:
         "1/2 = 3/6 (multiply top and bottom by 3) and 1/3 = 2/6 (multiply top and bottom by 2). Now the pieces match: 3/6 + 2/6 = 5/6.",
       misconceptions: [
@@ -75,6 +75,24 @@ const lesson = {
         "How many sixths make a half? How many make a third?",
         "After converting, both fractions count pieces of the same size. Add the counts.",
       ],
+    },
+    {
+      id: "step-4",
+      concept: "same-whole",
+      prompt: "One person eats half a small pizza and another eats a third of a much larger pizza. Can we call the total 5/6 of one pizza without knowing how the two whole pizzas compare?",
+      answer: { kind: "multipleChoice", options: ["yes", "no"], correctIndex: 1 },
+      solution: "No. A fraction measures a part relative to its whole. The small pizza and the large pizza are different whole amounts, so their half and third cannot be compared on one pizza-sized scale until we know the sizes. A common denominator aligns piece counts only after a common whole or unit has been chosen.",
+      misconceptions: [{ id: "ignores-reference-whole", triggerAnswers: ["yes"], description: "The learner combined part-to-whole fractions from different-sized wholes as though the reference amount were identical.", remediationFocus: "Name what one whole means for each fraction before trying to match denominators." }],
+      hints: ["Would half a tiny pizza be the same amount as half a very large pizza?", "A denominator tells you how a whole is divided. First check whether the wholes themselves match."],
+    },
+    {
+      id: "step-5",
+      concept: "equivalent-fractions",
+      prompt: "A ribbon is 3/4 of a metre long. You attach another piece that is 1/8 of a metre long. What is the combined length in metres? Write a fraction.",
+      answer: { kind: "numeric", value: 7 / 8, tolerance: 0 },
+      solution: "Both lengths refer to the same unit, one metre. Three quarters is six eighths, so 3/4 + 1/8 = 6/8 + 1/8 = 7/8 of a metre. Equivalent unsimplified forms describe the same length.",
+      misconceptions: [{ id: "adds-across", triggerAnswers: ["4/12", "1/3"], description: "The learner added the numerators and denominators, creating a value smaller than the original ribbon.", remediationFocus: "An attached positive piece must make the ribbon longer. Choose one shared piece size before adding the counts." }, { id: "changes-denominator-only", triggerAnswers: ["4/8", "1/2"], description: "The learner changed quarters into eighths without doubling the count of pieces.", remediationFocus: "When each piece is cut in half, the number of pieces doubles; the amount of ribbon remains unchanged." }],
+      hints: ["The answer must be longer than 3/4 of a metre. Use that as a quick sense check.", "Cut each quarter into two eighths, then count all the eighths."],
     },
   ],
   practice: [
@@ -109,7 +127,7 @@ const lesson = {
       id: "practice-2",
       concept: "equivalent-fractions",
       prompt: "Compute 1/4 + 1/2. Give the result as a fraction a/b.",
-      answer: { kind: "expression", acceptedForms: ["3/4", "6/8"] },
+      answer: { kind: "numeric", value: 3 / 4, tolerance: 0 },
       solution:
         "Re-cut the half into quarters: 1/2 = 2/4. Then 1/4 + 2/4 = 3/4.",
       misconceptions: [
@@ -128,7 +146,7 @@ const lesson = {
       id: "practice-3",
       concept: "equivalent-fractions",
       prompt: "Compute 2/3 + 1/6. Give the result as a fraction a/b.",
-      answer: { kind: "expression", acceptedForms: ["5/6"] },
+      answer: { kind: "numeric", value: 5 / 6, tolerance: 0 },
       solution:
         "Thirds re-cut into sixths: 2/3 = 4/6. Then 4/6 + 1/6 = 5/6.",
       misconceptions: [
@@ -142,6 +160,15 @@ const lesson = {
         },
       ],
       hints: ["How many sixths make two thirds?"],
+    },
+    {
+      id: "practice-4",
+      concept: "equivalent-fractions",
+      prompt: "A walking route has a 2/5 km section followed by a 1/10 km section. What is the total length in kilometres? Write a fraction or decimal.",
+      answer: { kind: "numeric", value: 1 / 2, tolerance: 0 },
+      solution: "Both sections use kilometres. Convert 2/5 into 4/10, then add 1/10 to get 5/10 = 1/2 = 0.5 km. Any equivalent fraction gives the same route length.",
+      misconceptions: [{ id: "adds-across", triggerAnswers: ["3/15", "1/5"], description: "The learner added the denominators and numerators rather than using one piece size.", remediationFocus: "Express both route sections in tenths of a kilometre before adding them." }],
+      hints: [],
     },
   ],
 } satisfies Lesson;

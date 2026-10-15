@@ -25,10 +25,10 @@ export default function VerifiedMoment({ kind, className = "" }: { kind: MomentK
     >
       {/* Decorative: the two lines beside her already say what happened, and a
           screen reader reading the pose as well would only add noise. */}
-      <MaiaCharacter state="celebrating" animated size="moment" className="shrink-0" />
+      <MaiaCharacter state="celebrating" animated size="inline" className="shrink-0 self-start mt-1" />
       <div className="min-w-0">
-        <p className="text-micro font-semibold uppercase tracking-[0.08em] text-correct">Verified moment</p>
-        <p className="mt-1.5 text-2xl font-semibold tracking-title">{copy.title}</p>
+        <p className="text-micro font-semibold uppercase tracking-[0.08em] text-correct">A moment of progress</p>
+        <p className="mt-1.5 text-xl font-semibold tracking-title">{copy.title}</p>
         <p className="mt-1.5 text-body leading-6 text-ink-soft">{copy.evidence}</p>
       </div>
     </Card>

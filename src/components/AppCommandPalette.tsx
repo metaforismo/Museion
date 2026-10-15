@@ -33,11 +33,11 @@ interface CommandItem {
 
 const NAVIGATION: Omit<CommandItem, "searchText">[] = [
   { id: "home", href: "/dashboard", label: "Home", detail: "Your next learning action", group: "Navigate", icon: "home" },
-  { id: "library", href: "/library", label: "Library", detail: "Browse authored lessons", group: "Navigate", icon: "library" },
-  { id: "review", href: "/review", label: "Review", detail: "Revisit recorded misconceptions", group: "Navigate", icon: "review" },
+  { id: "library", href: "/library", label: "Library", detail: "Explore courses and lessons", group: "Navigate", icon: "library" },
+  { id: "review", href: "/review", label: "Review", detail: "Give tricky ideas another try", group: "Navigate", icon: "review" },
   { id: "create", href: "/create", label: "Create from source", detail: "Turn trusted material into a course", group: "Navigate", icon: "source" },
-  { id: "evidence", href: "/progress", label: "Evidence", detail: "Inspect what the record supports", group: "Navigate", icon: "evidence" },
-  { id: "settings", href: "/settings", label: "Settings", detail: "AI runtime and model routing", group: "Navigate", icon: "settings" },
+  { id: "evidence", href: "/progress", label: "Progress", detail: "See what you have practised", group: "Navigate", icon: "evidence" },
+  { id: "settings", href: "/settings", label: "Settings", detail: "Tutoring preferences and account", group: "Navigate", icon: "settings" },
 ];
 
 function normalize(value: string) {
@@ -76,7 +76,7 @@ export default function AppCommandPalette({ courses = [], lessons = [], open, on
       id: `lesson:${lesson.id}`,
       href: `/lessons/${lesson.id}`,
       label: lesson.title,
-      detail: `${lesson.track} · ${lesson.concepts.join(" · ")}`,
+      detail: `${lesson.track} · ${lesson.description}`,
       group: "Lessons" as const,
       icon: "lesson" as const,
       searchText: normalize(`${lesson.title} ${lesson.track} ${lesson.description} ${lesson.concepts.join(" ")}`),

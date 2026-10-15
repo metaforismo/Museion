@@ -6,7 +6,7 @@ import { Tick02Icon } from "@hugeicons/core-free-icons";
 
 import CoursePathCatalog from "@/components/CoursePathCatalog";
 import LessonCatalog, { type CatalogLesson } from "@/components/LessonCatalog";
-import { Card, SectionHeader, cardClasses } from "@/components/ui";
+import { Card, cardClasses } from "@/components/ui";
 import { allLessons } from "@/lib/content";
 import { coursePaths, museionFoundations } from "@/lib/curriculum";
 import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
@@ -14,11 +14,11 @@ import { hasPractice } from "@/lib/engine/practice";
 import { currentActor } from "@/lib/server/actor";
 import { learnerProfile } from "@/lib/server/session-repository";
 
-export const metadata: Metadata = { title: "Library", description: "Authored lessons with deterministic answer checks." };
+export const metadata: Metadata = { title: "Library", description: "Explore thoughtful courses in math, science and computing." };
 export const dynamic = "force-dynamic";
 
 function prerequisiteCopy(count: number): string {
-  return count === 0 ? "Open starting point" : `After ${count} prerequisite ${count === 1 ? "node" : "nodes"}`;
+  return count === 0 ? "Open starting point" : `Builds on ${count} earlier ${count === 1 ? "lesson" : "lessons"}`;
 }
 
 /**
@@ -103,10 +103,10 @@ export default async function LibraryPage() {
     <div className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <header className="max-w-3xl">
         <p className="eyebrow">Library</p>
-        <h1 className="mt-2 title-page">Learn through designed investigations.</h1>
+        <h1 className="mt-2 title-page">Follow your curiosity.</h1>
         <p className="mt-3 max-w-2xl text-body leading-6 text-ink-soft">
-          Start with a complete Museion course, then use individual lessons for focused practice. Every
-          response is checked by lesson rules, never by a model.
+          Explore a course, try a short lesson, or build a path from your own material.
+          Each small step gives you room to think and a way to check your understanding.
         </p>
       </header>
 
@@ -114,16 +114,12 @@ export default async function LibraryPage() {
         <CoursePathCatalog courses={coursePaths} progress={courseProgress} />
       </div>
 
-      <section className="mt-10" aria-labelledby="foundation-map-title">
-        <SectionHeader
-          id="foundation-map-title"
-          title="The authored knowledge map"
-          meta={`${museionFoundations.nodes.length} nodes`}
-        />
+      <details className="mt-8 rounded-3xl border border-ink/10 bg-surface p-5 sm:p-6">
+        <summary className="cursor-pointer text-lg font-semibold tracking-title">See how the ideas connect</summary>
         <Card className="p-5">
           <p className="max-w-3xl text-body-sm leading-5 text-ink-soft">
-            This map covers only the lessons below. It does not imply standards alignment or silently
-            treat external curricula as Museion content.
+            See what comes first and how each lesson builds on the last.
+            Checkmarks show lessons you have completed.
           </p>
           <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {museionFoundations.nodes.map((node, index) => (
@@ -131,11 +127,13 @@ export default async function LibraryPage() {
             ))}
           </ol>
         </Card>
-      </section>
+      </details>
 
-      <div className="mt-10">
-        <LessonCatalog lessons={lessons} />
-      </div>
+      <details className="mt-5 rounded-3xl border border-ink/10 bg-surface p-5 sm:p-6">
+        <summary className="cursor-pointer text-lg font-semibold tracking-title">Explore individual lessons</summary>
+        <p className="mt-2 text-body-sm text-ink-soft">Find a particular idea, or revisit a foundation before starting a course.</p>
+        <div className="mt-5"><LessonCatalog lessons={lessons} /></div>
+      </details>
     </div>
   );
 }

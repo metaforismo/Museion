@@ -14,7 +14,10 @@ type AiStatus = {
   installed: boolean;
   authenticated: boolean;
   codexVersion: string | null;
-  provider: "codex" | "offline" | "openai-api";
+  provider: "codex" | "offline" | "openai-api" | "openrouter-free";
+  openRouterConfigured: boolean;
+  compilerAvailable: boolean;
+  compilerUnavailableReason: string | null;
   familyFallback: boolean;
   models: { compiler: Record<string, string>; tutor: string };
   degradedReason: string | null;
@@ -328,6 +331,7 @@ export default function AiSettingsPanel() {
 
   const connected = status.installed && status.authenticated;
   const liveReady = status.enabled && connected;
+  const activeMode = status.provider === "openrouter-free" ? "OpenRouter free connection" : status.provider === "openai-api" ? "API connection" : status.provider === "codex" ? "Local ChatGPT connection" : "Lesson guidance (offline)";
   const statusLabel = liveReady ? "Ready" : !status.enabled ? "Local AI disabled" : !status.installed ? "Codex not found" : "Sign-in needed";
   const liveGuidance = liveReady
     ? "Ready to use Luna, Terra and Sol through the authenticated local Codex session."
@@ -341,8 +345,8 @@ export default function AiSettingsPanel() {
   return (
     <div className="space-y-7">
       <section aria-labelledby="provider-heading">
-        <SectionHeader id="provider-heading" title="Choose the execution path." />
-        <p className="-mt-1 max-w-2xl text-body-sm leading-5 text-ink-soft">The offline replay is always available. Live local AI never falls through to paid API billing.</p>
+        <SectionHeader id="provider-heading" title="Choose your tutor connection." />
+        <p className="-mt-1 max-w-2xl text-body-sm leading-5 text-ink-soft">Guided lessons work offline. Connect live AI for personalised questions and courses from your own sources.</p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <article className={`rounded-[var(--radius-card)] border p-5 transition ${status.provider === "codex" ? "border-lapis/40 bg-lapis-soft/60 shadow-[var(--shadow-1)]" : "border-ink/10 bg-surface"}`}>
             <div className="flex items-center justify-between gap-3">
@@ -361,18 +365,18 @@ export default function AiSettingsPanel() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5">
                 <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-correct-soft text-correct"><HugeiconsIcon icon={SecurityCheckIcon} size={18} strokeWidth={1.8} /></span>
-                <h3 className="min-w-0 text-body font-semibold">Offline verified guidance</h3>
+                <h3 className="min-w-0 text-body font-semibold">Lesson guidance (offline)</h3>
               </div>
               <Chip tone="neutral">Always available</Chip>
             </div>
-            <p className="mt-3 text-body-sm leading-6 text-ink-soft">Verified replay and deterministic guidance, with no account, network model call or usage charge.</p>
+            <p className="mt-3 text-body-sm leading-6 text-ink-soft">Built-in lessons with checked hints, available without a live AI connection or model usage charge.</p>
             <p className="mt-2 text-label leading-5 text-ink-soft">Selecting this disables Museion’s live provider without signing Codex or other local clients out.</p>
-            <button type="button" disabled={status.provider === "offline" || Boolean(busyAction) || checking} onClick={() => void patchSettings({ provider: "offline" }, "offline")} className="mt-4 min-h-11 rounded-xl border border-ink/15 bg-surface px-4 text-body-sm font-semibold transition hover:border-lapis disabled:cursor-not-allowed disabled:opacity-40">{status.provider === "offline" ? "Active provider" : "Use offline demo"}</button>
+            <button type="button" disabled={status.provider === "offline" || Boolean(busyAction) || checking} onClick={() => void patchSettings({ provider: "offline" }, "offline")} className="mt-4 min-h-11 rounded-xl border border-ink/15 bg-surface px-4 text-body-sm font-semibold transition hover:border-lapis disabled:cursor-not-allowed disabled:opacity-40">{status.provider === "offline" ? "Active provider" : "Use built-in guidance"}</button>
           </article>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-ink/15 px-5 py-4 text-body-sm">
-          <div><p className="font-semibold">Live AI (API key)</p><p className="mt-1 text-ink-soft">Future server-configured provider. Browser API keys are intentionally unsupported.</p></div>
-          <Chip tone="neutral">Not configured</Chip>
+          <div><p className="font-semibold">Maia with OpenRouter</p><p className="mt-1 text-ink-soft">Free models for Maia and source-course building. Availability varies. The key stays on the server.</p></div>
+          <button type="button" disabled={!status.openRouterConfigured || status.provider === "openrouter-free" || Boolean(busyAction)} onClick={() => void patchSettings({ provider: "openrouter-free" }, "openrouter")} className="min-h-11 rounded-xl border border-ink/15 bg-surface px-4 font-semibold disabled:opacity-45">{status.provider === "openrouter-free" ? "Active provider" : status.openRouterConfigured ? "Use free connection" : "Not configured"}</button>
         </div>
       </section>
 
@@ -381,7 +385,7 @@ export default function AiSettingsPanel() {
           <div className="flex flex-wrap items-center gap-3"><span className={`h-2.5 w-2.5 rounded-full ${liveReady ? "bg-correct" : "bg-gold"}`} aria-hidden /><p className="text-body-sm font-semibold">Local runtime</p><Chip tone={liveReady ? "correct" : "attention"}>{statusLabel}</Chip></div>
           <h2 className="mt-4 text-2xl font-semibold tracking-title">Use your ChatGPT plan, locally.</h2>
           <p className="mt-2 max-w-[58ch] text-body leading-6 text-ink-soft">Museion invokes Codex without receiving OAuth credentials. Disconnecting Museion changes its provider only; global logout is a separate action.</p>
-          <dl className="mt-6 grid gap-3 text-body-sm sm:grid-cols-2"><div className="rounded-xl bg-paper p-4"><dt className="text-label text-ink-soft">Runtime</dt><dd className="mt-1 font-semibold">{status.installed ? status.codexVersion ?? "Codex installed" : "Not found"}</dd></div><div className="rounded-xl bg-paper p-4"><dt className="text-label text-ink-soft">Active mode</dt><dd className="mt-1 font-semibold">{status.provider === "codex" ? "Live GPT-5.6 family" : "Offline verified guidance"}</dd></div></dl>
+          <dl className="mt-6 grid gap-3 text-body-sm sm:grid-cols-2"><div className="rounded-xl bg-paper p-4"><dt className="text-label text-ink-soft">Runtime</dt><dd className="mt-1 font-semibold">{status.installed ? status.codexVersion ?? "Codex installed" : "Not found"}</dd></div><div className="rounded-xl bg-paper p-4"><dt className="text-label text-ink-soft">Active mode</dt><dd className="mt-1 font-semibold">{activeMode}</dd></div></dl>
           <ol aria-label="Live AI readiness" className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
             {readiness.map((item) => (
               <li key={item.label} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 py-3 text-body-sm">
@@ -404,7 +408,7 @@ export default function AiSettingsPanel() {
               </div>
               <button type="button" onClick={() => void copySetupPrompt()} className="min-h-11 rounded-xl border border-ink/15 bg-surface px-3 text-body-sm font-semibold text-lapis-dark transition hover:border-lapis/35">Copy setup prompt</button>
             </div>
-            <p className="mt-3 text-body-sm leading-6 text-ink-soft">Codex will prepare the local runtime. Then return here, choose <strong className="font-semibold text-ink">Connect ChatGPT</strong>, finish the official device login, and run <strong className="font-semibold text-ink">Check models</strong>. No Museion account, database, or API key is involved.</p>
+            <p className="mt-3 text-body-sm leading-6 text-ink-soft">Codex will prepare the local runtime. Then return here, choose <strong className="font-semibold text-ink">Connect ChatGPT</strong>, finish the official device login, and run <strong className="font-semibold text-ink">Check models</strong>. Your Museion account stays separate from your ChatGPT connection. No API key is entered in the browser.</p>
             <p className="mt-3 rounded-lg border-l-2 border-lapis bg-surface px-3 py-2.5 font-mono text-label leading-5 text-ink">{CODEX_SETUP_PROMPT}</p>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -449,9 +453,10 @@ export default function AiSettingsPanel() {
           )}
           <aside aria-label="Balanced model routing" className="border-t border-ink/10 bg-ink p-6 text-white sm:p-8">
             <p className="text-label font-semibold uppercase tracking-[0.08em] text-gold">Balanced routing</p>
-            <div className="mt-5 space-y-4">{Object.entries(status.models.compiler).map(([stage, model]) => <div key={stage} className="border-b border-white/10 pb-4"><p className="text-body-sm text-white/65">{STAGE_LABELS[stage] ?? stage}</p><p className="mt-1 font-mono text-body-sm font-semibold">{model}</p></div>)}</div>
+            <div className="mt-5 space-y-4">{status.compilerAvailable ? Object.entries(status.models.compiler).map(([stage, model]) => <div key={stage} className="border-b border-white/10 pb-4"><p className="text-body-sm text-white/65">{STAGE_LABELS[stage] ?? stage}</p><p className="mt-1 font-mono text-body-sm font-semibold">{model}</p></div>) : <p className="text-body-sm text-white/80">New course building is not connected. You can prepare your materials or learn with Museion Originals.</p>}</div>
             <div className="mt-5"><p className="text-body-sm text-white/65">Maia tutor</p><p className="mt-1 font-mono text-body-sm font-semibold">{status.models.tutor}</p></div>
-            <label className="mt-6 flex items-start gap-3 text-body-sm leading-6 text-white/80"><input type="checkbox" checked={status.familyFallback} disabled={Boolean(busyAction)} onChange={(event) => void patchSettings({ familyFallback: event.target.checked }, "fallback")} className="mt-1" />Allow visible fallback within GPT-5.6. Sol remains mandatory for publication.</label>
+            {status.provider !== "openrouter-free" && <label className="mt-6 flex items-start gap-3 text-body-sm leading-6 text-white/80"><input type="checkbox" checked={status.familyFallback} disabled={Boolean(busyAction)} onChange={(event) => void patchSettings({ familyFallback: event.target.checked }, "fallback")} className="mt-1" />Allow visible fallback within GPT-5.6. Sol remains mandatory for publication.</label>}
+            {status.provider === "openrouter-free" && <p className="mt-6 text-body-sm text-white/80">Maia and course building use only openrouter/free. Each completed stage records the selected model. Unavailable replies use lesson hints; a rejected compilation stays unpublished.</p>}
           </aside>
         </details>
       </section>
@@ -478,7 +483,7 @@ export default function AiSettingsPanel() {
         </Card>
       )}
 
-      {liveReady && <Card as="section" className="border-wrong/25 p-5"><h2 className="title-panel">Global Codex session</h2><p className="mt-2 max-w-[64ch] text-body-sm leading-6 text-ink-soft">Normally, choose Offline Demo above. Global logout also signs the Codex CLI and other local clients out of this account.</p>{!confirmLogout ? <button type="button" disabled={Boolean(busyAction)} onClick={() => setConfirmLogout(true)} className="mt-4 min-h-9 text-body-sm font-semibold text-wrong underline">Review global logout</button> : <div role="group" aria-label="Confirm global logout" className="mt-4 rounded-xl bg-wrong-soft p-4"><p className="text-body-sm font-semibold text-wrong">Log out every local Codex client on this computer?</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={busyAction === "logout"} onClick={() => void globallyLogout()} className="min-h-11 rounded-xl bg-wrong px-4 text-body-sm font-semibold text-white">{busyAction === "logout" ? "Logging out…" : "Confirm global logout"}</button><button type="button" disabled={busyAction === "logout"} onClick={() => setConfirmLogout(false)} className="min-h-11 rounded-xl border border-ink/15 bg-surface px-4 text-body-sm font-semibold">Keep session</button></div></div>}</Card>}
+      {liveReady && <Card as="section" className="border-wrong/25 p-5"><h2 className="title-panel">Global Codex session</h2><p className="mt-2 max-w-[64ch] text-body-sm leading-6 text-ink-soft">Choose built-in guidance above to stop using live AI. Global logout also signs the Codex CLI and other local clients out of this account.</p>{!confirmLogout ? <button type="button" disabled={Boolean(busyAction)} onClick={() => setConfirmLogout(true)} className="mt-4 min-h-9 text-body-sm font-semibold text-wrong underline">Review global logout</button> : <div role="group" aria-label="Confirm global logout" className="mt-4 rounded-xl bg-wrong-soft p-4"><p className="text-body-sm font-semibold text-wrong">Log out every local Codex client on this computer?</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={busyAction === "logout"} onClick={() => void globallyLogout()} className="min-h-11 rounded-xl bg-wrong px-4 text-body-sm font-semibold text-white">{busyAction === "logout" ? "Logging out…" : "Confirm global logout"}</button><button type="button" disabled={busyAction === "logout"} onClick={() => setConfirmLogout(false)} className="min-h-11 rounded-xl border border-ink/15 bg-surface px-4 text-body-sm font-semibold">Keep session</button></div></div>}</Card>}
     </div>
   );
 }

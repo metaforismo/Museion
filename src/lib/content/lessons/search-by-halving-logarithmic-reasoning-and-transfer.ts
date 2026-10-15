@@ -97,19 +97,19 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-log-invents-exact-time",
-          triggerAnswers: ["Binary search always takes exactly one millisecond", "0"],
+          triggerAnswers: ["Binary search always takes exactly one millisecond"],
           description: "The learner converted a growth-rate statement into an exact elapsed time.",
           remediationFocus: "Keep comparison growth separate from measured wall-clock time.",
         },
         {
           id: "sh-log-infers-universal-speedup",
-          triggerAnswers: ["Asymptotic notation proves an exact timing speedup on every device", "3"],
+          triggerAnswers: ["Asymptotic notation proves an exact timing speedup on every device"],
           description: "The learner treated asymptotic analysis as a universal benchmark result.",
           remediationFocus: "Asymptotic classes describe how work grows; exact performance requires measurement and context.",
         },
         {
           id: "sh-log-forgets-sorted-precondition",
-          triggerAnswers: ["Binary search is valid on every unsorted array", "2"],
+          triggerAnswers: ["Binary search is valid on every unsorted array"],
           description: "The learner generalized binary search beyond its ordering precondition.",
           remediationFocus: "The halving guarantee depends on an order that makes a whole side dismissible.",
         },
@@ -195,13 +195,13 @@ const lesson = {
       misconceptions: [
         {
           id: "sh-log-practice-exact-seconds",
-          triggerAnswers: ["Binary search will save exactly 2 seconds", "0"],
+          triggerAnswers: ["Binary search will save exactly 2 seconds"],
           description: "The learner inferred a measured duration from asymptotic notation.",
           remediationFocus: "Exact timing needs a specified implementation, environment, inputs, and measurement.",
         },
         {
           id: "sh-log-practice-every-small-input",
-          triggerAnswers: ["Binary search uses fewer comparisons for every possible tiny input", "1"],
+          triggerAnswers: ["Binary search uses fewer comparisons for every possible tiny input"],
           description: "The learner turned a long-run growth comparison into an every-input guarantee.",
           remediationFocus: "Asymptotic growth does not assert strict superiority for every small input instance.",
         },

@@ -55,13 +55,13 @@ const lesson = {
       misconceptions: [
         {
           id: "treats-variation-as-fabrication",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["One sample must be fabricated because the counts differ."],
           description: "The learner assumed any difference between samples means one record is false.",
           remediationFocus: "Repeated samples can naturally contain different people and therefore different proportions.",
         },
         {
           id: "treats-one-sample-as-exact-population",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The second sample proves exactly 55% of every visitor uses a study room."],
           description: "The learner converted one sample’s observed proportion into an exact population fact.",
           remediationFocus: "Use sample language and retain uncertainty when extending beyond the observed group.",
         },
@@ -91,13 +91,13 @@ const lesson = {
       misconceptions: [
         {
           id: "asserts-exact-permanent-population-rate",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Study-room use is exactly 47.5% for all visitors forever."],
           description: "The learner erased sampling and time limits by claiming a permanent exact value.",
           remediationFocus: "Report the observed samples and state what additional evidence a broader estimate would require.",
         },
         {
           id: "rejects-lower-sample-for-difference",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The lower sample is wrong because it is not equal to the higher sample."],
           description: "The learner treated ordinary between-sample variation as an error by default.",
           remediationFocus: "Different results require investigation when warranted, but difference itself is not proof of error.",
         },
@@ -157,13 +157,13 @@ const lesson = {
       misconceptions: [
         {
           id: "invalidates-different-sample",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The sample with 6 helmets must be invalid."],
           description: "The learner assumed a differing sample result is automatically invalid.",
           remediationFocus: "Variation is expected when different people are included; inspect collection quality separately.",
         },
         {
           id: "makes-one-sample-universal",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The sample with 9 helmets proves the exact helmet rate for all trail users."],
           description: "The learner treated one observed fraction as an exact fact about a larger population.",
           remediationFocus: "Keep the word ‘sample’ in a conclusion unless broader evidence supports extension.",
         },
@@ -193,13 +193,13 @@ const lesson = {
       misconceptions: [
         {
           id: "claims-exact-all-jar-rate",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Every jar has exactly 50% blue beads."],
           description: "The learner asserted an exact universal percentage not established by the two samples.",
           remediationFocus: "Keep conclusions tied to the observed jars and samples unless a broader design justifies more.",
         },
         {
           id: "calls-difference-counting-error",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The jar with 13 blue beads was counted incorrectly because it differs from the other jar."],
           description: "The learner interpreted unequal samples as proof of a counting mistake.",
           remediationFocus: "Variation can arise from different samples; check counting separately rather than assuming error from difference.",
         },

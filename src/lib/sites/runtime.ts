@@ -19,6 +19,8 @@ export interface SitesRuntimeEnv {
   DB?: D1DatabaseLike;
   UPLOADS?: R2BucketLike;
   OPENAI_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
+  MUSEION_AI_PROVIDER?: string;
   OPENAI_MODEL?: string;
   OPENAI_COMPILER_MODEL?: string;
   IDENTITY_PEPPER?: string;
@@ -35,7 +37,7 @@ const runtime = globalThis as typeof globalThis & { __museionSitesEnv?: SitesRun
 
 export function installSitesRuntime(env: Record<string, unknown>, ctx?: ExecutionContextLike): void {
   runtime.__museionSitesEnv = env as SitesRuntimeEnv;
-  for (const key of ["OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_COMPILER_MODEL", "IDENTITY_PEPPER", "MUSEION_LIVE_AI_ENABLED", "MUSEION_MCP_PUBLIC_ENABLED"] as const) {
+  for (const key of ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "MUSEION_AI_PROVIDER", "OPENAI_MODEL", "OPENAI_COMPILER_MODEL", "IDENTITY_PEPPER", "MUSEION_LIVE_AI_ENABLED", "MUSEION_MCP_PUBLIC_ENABLED"] as const) {
     const value = env[key];
     if (typeof value === "string") process.env[key] = value;
   }

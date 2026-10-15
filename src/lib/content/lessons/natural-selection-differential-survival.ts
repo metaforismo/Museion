@@ -27,7 +27,7 @@ const lesson = {
       misconceptions: [
         {
           id: "fitness-as-physical-strength",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Dark moths were physically stronger and more powerful than light moths"],
           description:
             "The learner equated fitness with physical strength or power rather than reproductive success arising from a match to the local environment.",
           remediationFocus:
@@ -35,7 +35,7 @@ const lesson = {
         },
         {
           id: "survival-of-the-strongest",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Survival always goes to whichever moths are toughest, no matter the environment"],
           description:
             "The learner applied a fixed 'strongest wins' rule instead of recognizing that which trait is favored depends on the specific environment.",
           remediationFocus:
@@ -168,14 +168,14 @@ const lesson = {
       misconceptions: [
         {
           id: "fixed-fitness-ranking",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Green beetles would remain fittest, since they were fittest earlier in the season"],
           description: "The learner treated fitness as a fixed property of a trait rather than something that depends on the current environment.",
           remediationFocus:
             "Re-ask what specifically caused higher survival before (blending with green leaves) and check whether that same mechanism still applies once the environment changes.",
         },
         {
           id: "survival-of-the-strongest",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Whichever beetle is toughest would survive best, regardless of leaf color"],
           description: "The learner reverted to a fixed 'toughest wins' rule instead of an environment-dependent account of fitness.",
           remediationFocus: "Ask what specifically increased survival in each environment — a match to background color, not toughness.",
         },

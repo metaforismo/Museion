@@ -27,7 +27,7 @@ const lesson = {
       misconceptions: [
         {
           id: "directed-need-teleology",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The whole population growing longer necks together once the drought began, because it needed more food"],
           description:
             "The learner treated the population as sensing a need and adjusting on purpose, rather than selection acting on variation that already existed before the environmental change.",
           remediationFocus:
@@ -35,7 +35,7 @@ const lesson = {
         },
         {
           id: "lamarckian-use-and-pass-on",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Individual giraffes stretching their necks a little further each day the drought continued"],
           description:
             "The learner attributed the heritable variation to individual giraffes stretching their necks during their own lifetime (an acquired trait), rather than pre-existing heritable variation.",
           remediationFocus:
@@ -67,7 +67,7 @@ const lesson = {
       misconceptions: [
         {
           id: "lamarckian-use-and-pass-on",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The calves are born with the same extra stretched reach their parent gained"],
           description:
             "The learner had the giraffe pass its own lifetime gains directly to its calves — the classic 'use it and pass it on' (Lamarckian) error.",
           remediationFocus:
@@ -75,7 +75,7 @@ const lesson = {
         },
         {
           id: "cumulative-acquired-change",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The calves inherit slightly more reach than their parent had at birth, since the stretching adds up generation after generation"],
           description:
             "The learner treated acquired traits as compounding across generations, as if each generation's effort adds to an inherited total.",
           remediationFocus:
@@ -107,7 +107,7 @@ const lesson = {
       misconceptions: [
         {
           id: "lamarckian-use-and-pass-on",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["An individual giraffe's neck-length genes are updated during its lifetime and then passed on to its calves"],
           description:
             "The learner again located the change inside a single giraffe's genes updating during its lifetime, rather than in the population's trait mix shifting across generations.",
           remediationFocus:
@@ -115,7 +115,7 @@ const lesson = {
         },
         {
           id: "denies-population-change",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Populations do not really change either — 'evolution' just describes giraffes trying harder collectively"],
           description:
             "The learner denied that any real, measurable change happens, reframing evolution as collective effort rather than a genuine shift in trait frequencies.",
           remediationFocus:
@@ -149,7 +149,7 @@ const lesson = {
       misconceptions: [
         {
           id: "lamarckian-use-and-pass-on",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Mice darkening their fur during their lifetime once they started living on darker soil"],
           description:
             "The learner had mice darkening their own fur during life and passing that darkening on, rather than recognizing pre-existing heritable variation.",
           remediationFocus:
@@ -157,7 +157,7 @@ const lesson = {
         },
         {
           id: "directed-need-teleology",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The population needing a fur color that would match the soil"],
           description:
             "The learner treated the population as generating a needed trait on purpose rather than selection acting on pre-existing variation.",
           remediationFocus: "Selection can only act on variation a population already has.",
@@ -187,13 +187,13 @@ const lesson = {
       misconceptions: [
         {
           id: "lamarckian-use-and-pass-on",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Yes — the pups are born looking as dark as their stained parent"],
           description: "The learner had the stained parent's temporary appearance passed directly to its pups.",
           remediationFocus: "Ask what is actually different about this mouse: its DNA, or just the outside of its fur.",
         },
         {
           id: "cumulative-acquired-change",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Partly — the pups inherit some, but not all, of the extra darkness"],
           description:
             "The learner treated the acquired darkening as partially heritable, as if acquired change graded smoothly into inherited change.",
           remediationFocus: "Only changes to the genes in reproductive cells can be inherited — there is no partial passing-on of an acquired trait.",
@@ -223,7 +223,7 @@ const lesson = {
       misconceptions: [
         {
           id: "individual-change-as-evolution",
-          triggerAnswers: ["1", "2"],
+          triggerAnswers: ["A single mouse's fur looks darker after it rolls in soil","A single mouse grows noticeably thicker fur after living through one cold winter"],
           description:
             "The learner selected an individual's temporary or lifetime change as an example of evolution, rather than a shift in a population's trait frequencies across generations.",
           remediationFocus:

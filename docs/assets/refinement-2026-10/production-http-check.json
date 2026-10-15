@@ -1,0 +1,123 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "s-maxage=31536000"
+  },
+  {
+    "path": "/about",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "s-maxage=31536000"
+  },
+  {
+    "path": "/help",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "s-maxage=31536000"
+  },
+  {
+    "path": "/accessibility",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "s-maxage=31536000"
+  },
+  {
+    "path": "/privacy",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "s-maxage=31536000"
+  },
+  {
+    "path": "/terms",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "s-maxage=31536000"
+  },
+  {
+    "path": "/login",
+    "status": 200,
+    "redirect": null,
+    "robots": "noindex, nofollow",
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/signup",
+    "status": 200,
+    "redirect": null,
+    "robots": "noindex, nofollow",
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/robots.txt",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "public, max-age=0, must-revalidate",
+    "body": "User-Agent: *\nDisallow: /\n\n"
+  },
+  {
+    "path": "/sitemap.xml",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "public, max-age=0, must-revalidate",
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n</urlset>\n"
+  },
+  {
+    "path": "/llms.txt",
+    "status": 200,
+    "redirect": null,
+    "robots": null,
+    "cache": "public, max-age=300"
+  },
+  {
+    "path": "/dashboard",
+    "status": 307,
+    "redirect": "/login?next=%2Fdashboard",
+    "robots": "noindex, nofollow",
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/create",
+    "status": 307,
+    "redirect": "/login?next=%2Fcreate",
+    "robots": "noindex, nofollow",
+    "cache": "private, no-store"
+  },
+  {
+    "path": "/api/account",
+    "status": 401,
+    "redirect": null,
+    "robots": "noindex, nofollow",
+    "cache": "no-store"
+  },
+  {
+    "path": "/api/ai/status",
+    "status": 401,
+    "redirect": null,
+    "robots": "noindex, nofollow",
+    "cache": "no-store"
+  },
+  {
+    "path": "/judge",
+    "status": 404,
+    "redirect": null,
+    "robots": null,
+    "cache": null
+  },
+  {
+    "path": "/api/judge",
+    "status": 404,
+    "redirect": null,
+    "robots": null,
+    "cache": null
+  }
+]

@@ -1,78 +1,35 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-
 import ProgressRing from "@/components/ProgressRing";
-import { SubjectBadge } from "@/components/ui";
+import SubjectIcon from "@/components/SubjectIcon";
 import type { CoursePath } from "@/lib/curriculum";
 import { subjectColor, subjectDeep, subjectTint } from "@/lib/curriculum/subjects";
+import { courseArtSrc } from "@/lib/design/assets";
+import styles from "./CoursePathCard.module.css";
 
-/**
- * One course card for every grid that lists courses. It used to live inline in
- * the dashboard, which is exactly how the library drifted into a second,
- * quieter card for the same object.
- *
- * `progress` is optional because the library is a static route with no learner
- * record: omitting it hides the ring rather than rendering a 0/n that would
- * imply the record was consulted and came back empty.
- */
-export default function CoursePathCard({
-  course,
-  progress,
-  band = false,
-}: {
-  course: CoursePath;
-  progress?: { completed: number; total: number };
-  /** Show the authored learner band — worth the line in a catalog, noise on the dashboard. */
-  band?: boolean;
+/** A course always opens its path. Progress is present only when a record was read. */
+export default function CoursePathCard({ course, progress, band = false }: {
+  course: CoursePath; progress?: { completed: number; total: number }; band?: boolean;
 }) {
   const accent = subjectColor(course.subject);
   const tint = subjectTint(course.subject);
-  const deep = subjectDeep(course.subject);
+  const art = courseArtSrc(course.id);
   const started = (progress?.completed ?? 0) > 0;
-  // Without a record we cannot say "Start": a learner half-way through would be
-  // told to begin. "Open" states only what the link does.
-  const cta = progress === undefined ? "Open" : started ? "Continue" : "Start";
+  const complete = progress !== undefined && progress.total > 0 && progress.completed >= progress.total;
+  const cta = progress === undefined ? "Open path" : complete ? "Revisit" : started ? "Continue" : "Start";
   return (
-    // A pressable card, not a floating one: the 2px hairline takes the
-    // subject's accent as the pointer arrives and stands up on the deep edge,
-    // then presses flat on click. The 3px top accent stays inline, so it holds
-    // through every state. A started course warms to its subject tint — the
-    // one card state the record can justify, and the grid's way of saying
-    // "this door is already open" without a chip or a claim.
-    <Link
-      href={`/courses/${course.id}`}
-      className="pressable-card group flex min-h-40 flex-col overflow-hidden"
-      style={{
-        borderTop: `3px solid ${accent}`,
-        "--pressable-accent": accent,
-        "--pressable-edge": deep,
-        ...(started ? { backgroundColor: tint } : null),
-      } as CSSProperties}
-    >
-      {/* Progress is shown when there is progress. A "Not started" chip on every
-          unstarted card states the absence of a fact ten times over, and the
-          missing ring already says it — the same way the ring's presence, not a
-          second chip, says the opposite. The hover CTA still reads "Start". */}
-      <div className="flex items-center justify-between gap-3 px-5 py-4" style={{ backgroundColor: tint }}>
-        <SubjectBadge subject={course.subject} size={40} />
-        {started && progress && <ProgressRing completed={progress.completed} total={progress.total} color={accent} />}
+    <Link href={`/courses/${course.id}`} className={styles.card} style={{ "--course-accent": accent, "--course-tint": tint, "--course-edge": subjectDeep(course.subject) } as CSSProperties}>
+      <div className={styles.cover}>
+        <span className={styles.subject}>{course.subject}</span>
+        {art ? (
+          // eslint-disable-next-line @next/next/no-img-element -- fixed-size decorative course artwork shared with its path overview
+          <img src={art} alt="" aria-hidden="true" width={102} height={102} className={styles.art} />
+        ) : <SubjectIcon subject={course.subject} variant="object" size={102} className={styles.art} />}
+        {started && progress && <ProgressRing completed={progress.completed} total={progress.total} color={accent} size={34} className={styles.progress} />}
       </div>
-      <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
-        <h3 className="text-xl font-semibold tracking-title">{course.title}</h3>
-        <p className="mt-1.5 text-body-sm leading-6 text-ink-soft">{course.tagline}</p>
-        <div className="mt-auto pt-4 text-label text-ink-soft">
-          <div className="flex items-center justify-between gap-3">
-            <span>{course.lessonIds.length} lessons · {course.estimatedMinutes} min</span>
-            <span
-              aria-hidden="true"
-              className="font-semibold opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100"
-              style={{ color: accent }}
-            >
-              {cta} →
-            </span>
-          </div>
-          {band && <p className="mt-1 text-micro">{course.learnerBand}</p>}
-        </div>
+      <div className={styles.body}>
+        <h3 className={styles.title}>{course.title}</h3><p className={styles.tagline}>{course.tagline}</p>
+        <div className={styles.footer}><div className={styles.facts}><span>{course.lessonIds.length} lessons · {course.estimatedMinutes} min</span><span aria-hidden="true" className={styles.cta}>{cta}<span>→</span></span></div>{band && <p className={styles.band}>{course.learnerBand}</p>}</div>
       </div>
     </Link>
   );

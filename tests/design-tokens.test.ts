@@ -31,8 +31,8 @@ describe("globals.css", () => {
   it("declares the five-step type scale", () => {
     expect(globals).toContain("--text-micro: 0.6875rem;");
     expect(globals).toContain("--text-label: 0.75rem;");
-    expect(globals).toContain("--text-body-sm: 0.8125rem;");
-    expect(globals).toContain("--text-body: 0.9375rem;");
+    expect(globals).toContain("--text-body-sm: 0.875rem;");
+    expect(globals).toContain("--text-body: 1rem;");
     expect(globals).toContain("--text-lead: 1.0625rem;");
   });
 

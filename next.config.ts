@@ -12,6 +12,8 @@ const scriptSrc = process.env.NODE_ENV === "production"
   : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
 
 const nextConfig: NextConfig = {
+  // Keep the local product navigation usable on narrow viewports.
+  devIndicators: false,
   // Keep Turbopack inside this checkout when a parent directory contains
   // unrelated package-manager lockfiles.
   turbopack: {

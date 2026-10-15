@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import SubjectIcon from "@/components/SubjectIcon";
-import { Chip, cardClasses } from "@/components/ui";
+import { cardClasses } from "@/components/ui";
 import { subjectColor } from "@/lib/curriculum/subjects";
 
 export interface CatalogLesson {
@@ -53,6 +53,8 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
 
       if (event.key === "/" && !isTyping) {
         event.preventDefault();
+        const disclosure = searchInput.current?.closest("details");
+        if (disclosure) disclosure.open = true;
         searchInput.current?.focus();
       }
     };
@@ -97,7 +99,7 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
               /
             </span>
           </div>
-          <p className="mt-2 text-label text-ink-soft">Search titles, descriptions, subjects, and registered concepts.</p>
+          <p className="mt-2 text-label text-ink-soft">Search by topic, subject, or idea.</p>
         </div>
 
         <div className="min-w-0">
@@ -137,7 +139,7 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
         <div className="mt-6 border-l-2 border-gold py-4 pl-6" role="status">
           <h3 className="text-2xl font-semibold tracking-title">No lesson matches yet</h3>
           <p className="mt-2 max-w-xl text-body leading-6 text-ink-soft">
-            Try a broader concept or show every subject. The compiler can also turn an authorized source into a new course.
+            Try a broader concept or show every subject. You can also build a course from your own notes.
           </p>
           <div className="mt-4 flex flex-wrap gap-4">
             <button type="button" onClick={resetFilters} className="min-h-11 text-body-sm font-semibold text-lapis-dark hover:underline">
@@ -163,19 +165,14 @@ export default function LessonCatalog({ lessons }: { lessons: CatalogLesson[] })
                     {/* The clay object, matching the sidebar, the course cards and the map. */}
                     <SubjectIcon subject={lesson.track} variant="object" size={30} />
                     <span className="min-w-0 flex-1 truncate text-label font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>{lesson.track}</span>
-                    <span className="shrink-0 text-label font-medium text-ink-soft">{lesson.stepCount} verified steps</span>
+                    <span className="shrink-0 text-label font-medium text-ink-soft">{lesson.stepCount} steps</span>
                   </div>
                   <h3 className="mt-3 text-lg font-semibold tracking-title transition group-hover:text-lapis-dark">{lesson.title}</h3>
                   <p className="mt-1.5 line-clamp-2 text-body-sm leading-6 text-ink-soft">
                     {lesson.description}
                   </p>
                   <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
-                    <div className="flex min-w-0 flex-wrap gap-1.5">
-                      {lesson.concepts.slice(0, 2).map((concept) => (
-                        <Chip key={concept}>{concept}</Chip>
-                      ))}
-                    </div>
-                    <span className="shrink-0 text-label font-semibold opacity-0 transition group-hover:opacity-100" style={{ color: accent }} aria-hidden="true">
+                    <span className="shrink-0 text-label font-semibold transition-colors" style={{ color: accent }} aria-hidden="true">
                       Open →
                     </span>
                   </div>

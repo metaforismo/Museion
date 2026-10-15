@@ -27,10 +27,7 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-net-continuous-force-myth",
-          triggerAnswers: [
-            "it gradually slows down and stops, because nothing is pushing it forward",
-            "0",
-          ],
+          triggerAnswers: ["it gradually slows down and stops, because nothing is pushing it forward"],
           description:
             "The learner assumed constant motion needs a sustained forward force and treated the absence of a new force as a reason to slow down — the classic 'motion needs a mover' (Aristotelian) misconception.",
           remediationFocus:
@@ -38,7 +35,7 @@ const lesson = {
         },
         {
           id: "fm-net-spontaneous-speedup",
-          triggerAnswers: ["it speeds up on its own, because the ice is very slippery", "2"],
+          triggerAnswers: ["it speeds up on its own, because the ice is very slippery"],
           description: "The learner attributed a speed increase to the surface itself rather than to any force.",
           remediationFocus:
             "A change in speed requires a net force in the direction of the change. Identify what new force, if any, is described in the scenario.",
@@ -123,7 +120,7 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-net-heavier-falls-faster",
-          triggerAnswers: ["the 6 kg ball, because gravity pulls harder on more mass", "0"],
+          triggerAnswers: ["the 6 kg ball, because gravity pulls harder on more mass"],
           description:
             "The learner assumed greater weight alone causes greater falling acceleration — the classic 'heavier objects fall faster' misconception.",
           remediationFocus:
@@ -131,7 +128,7 @@ const lesson = {
         },
         {
           id: "fm-net-lighter-falls-faster",
-          triggerAnswers: ["the 2 kg ball, because less mass is easier to accelerate", "1"],
+          triggerAnswers: ["the 2 kg ball, because less mass is easier to accelerate"],
           description:
             "The learner focused only on how mass resists acceleration and ignored that gravity's force is also smaller on that same lighter object.",
           remediationFocus: "Compare both the force of gravity and the mass together — not mass alone — to find acceleration.",
@@ -161,17 +158,14 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-net-ignores-normal-force",
-          triggerAnswers: ["net force equals the book's weight; the book accelerates downward", "1"],
+          triggerAnswers: ["net force equals the book's weight; the book accelerates downward"],
           description: "The learner accounted for the book's weight but ignored the table's normal force pushing back.",
           remediationFocus:
             "List every force touching the object before summing — here that includes the table's supporting push, not just gravity.",
         },
         {
           id: "fm-net-balanced-forces-still-move",
-          triggerAnswers: [
-            "net force is zero, but the book still accelerates upward because the forces are balanced",
-            "2",
-          ],
+          triggerAnswers: ["net force is zero, but the book still accelerates upward because the forces are balanced"],
           description:
             "The learner correctly found zero net force but incorrectly concluded that balance itself produces motion.",
           remediationFocus: "Zero net force means zero acceleration — no change in velocity — not motion in either direction.",
@@ -247,14 +241,14 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-net-practice-invents-forward-weight",
-          triggerAnswers: ["a force equal to its weight, pushing it forward", "1"],
+          triggerAnswers: ["a force equal to its weight, pushing it forward"],
           description:
             "The learner invented a forward force sized to the ball's weight rather than checking whether any force is actually described.",
           remediationFocus: "Only forces you can identify in the scenario count; weight acts downward, not forward.",
         },
         {
           id: "fm-net-practice-invents-motion-sustaining-force",
-          triggerAnswers: ["a small force that keeps it going, matching its speed", "2"],
+          triggerAnswers: ["a small force that keeps it going, matching its speed"],
           description:
             "The learner assumed constant motion needs a matching sustaining force — the continuous-force myth.",
           remediationFocus:
@@ -282,14 +276,14 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-net-practice-spacecraft-slows",
-          triggerAnswers: ["it gradually slows to a stop, since nothing is powering it", "1"],
+          triggerAnswers: ["it gradually slows to a stop, since nothing is powering it"],
           description:
             "The learner assumed motion decays without continued power — the continuous-force myth applied to space travel.",
           remediationFocus: "Zero net force means zero change in velocity, not gradual loss of speed.",
         },
         {
           id: "fm-net-practice-spacecraft-speeds-up",
-          triggerAnswers: ["it speeds up over time, since space has no friction to hold it back", "2"],
+          triggerAnswers: ["it speeds up over time, since space has no friction to hold it back"],
           description: "The learner assumed the absence of friction causes speeding up rather than simply no slowing.",
           remediationFocus:
             "No net force means no acceleration at all — the spacecraft's speed stays exactly the same; it does not increase either.",
@@ -312,13 +306,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-net-practice-heavy-rock-first",
-          triggerAnswers: ["the 4 kg rock lands first", "0"],
+          triggerAnswers: ["the 4 kg rock lands first"],
           description: "The learner assumed greater weight causes greater falling acceleration.",
           remediationFocus: "Gravity's larger force on the heavier rock is matched by its larger mass; the ratio F/m is unchanged.",
         },
         {
           id: "fm-net-practice-light-rock-first",
-          triggerAnswers: ["the 1 kg rock lands first", "2"],
+          triggerAnswers: ["the 1 kg rock lands first"],
           description: "The learner assumed less mass falls faster.",
           remediationFocus: "Compare force and mass together, not mass alone.",
         },

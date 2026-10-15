@@ -141,6 +141,26 @@ describe("compiler run lifecycle", () => {
     await expect(createCompilerRun("creator-a", document, audience)).rejects.toThrow("LIVE_COMPILER_NOT_CONFIGURED");
   });
 
+  it("never falls through to a paid compiler when the free tutor is selected", async () => {
+    process.env.OPENAI_API_KEY = "must-not-be-used";
+    updateAiSettings({ provider: "openrouter-free" });
+    const document = await ingestTextSource({ title: "Free-tutor source", text: "A triangle has three sides.", mediaType: "text/plain" });
+    await expect(createCompilerRun("creator-free-tutor", document, audience)).rejects.toThrow("LIVE_COMPILER_NOT_CONFIGURED");
+  });
+
+  it("honours an explicit live opt-out on the local runtime before any provider call", async () => {
+    const originalEnabled = process.env.MUSEION_LIVE_AI_ENABLED;
+    process.env.MUSEION_LIVE_AI_ENABLED = "0";
+    updateAiSettings({ provider: "openai-api" });
+    const document = await ingestTextSource({ title: "Disabled compiler", text: "A triangle has three sides.", mediaType: "text/plain" });
+    try {
+      await expect(createCompilerRun("creator-live-disabled", document, audience)).rejects.toThrow("LIVE_AI_DISABLED");
+    } finally {
+      if (originalEnabled === undefined) delete process.env.MUSEION_LIVE_AI_ENABLED;
+      else process.env.MUSEION_LIVE_AI_ENABLED = originalEnabled;
+    }
+  });
+
   it("queues once, rejects duplicate clicks, and exposes the completed golden result", async () => {
     const document = SourceDocumentSchema.parse(goldenDocumentJson);
     const queued = await enqueueCompilerRun("creator-a", document, audience, "exam-practice");
