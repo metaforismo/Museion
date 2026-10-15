@@ -253,6 +253,7 @@ async function learnerFlow(viewport, label) {
     await page.goto(`${origin.origin}/dashboard`);
     await visible(page.getByRole("button", { name: "Sign out", exact: true }));
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page.waitForURL(`${origin.origin}/`, { waitUntil: "domcontentloaded" });
     await page.goto(`${origin.origin}/dashboard`);
     assert(new URL(page.url()).pathname === "/login", "Signout must restore the private boundary");
   } finally { await context.close(); }
@@ -270,6 +271,9 @@ try {
     await visible(page.getByRole("banner").getByRole("link", { name: "Sign in", exact: true }));
     await page.screenshot({ path: path.join(outputDir, "tablet-no-javascript.png"), fullPage: true });
   } finally { await noJs.close(); }
-} finally { await browser.close(); }
+} finally {
+  await writeFile(path.join(outputDir, "failures.json"), JSON.stringify(failures, null, 2));
+  await browser.close();
+}
 if (failures.length) throw new Error(`Private-product UI gate failures:\n${failures.join("\n")}`);
 console.log(`Private-product UI gates passed. Evidence: ${outputDir}`);
