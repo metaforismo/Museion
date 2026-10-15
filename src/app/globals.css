@@ -274,7 +274,7 @@ a[class*="bg-"]:active {
 .pressable.pressable-held:disabled {
   box-shadow: 0 0 0 0 var(--pressable-edge);
   cursor: progress;
-  opacity: 0.85;
+  opacity: 1;
   transform: translateY(2px);
 }
 

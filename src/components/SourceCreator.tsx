@@ -734,7 +734,7 @@ export default function SourceCreator() {
                   <p className="text-ink-soft">Document SHA-256</p>
                   <button type="button" onClick={() => void copyHash()} className="font-semibold text-lapis-dark underline underline-offset-4">Copy hash</button>
                 </div>
-                <code className="mt-2 block overflow-x-auto font-mono">{document.sha256}</code>
+                <code tabIndex={0} className="mt-2 block overflow-x-auto font-mono focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis">{document.sha256}</code>
                 {copyNotice && <p role="status" aria-live="polite" className="mt-2 text-ink-soft">{copyNotice}</p>}
               </div>
 
@@ -779,7 +779,7 @@ export default function SourceCreator() {
                   <span>Page {page.pageNumber}</span>
                   <span>{page.charCount.toLocaleString()} characters</span>
                 </div>
-                <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words font-sans text-body-sm leading-relaxed">
+                <pre tabIndex={0} role="region" aria-label="Source text" className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words font-sans text-body-sm leading-relaxed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis">
                   {page.text}
                 </pre>
               </div>
