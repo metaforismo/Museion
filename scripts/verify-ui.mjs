@@ -224,7 +224,9 @@ async function learnerFlow(viewport, label) {
       await inspect(page, `${label}-${route.slice(1).replaceAll("/", "-")}`);
     }
     await page.goto(`${origin.origin}/create`);
+    await page.getByText("Loading draft…", { exact: true }).waitFor({ state: "hidden" });
     await page.getByLabel("Add files", { exact: true }).setInputFiles(path.resolve("tests/fixtures/binary-search-golden-source.pdf"));
+    await visible(page.getByText("binary-search-golden-source.pdf", { exact: false }).first());
     await page.getByRole("checkbox", { name: /^I am allowed to use every material/ }).check();
     await page.getByRole("button", { name: "Normalize 1 material", exact: true }).click();
     await visible(page.locator('[aria-label="Source pages"]'));

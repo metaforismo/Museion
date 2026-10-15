@@ -670,7 +670,7 @@ export default function SourceCreator() {
             rightsBasis={rightsBasis}
             sourceAuthorized={sourceAuthorized}
             busy={busy}
-            disabled={activeJob}
+            disabled={!draftReady || activeJob}
             normalized={Boolean(document)}
             canNormalize={canNormalize}
             onTitle={(value) => { invalidateNormalizedSource(); setTitle(value); }}
