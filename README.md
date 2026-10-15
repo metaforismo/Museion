@@ -18,6 +18,7 @@ Open [localhost:3000](http://localhost:3000). Registration asks for name/email, 
 
 ```bash
 npm run build
+npm run verify:bundle
 npm run start
 ```
 
@@ -102,6 +103,6 @@ npm run build
 
 The suite includes lesson validation, tutoring boundaries, compiler publication gates, dashboard recommendations, account isolation, session expiry/revocation, durable preferences, SQLite reopen, and saved-course persistence. Live-provider tests require explicit opt-in.
 
-Current browser evidence and responsive checks are recorded in [`docs/product-qa.md`](docs/product-qa.md). The historical `verify:ui` and screenshot scripts predate the authenticated flow and are not the acceptance gate for this revision.
+Current browser evidence and responsive checks are recorded in [`docs/polish-2026-10-04.md`](docs/polish-2026-10-04.md). `npm run verify:ui` now checks the private product: signup and local OTP verification, onboarding, account boundaries, desktop/mobile accessibility and contrast, keyboard entry, and checked-lesson resume. It requires Chromium (`npx playwright install chromium`), a loopback server with a separate database/outbox/uploads directory, `MUSEION_UI_QA=1`, and matching `MUSEION_BASE_URL` and `MUSEION_AUTH_OUTBOX_PATH` in the server and test processes. The [CI browser job](.github/workflows/ci.yml) is the complete isolated setup; live AI is disabled. The historical screenshot script remains separate from this gate.
 
 Design decisions and the Before/After/Why review are in [`docs/design-product.md`](docs/design-product.md). Original imagery and reusable briefs are recorded in [`docs/brand/asset-manifest.md`](docs/brand/asset-manifest.md).
