@@ -10,7 +10,7 @@ export default function ErrorBoundary({
 }) {
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-24 text-center animate-fade-up">
-      <h1 className="font-display text-2xl font-semibold">
+      <h1 className="tracking-title text-2xl font-semibold">
         Something went wrong on our side
       </h1>
       <p className="mt-3 leading-7 text-ink-soft">

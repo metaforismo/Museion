@@ -47,6 +47,14 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      MUSEION_UI_QA: "1"
+      MUSEION_BASE_URL: http://127.0.0.1:3000
+      MUSEION_DATABASE_PATH: /tmp/museion-ci/learner.sqlite
+      MUSEION_AUTH_OUTBOX_PATH: /tmp/museion-ci/auth-outbox
+      MUSEION_UPLOADS_PATH: /tmp/museion-ci/uploads
+      MUSEION_COOKIE_SECURE: "0"
+      MUSEION_LIVE_AI_ENABLED: "0"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -55,6 +63,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Install Chromium for browser verification
+        run: npx playwright install --with-deps chromium
       - name: Build
         run: npm run build
       - name: Start production server
@@ -69,7 +79,7 @@ jobs:
           done
           cat /tmp/museion-next.log
           exit 1
-      - name: WCAG, performance, keyboard, and judge browser gates
+      - name: Private product, WCAG, contrast, keyboard, and resume gates
         run: npm run verify:ui
       - name: Upload browser evidence
         if: always()

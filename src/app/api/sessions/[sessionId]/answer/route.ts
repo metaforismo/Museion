@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getOwnedSession } from "@/lib/server/session-access";
+import { currentActor } from "@/lib/server/actor";
+import { persistSession } from "@/lib/server/session-repository";
+import { buildProactiveGuidance } from "@/lib/maia/proactive-server";
 
 const AnswerCommandSchema = z.object({
   answer: z.string().trim().min(1).max(1_000),
@@ -30,15 +33,18 @@ export async function POST(
   }
   const step = session.lesson.steps.find((candidate) => candidate.id === outcome.stepId);
   if (!step) return NextResponse.json({ error: "Session step is unavailable" }, { status: 409 });
+  try { await persistSession(session, (await currentActor()).ownerId, body.data.expectedVersion); }
+  catch { return NextResponse.json({ error: "Session conflict" }, { status: 409 }); }
 
   return NextResponse.json({
     ...outcome,
+    proactiveGuidance: buildProactiveGuidance(session),
     stepIndex: session.stepIndex,
     // The verified solution is revealed only AFTER the step is solved:
     // a worked explanation reinforces learning once the reasoning work
     // has been done — never before. It must describe the variant the
     // learner actually solved, so it comes from the active step.
-    solution: outcome.correct ? session.activeStep.solution : null,
+    solution: outcome.correct && !outcome.intermediate ? session.activeStep.solution : null,
     stats: null,
   });
 }

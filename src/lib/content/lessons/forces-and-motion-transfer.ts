@@ -27,13 +27,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-tr-forces-present-means-balanced",
-          triggerAnswers: ["the speed stays constant, because forces are still acting on it", "0"],
+          triggerAnswers: ["the speed stays constant, because forces are still acting on it"],
           description: "The learner assumed that any pair of opposing forces automatically balances, regardless of magnitude.",
           remediationFocus: "Balance requires equal magnitudes in opposite directions, not merely opposing directions — compare the two numbers.",
         },
         {
           id: "fm-tr-friction-always-wins",
-          triggerAnswers: ["the speed decreases, because friction always slows things down", "2"],
+          triggerAnswers: ["the speed decreases, because friction always slows things down"],
           description: "The learner assumed friction necessarily dominates any applied force, regardless of magnitude.",
           remediationFocus: "Compare the actual sizes of the applied force and friction; whichever is larger determines the direction of the net force.",
         },
@@ -142,13 +142,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-tr-third-law-same-object",
-          triggerAnswers: ["the forces do cancel, so the sled can never actually accelerate", "0"],
+          triggerAnswers: ["the forces do cancel, so the sled can never actually accelerate"],
           description: "The learner applied the third-law pair as though both forces act on the sled, producing an apparent cancellation.",
           remediationFocus: "Identify which object each force in the pair acts on; only sum forces that act on the object whose motion you're analyzing.",
         },
         {
           id: "fm-tr-third-law-surface-dependent",
-          triggerAnswers: ["the forces cancel only on snow, not on pavement", "2"],
+          triggerAnswers: ["the forces cancel only on snow, not on pavement"],
           description: "The learner invented a surface-dependent exception to Newton's third law.",
           remediationFocus: "The third law holds on every surface; the relevant question is which forces act on which object, not what surface is involved.",
         },
@@ -271,13 +271,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-tr-practice-wall-cancels",
-          triggerAnswers: ["the forces do cancel, so nothing can ever move when you push a wall", "1"],
+          triggerAnswers: ["the forces do cancel, so nothing can ever move when you push a wall"],
           description: "The learner assumed the third-law pair cancels for a single object.",
           remediationFocus: "Sum only the forces acting on one object at a time; a reaction force on a different object doesn't enter that sum.",
         },
         {
           id: "fm-tr-practice-wall-unequal",
-          triggerAnswers: ["the wall's push back is always slightly smaller than yours in practice", "2"],
+          triggerAnswers: ["the wall's push back is always slightly smaller than yours in practice"],
           description: "The learner denied that the third-law pair is truly equal in magnitude.",
           remediationFocus: "Newton's third law guarantees exactly equal magnitudes; look for a different reason nothing moves.",
         },
@@ -302,13 +302,13 @@ const lesson = {
       misconceptions: [
         {
           id: "fm-tr-practice-rocket-same-object",
-          triggerAnswers: ["the same object — the rocket", "0"],
+          triggerAnswers: ["the same object — the rocket"],
           description: "The learner placed both forces of the pair on the rocket alone.",
           remediationFocus: "Identify the two separate objects in a third-law pair — here, the gas and the rocket.",
         },
         {
           id: "fm-tr-practice-rocket-not-real",
-          triggerAnswers: ["no real object; the forces are purely theoretical", "2"],
+          triggerAnswers: ["no real object; the forces are purely theoretical"],
           description: "The learner dismissed one of the paired forces as not physically real.",
           remediationFocus: "Both forces in a third-law pair are equally real and measurable; they simply act on different objects.",
         },

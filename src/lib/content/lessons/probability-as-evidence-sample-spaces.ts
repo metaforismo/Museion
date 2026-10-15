@@ -13,7 +13,7 @@ const lesson = {
       concept: "sample-space",
       prompt:
         "A bag holds four equally likely tickets: red, blue, green, and yellow. What is the probability of drawing blue? Write a fraction.",
-      answer: { kind: "expression", acceptedForms: ["1/4", "0.25"] },
+      answer: { kind: "numeric", value: 1 / 4, tolerance: 0 },
       solution:
         "There is one blue ticket among four equally likely tickets. Probability compares favourable outcomes with all outcomes in the stated sample space, so P(blue) = 1/4.",
       misconceptions: [
@@ -72,32 +72,32 @@ const lesson = {
       id: "step-3",
       concept: "complement",
       prompt:
-        "For the same fair six-sided number cube, what is the probability of NOT rolling an even number?",
+        "For a fair six-sided number cube, what is the probability of NOT rolling a number greater than 4?",
       answer: {
         kind: "multipleChoice",
-        options: ["1/6", "1/2", "2/3"],
-        correctIndex: 1,
+        options: ["1/6", "1/3", "2/3"],
+        correctIndex: 2,
       },
       solution:
-        "Not even means odd: 1, 3, or 5. Three of the six equally likely outcomes are odd, so the probability is 3/6 = 1/2. A complement describes all outcomes outside the named event.",
+        "The outcomes greater than 4 are 5 and 6. Their complement is 1, 2, 3 and 4: four of the six equally likely faces, so the probability is 4/6 = 2/3. The event and its complement together cover every possible face.",
       misconceptions: [
         {
           id: "uses-one-outcome",
-          triggerAnswers: ["0"],
-          description: "The learner treated ‘not even’ as if it named only one face.",
+          triggerAnswers: ["1/6"],
+          description: "The learner treated the complement as if it named only one face.",
           remediationFocus:
             "List every outcome outside the event; a complement can contain more than one outcome.",
         },
         {
           id: "keeps-event-instead-of-complement",
-          triggerAnswers: ["2"],
-          description: "The learner named an even outcome instead of switching to the complement event.",
+          triggerAnswers: ["1/3"],
+          description: "The learner counted the two faces greater than 4 rather than the four faces outside that event.",
           remediationFocus:
-            "Translate NOT rolling even into the opposite event before counting outcomes.",
+            "Use NOT to exclude faces greater than 4, then count every remaining face.",
         },
       ],
       hints: [
-        "What numbers on the cube are not divisible by 2?",
+        "Which cube values are 4 or smaller?",
         "Count those outcomes over all six faces, then simplify if useful.",
       ],
     },
@@ -108,7 +108,7 @@ const lesson = {
       concept: "sample-space",
       prompt:
         "Five equally likely cards are numbered 1 through 5. What is the probability of drawing card 1? Write a fraction.",
-      answer: { kind: "expression", acceptedForms: ["1/5", "0.2"] },
+      answer: { kind: "numeric", value: 1 / 5, tolerance: 0 },
       solution:
         "One numbered card is favourable and five cards are possible, so P(card 1) = 1/5.",
       misconceptions: [
@@ -135,7 +135,7 @@ const lesson = {
       misconceptions: [
         {
           id: "reports-named-event",
-          triggerAnswers: ["0"],
+          triggerAnswers: ["1/6"],
           description: "The learner gave the chance of rolling 1 rather than not rolling 1.",
           remediationFocus: "Use the word NOT to switch from the named event to its complement.",
         },

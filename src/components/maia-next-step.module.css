@@ -1,0 +1,5 @@
+.note { margin-top: 24px; max-width: 56ch; padding-left: 14px; border-left: 2px solid var(--color-lapis); }
+.label { font-size: var(--text-label); line-height: 1.5; color: var(--color-lapis-dark); font-weight: 650; margin-bottom: 5px; }
+.reason { font-size: var(--text-body-sm); line-height: 1.6; color: var(--color-ink); }
+.pace { margin-top: 7px; font-size: var(--text-label); line-height: 1.5; color: var(--color-ink-soft); }
+@media (max-width: 640px) { .note { margin-top: 20px; } }

@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ChartUpIcon, Files02Icon, Home09Icon, LibraryIcon, RepeatIcon, Settings01Icon } from "@hugeicons/core-free-icons";
 
 import AppIcon from "./AppIcon";
 import BrandMark from "./BrandMark";
-import MaiaCharacter from "./MaiaCharacter";
 import SubjectIcon from "./SubjectIcon";
+import { subjectColor } from "@/lib/curriculum/subjects";
+import { orderSidebarPaths, type CourseProgress, type SidebarCourse } from "@/lib/design/path-selection";
 
 const GROUPS: { label: string; items: { href: string; label: string; icon: typeof Home09Icon }[] }[] = [
   { label: "Learn", items: [
@@ -18,8 +20,8 @@ const GROUPS: { label: string; items: { href: string; label: string; icon: typeo
     { href: "/review", label: "Review", icon: RepeatIcon },
   ] },
   { label: "Your work", items: [
-    { href: "/create", label: "Source Studio", icon: Files02Icon },
-    { href: "/progress", label: "Evidence", icon: ChartUpIcon },
+    { href: "/create", label: "Create a course", icon: Files02Icon },
+    { href: "/progress", label: "Progress", icon: ChartUpIcon },
   ] },
 ];
 
@@ -27,105 +29,202 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-type SidebarCourse = { id: string; title: string; subject: string; lessonCount: number };
+/**
+ * One row geometry for every destination in the rail — 44px tall, one 28px
+ * icon slot, one label column — so nav items and paths share a spine instead
+ * of drifting apart. One active treatment too: a filled lapis pill that is
+ * actually visible, replacing the 3.5% ink tint nobody could see.
+ */
+const ROW = "group relative flex min-h-11 items-center gap-2.5 rounded-xl transition-colors duration-150";
+const ROW_ACTIVE = "bg-lapis-soft text-lapis-dark ring-1 ring-inset ring-lapis/10";
+const ROW_IDLE = "text-ink-soft hover:bg-paper hover:text-ink";
+const SLOT = "grid h-7 w-7 shrink-0 place-items-center";
+const SECTION = "px-2.5 pb-1.5 text-label font-semibold uppercase tracking-[0.12em] text-ink-soft";
 
-export default function AppSidebar({ collapsed = false, courses = [], lessonCount = 0, onNavigate, onToggle }: { collapsed?: boolean; courses?: SidebarCourse[]; lessonCount?: number; onNavigate?: () => void; onToggle?: () => void }) {
+type Guidance = "live" | "offline";
+type SidebarState = { progress: CourseProgress; guidance: Guidance | null };
+
+/**
+ * Per-learner state is fetched here rather than threaded through props, so the
+ * root layout stays static. A failed request degrades to catalog order with no
+ * progress rails and no guidance claim — never to a guess.
+ */
+function useSidebarState(): SidebarState {
+  const [state, setState] = useState<SidebarState>({ progress: {}, guidance: null });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/progress", { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!payload) return;
+        const provider = payload.runtime?.provider;
+        setState({
+          progress: payload.courseProgress ?? {},
+          guidance: provider ? (provider === "offline" ? "offline" : "live") : null,
+        });
+      })
+      .catch(() => { /* the rail degrades to catalog order without progress rails */ });
+    return () => controller.abort();
+  }, []);
+  return state;
+}
+
+function GuidanceStatus({ guidance, collapsed }: { guidance: Guidance | null; collapsed: boolean }) {
+  const label = guidance === "live" ? "Maia is connected" : "Guided lessons available";
+  // The row keeps its height before the state resolves so the footer never jumps.
+  if (!guidance) return <p aria-hidden="true" className="h-7" />;
+  const dot = <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${guidance === "live" ? "bg-correct" : "bg-ink/30"}`} />;
+  if (collapsed) {
+    return <p title={label} className="flex h-7 items-center justify-center text-label">{dot}<span className="sr-only">{label}</span></p>;
+  }
+  return <p className="flex h-7 items-center gap-2 px-2.5 text-label text-ink-soft">{dot}{label}</p>;
+}
+
+export default function AppSidebar({
+  collapsed = false,
+  courses = [],
+  onNavigate,
+  onToggle,
+  guidance,
+}: {
+  collapsed?: boolean;
+  courses?: SidebarCourse[];
+  onNavigate?: () => void;
+  onToggle?: () => void;
+  guidance?: Guidance;
+}) {
   const pathname = usePathname();
+  const state = useSidebarState();
   const settingsActive = isActive(pathname, "/settings");
+  const { visible, hiddenCount } = orderSidebarPaths(courses, state.progress, 4);
+  // The meter lane appears only once it carries information. A learner who has
+  // started nothing gets six clean rows, not six empty ticks.
+  const meters = visible.some((course) => (state.progress[course.id]?.completed ?? 0) > 0);
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className={`flex h-20 shrink-0 items-center border-b border-ink/[0.06] ${collapsed ? "justify-center px-2" : "px-4"}`}>
-        <Link href="/dashboard" aria-label="Museion home" onClick={onNavigate} className="flex min-w-0 items-center gap-3">
-          <BrandMark className="h-10 w-10 shrink-0" />
-          {!collapsed && <span className="min-w-0"><span className="block font-display text-lg font-semibold leading-none tracking-tight">Museion</span><span className="mt-1 block truncate text-[0.68rem] text-ink-soft">A house for reasoning</span></span>}
+      <div className={`flex h-16 shrink-0 items-center border-b border-ink/[0.06] ${collapsed ? "justify-center px-2" : "px-4"}`}>
+        <Link
+          href="/dashboard"
+          aria-label="Museion home"
+          onClick={onNavigate}
+          className={`flex min-h-11 min-w-0 items-center gap-2.5 rounded-lg ${collapsed ? "min-w-11 justify-center" : ""}`}
+        >
+          <BrandMark className="h-9 w-9 shrink-0" />
+          {!collapsed && <span className="truncate text-lead font-semibold tracking-title">Museion</span>}
         </Link>
       </div>
 
       <nav aria-label="Application navigation" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-5 pt-4 [scrollbar-width:thin]">
         {GROUPS.map((group) => (
-          <div key={group.label} className="mb-6 last:mb-0">
-            {!collapsed && <p className="px-2.5 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-ink-soft">{group.label}</p>}
+          <div key={group.label} className="mb-5 last:mb-0">
+            {!collapsed && <p className={SECTION}>{group.label}</p>}
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const active = isActive(pathname, item.href);
-                return <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined} aria-current={active ? "page" : undefined} onClick={onNavigate} className={`group relative flex min-h-10 items-center gap-2.5 rounded-xl text-sm font-medium transition duration-200 active:translate-y-px ${active ? "bg-ink/[0.035] text-ink" : "text-ink-soft hover:bg-paper hover:text-ink"} ${collapsed ? "justify-center px-0" : "px-2"}`}>
-                  {active && <span aria-hidden="true" className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-lapis" />}
-                  <span aria-hidden="true" className={`grid h-7 w-7 shrink-0 place-items-center transition duration-200 ${active ? "text-lapis-dark" : "text-ink-soft group-hover:text-ink"}`}>
-                    <HugeiconsIcon icon={item.icon} size={17} strokeWidth={1.8} />
-                  </span>
-                  {!collapsed && <span>{item.label}</span>}
-                </Link>;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    onClick={onNavigate}
+                    className={`${ROW} text-body-sm ${active ? `${ROW_ACTIVE} font-semibold` : `${ROW_IDLE} font-medium`} ${collapsed ? "justify-center px-0" : "px-2"}`}
+                  >
+                    <span aria-hidden="true" className={SLOT}>
+                      <HugeiconsIcon icon={item.icon} size={18} strokeWidth={1.75} />
+                    </span>
+                    {/* Kept in the tree when collapsed so the icon-only rail still has an accessible name. */}
+                    <span className={collapsed ? "sr-only" : "truncate"}>{item.label}</span>
+                  </Link>
+                );
               })}
             </div>
           </div>
         ))}
 
-        {collapsed && courses.length > 0 && (
-          <div className="mt-5 border-t border-ink/8 pt-4">
-            <ol aria-label="Paths" className="space-y-1">
-              {courses.slice(0, 8).map((course) => {
+        {visible.length > 0 && (
+          <section aria-label="Paths" className="mt-6 border-t border-ink/8 pt-4">
+            {!collapsed && <p className={SECTION}>Your paths</p>}
+            <ol className="space-y-0.5">
+              {visible.map((course) => {
                 const href = `/courses/${course.id}`;
                 const active = isActive(pathname, href);
+                const entry = state.progress[course.id];
+                const percent = entry && entry.total > 0 ? Math.round((entry.completed / entry.total) * 100) : 0;
                 return (
-                  <li key={course.id} className="flex justify-center">
+                  <li key={course.id}>
                     <Link
                       href={href}
-                      title={`${course.title} — ${course.lessonCount} lessons`}
                       aria-current={active ? "page" : undefined}
                       onClick={onNavigate}
-                      className={`grid min-h-10 min-w-10 place-items-center rounded-xl transition duration-200 active:translate-y-px ${active ? "bg-paper shadow-[inset_0_0_0_1px_rgba(24,35,65,.08)]" : "hover:bg-paper"}`}
+                      title={`${course.title} — ${course.subject}`}
+                      className={`${ROW} text-body-sm ${active ? ROW_ACTIVE : ROW_IDLE} ${collapsed ? "justify-center px-0" : "px-2"}`}
                     >
-                      <SubjectIcon subject={course.subject} size={26} iconSize={14} variant="plain" />
-                      <span className="sr-only">{course.title}</span>
+                      <span aria-hidden="true" className={SLOT}>
+                        <SubjectIcon subject={course.subject} variant="object" size={26} />
+                      </span>
+                      {collapsed ? (
+                        <span className="sr-only">{course.title}</span>
+                      ) : (
+                        <span className="min-w-0 flex-1">
+                          <span className={`block truncate ${active ? "font-semibold" : "font-medium"}`}>{course.title}</span>
+                          {/* A short meter on a lane every row shares: full-width bars read as link
+                              underlines, and a lane only some rows have makes those rows look underlined. */}
+                          {meters && (
+                            <span aria-hidden="true" className="mt-1.5 block h-0.5 w-14 overflow-hidden rounded-full bg-ink/10">
+                              <span className="block h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: subjectColor(course.subject) }} />
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      <span className="sr-only">
+                        {course.subject}, {course.lessonCount} lessons
+                        {percent > 0 ? `, ${percent}% complete` : ""}
+                      </span>
                     </Link>
                   </li>
                 );
               })}
-            </ol>
-          </div>
-        )}
-
-        {!collapsed && courses.length > 0 && (
-          <section aria-labelledby="sidebar-paths-title" className="mt-7 border-t border-ink/8 pt-5">
-            <div className="flex items-start justify-between gap-3 px-2.5 pb-3">
-              <div>
-                <p id="sidebar-paths-title" className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-ink-soft">Paths</p>
-                <p className="mt-1 text-[0.64rem] tabular-nums text-ink-soft">{courses.length} {courses.length === 1 ? "path" : "paths"} · {lessonCount} {lessonCount === 1 ? "lesson" : "lessons"}</p>
-              </div>
-              <Link href="/library" onClick={onNavigate} className="rounded-md px-1 py-0.5 text-[0.66rem] font-medium text-lapis-dark hover:bg-lapis-soft">View all</Link>
-            </div>
-            <ol className="space-y-0.5">
-              {courses.map((course) => {
-                const href = `/courses/${course.id}`;
-                const active = isActive(pathname, href);
-                return <li key={course.id}><Link href={href} aria-current={active ? "page" : undefined} onClick={onNavigate} title={`${course.title} — ${course.subject}, ${course.lessonCount} lessons`} className={`group flex min-h-10 items-center gap-2.5 rounded-xl px-2 transition duration-200 active:translate-y-px ${active ? "bg-paper text-ink shadow-[inset_0_0_0_1px_rgba(24,35,65,.05)]" : "text-ink-soft hover:bg-paper hover:text-ink"}`}>
-                  <SubjectIcon subject={course.subject} size={26} iconSize={14} variant="plain" className="transition duration-200 group-hover:text-ink" />
-                  <span className={`min-w-0 flex-1 truncate text-xs font-semibold ${active ? "text-ink" : "group-hover:text-ink"}`}>{course.title}</span>
-                  <span className="shrink-0 text-[0.62rem] tabular-nums text-ink-soft/80">{course.lessonCount}<span className="sr-only"> lessons, {course.subject}</span></span>
-                </Link></li>;
-              })}
+              {hiddenCount > 0 && (
+                <li>
+                  <Link
+                    href="/library"
+                    onClick={onNavigate}
+                    title={`View all ${courses.length} courses`}
+                    className={`${ROW} text-body-sm font-medium ${ROW_IDLE} ${collapsed ? "justify-center px-0" : "px-2"}`}
+                  >
+                    <span aria-hidden="true" className={`${SLOT} rounded-lg bg-ink/[0.05] text-label font-semibold tabular-nums`}>+{hiddenCount}</span>
+                    <span className={collapsed ? "sr-only" : "truncate"}>All {courses.length} courses</span>
+                  </Link>
+                </li>
+              )}
             </ol>
           </section>
         )}
       </nav>
 
       <div className="shrink-0 border-t border-ink/8 bg-surface/95 p-2">
-        {!collapsed && (
-          <div className="mb-1.5 flex items-center gap-2.5 rounded-xl border border-ink/8 bg-paper/55 px-2.5 py-2">
-            <MaiaCharacter state="attentive" animated className="h-9 w-8 shrink-0" title="Maia" />
-            <p className="min-w-0 text-[0.66rem] leading-4 text-ink-soft">
-              <span className="block text-xs font-semibold text-ink">Maia</span>
-              <span className="block truncate">Asks questions, never answers</span>
-            </p>
-          </div>
-        )}
+        <GuidanceStatus guidance={guidance ?? state.guidance} collapsed={collapsed} />
         <div className={collapsed ? "space-y-1" : "flex items-center gap-1"}>
-          <Link href="/settings" title={collapsed ? "Settings" : undefined} aria-current={settingsActive ? "page" : undefined} onClick={onNavigate} className={`relative flex min-h-11 items-center gap-2.5 rounded-xl text-sm font-medium transition hover:bg-paper hover:text-ink active:translate-y-px ${settingsActive ? "bg-ink/[0.035] text-ink" : "text-ink-soft"} ${collapsed ? "justify-center" : "flex-1 px-2"}`}>
-            {settingsActive && <span aria-hidden="true" className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-lapis" />}
-            <span aria-hidden="true" className={`grid h-7 w-7 shrink-0 place-items-center transition duration-200 ${settingsActive ? "text-lapis-dark" : ""}`}><HugeiconsIcon icon={Settings01Icon} size={17} strokeWidth={1.8} /></span>
-            {!collapsed && "Settings"}
+          <Link
+            href="/settings"
+            aria-current={settingsActive ? "page" : undefined}
+            onClick={onNavigate}
+            className={`${ROW} text-body-sm ${settingsActive ? `${ROW_ACTIVE} font-semibold` : `${ROW_IDLE} font-medium`} ${collapsed ? "justify-center px-0" : "flex-1 px-2"}`}
+          >
+            <span aria-hidden="true" className={SLOT}><HugeiconsIcon icon={Settings01Icon} size={18} strokeWidth={1.75} /></span>
+            <span className={collapsed ? "sr-only" : "truncate"}>Settings</span>
           </Link>
-          {onToggle && <button type="button" onClick={onToggle} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={`hidden min-h-11 items-center justify-center rounded-xl text-ink-soft transition hover:bg-paper hover:text-ink lg:flex ${collapsed ? "w-full" : "w-11 shrink-0"}`}><AppIcon name="collapse" className={`h-[1.15rem] w-[1.15rem] transition-transform ${collapsed ? "rotate-180" : ""}`} /></button>}
+          {onToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={`hidden min-h-11 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-paper hover:text-ink lg:flex ${collapsed ? "w-full" : "w-11 shrink-0"}`}
+            >
+              <AppIcon name="collapse" className={`h-[1.15rem] w-[1.15rem] transition-transform ${collapsed ? "rotate-180" : ""}`} />
+            </button>
+          )}
         </div>
       </div>
     </div>

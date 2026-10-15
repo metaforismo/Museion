@@ -1,8 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 
+import { Card, Pressable, SectionHeader } from "@/components/ui";
+import { STUDIO_ACCENT, STUDIO_DEEP } from "@/lib/design/zones";
 import { parseCreatorDraft, serializeCreatorDraft, type CreatorMaterialDraft } from "@/lib/client/creator-draft";
 import { fetchWithTimeout, RequestTimeoutError } from "@/lib/client/fetch-with-timeout";
 import type { SourceDocument } from "@/lib/source/contracts";
@@ -43,6 +47,70 @@ const COMPILE_STAGES = [
   { id: "repair", label: "Repair if needed", model: "Audit pass" },
 ] as const;
 
+/** Rail colour for pipeline ground not yet walked: ink/10, the hairline family. */
+const RAIL_QUIET = "color-mix(in srgb, var(--color-ink) 10%, transparent)";
+
+type SpineStep = { label: string; detail: string; state: "done" | "current" | "upcoming" };
+
+/**
+ * The studio's progress spine — the course trail's node grammar at pipeline
+ * scale, in the studio's peach accent. Three stages read left to right the
+ * way the compiler actually runs them: a done stage settles at 44px under a
+ * white check, the current stage stands at 56px inside the licensed breathing
+ * halo, and stages ahead stay quiet surface circles. The rail is ground-thick
+ * (8px) and fills only behind stages the runtime has satisfied. Compile is
+ * never drawn done here: a finished compile navigates to review before this
+ * spine could claim it.
+ */
+function StudioSpine({ steps }: { steps: SpineStep[] }) {
+  return (
+    <ol aria-label="Creator progress" role="list" className="m-0 mt-8 flex list-none items-start p-0">
+      {steps.map((step, index) => {
+        const done = step.state === "done";
+        const current = step.state === "current";
+        const walkedIn = index > 0 && steps[index - 1].state === "done";
+        return (
+          <li key={step.label} aria-current={current ? "step" : undefined} className="flex min-w-0 flex-1 flex-col items-center">
+            <div className="flex h-14 w-full items-center">
+              <span
+                aria-hidden="true"
+                className={`h-2 min-w-2 flex-1 rounded-full ${index === 0 ? "invisible" : ""}`.trimEnd()}
+                style={{ backgroundColor: walkedIn ? STUDIO_ACCENT : RAIL_QUIET }}
+              />
+              {done ? (
+                <span aria-hidden="true" className="mx-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: STUDIO_ACCENT }}>
+                  <HugeiconsIcon icon={Tick02Icon} size={22} strokeWidth={2.5} />
+                </span>
+              ) : current ? (
+                <span aria-hidden="true" className="relative mx-1 grid h-14 w-14 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: STUDIO_ACCENT }}>
+                  <span className="path-halo pointer-events-none absolute -inset-1.5 rounded-full border-[3px]" style={{ borderColor: STUDIO_ACCENT }} />
+                  <span className="font-mono text-lg font-bold">{index + 1}</span>
+                </span>
+              ) : (
+                <span aria-hidden="true" className="mx-1 grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-ink/15 bg-surface font-mono text-body-sm font-semibold text-ink-soft">
+                  {index + 1}
+                </span>
+              )}
+              <span
+                aria-hidden="true"
+                className={`h-2 min-w-2 flex-1 rounded-full ${index === steps.length - 1 ? "invisible" : ""}`.trimEnd()}
+                style={{ backgroundColor: done ? STUDIO_ACCENT : RAIL_QUIET }}
+              />
+            </div>
+            <span className="mt-2 block w-full px-1 text-center">
+              <span className={`block text-body-sm font-semibold ${step.state === "upcoming" ? "text-ink-soft" : "text-ink"}`}>
+                <span className="sr-only">{`Step ${index + 1} of ${steps.length}, ${done ? "complete" : current ? "current step" : "not started"}: `}</span>
+                {step.label}
+              </span>
+              <span className="mt-0.5 block text-label text-ink-soft">{step.detail}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function emptyTextMaterial(id = "draft_primary", title = "Primary material"): CreatorMaterialDraft {
   return { id, title, origin: "text", content: "", mediaType: "text/markdown", role: "primary-source", sourceUrl: "", sourceKind: "webpage" };
 }
@@ -58,10 +126,13 @@ function errorMessage(error: unknown): string {
 
 function compilerErrorMessage(code: string | null): string {
   const messages: Record<string, string> = {
+    COMPILER_PROVIDER_UNAVAILABLE: "The course-building provider could not complete this request. Try again when a compatible free model is available.",
+    COMPILER_PROVIDER_INVALID_RESPONSE: "The provider returned an incomplete or invalid course stage. Try again; no course was published.",
     COMPILATION_REJECTED: "The generated course did not pass publication validation.",
     COMPILER_JOB_ALREADY_RUNNING: "A compilation is already running in this browser session.",
     COMPILER_RUN_QUOTA_EXCEEDED: "The local run history is full. Wait for older runs to expire, then try again.",
-    LIVE_COMPILER_NOT_CONFIGURED: "Live compilation is unavailable here. Connect Codex in Settings or use the verified replay.",
+    LIVE_COMPILER_NOT_CONFIGURED: "Course building isn’t connected. Prepare your material here, choose a course-building connection in Settings, or explore Museion Originals.",
+    LIVE_AI_DISABLED: "Course building is disabled on this server. You can prepare your material and explore Museion Originals.",
   };
   return messages[code ?? ""] ?? "Compilation stopped safely before publication.";
 }
@@ -78,7 +149,7 @@ export default function SourceCreator() {
   const architectTrigger = useRef<HTMLButtonElement>(null);
   const normalizationSeq = useRef(0);
   const suppressNextDraftSave = useRef(false);
-  const [title, setTitle] = useState("Binary Search Notes");
+  const [title, setTitle] = useState("My study notes");
   const [materials, setMaterials] = useState<CreatorMaterialDraft[]>([emptyTextMaterial()]);
   const [sourcePack, setSourcePack] = useState<SourcePack | null>(null);
   const [document, setDocument] = useState<SourceDocument | null>(null);
@@ -101,7 +172,18 @@ export default function SourceCreator() {
   const [draftReady, setDraftReady] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"loading" | "empty" | "saved" | "saving" | "error">("loading");
   const [architectOpen, setArchitectOpen] = useState(false);
+  const [compilerStatus, setCompilerStatus] = useState<"checking" | "available" | "unavailable" | "unknown">("checking");
   const activeJob = Boolean(job && ["queued", "running"].includes(job.status));
+  const canCompileThisSource = document?.sha256 === GOLDEN_SOURCE_SHA256 || compilerStatus === "available";
+
+  useEffect(() => {
+    let active = true;
+    void fetchWithTimeout("/api/ai/status", { cache: "no-store" }).then(async (response) => {
+      const status = await response.json().catch(() => null) as { compilerAvailable?: boolean } | null;
+      if (active) setCompilerStatus(response.ok && typeof status?.compilerAvailable === "boolean" ? status.compilerAvailable ? "available" : "unavailable" : "unknown");
+    }).catch(() => { if (active) setCompilerStatus("unknown"); });
+    return () => { active = false; };
+  }, []);
 
   const restoreDraft = (): boolean => {
     try {
@@ -406,10 +488,23 @@ export default function SourceCreator() {
 
   const compile = async () => {
     if (compileLock.current || !document || !sourcePack || !sourceAuthorized || !warningsAccepted || (job && ["queued", "running"].includes(job.status))) return;
+    if (!canCompileThisSource) { setError(compilerErrorMessage("LIVE_COMPILER_NOT_CONFIGURED")); return; }
     compileLock.current = true;
     setCompiling(true);
     setError(null);
     try {
+      // Raw authorized files are retained in Sites R2 only for the bounded
+      // compilation window. Self-host builds without R2 keep their existing
+      // browser-normalized flow.
+      for (const file of materialFiles.current.values()) {
+        const form = new FormData();
+        form.set("file", file);
+        const upload = await fetchWithTimeout("/api/uploads", { method: "POST", body: form });
+        if (!upload.ok && upload.status !== 503) {
+          const uploadError = await upload.json().catch(() => null);
+          throw new Error(compilerErrorMessage(uploadError?.error ?? "UPLOAD_FAILED"));
+        }
+      }
       compileRequestId.current ??= crypto.randomUUID();
       const response = await fetchWithTimeout("/api/compiler/runs", {
         method: "POST",
@@ -430,6 +525,9 @@ export default function SourceCreator() {
       }
       setJob(payload as CompilerJob);
       sessionStorage.setItem(ACTIVE_RUN_KEY, (payload as CompilerJob).runId);
+      // Sites persists the queued run first. A separate bounded request acquires
+      // its D1 lease, so refreshes can reconnect without duplicating work.
+      void fetch(`/api/compiler/runs/${(payload as CompilerJob).runId}/advance`, { method: "POST" }).catch(() => undefined);
     } catch (cause) {
       setError(
         cause instanceof RequestTimeoutError
@@ -497,24 +595,26 @@ export default function SourceCreator() {
           : "Saved on this device";
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
       <div className="max-w-3xl">
-        <p className="text-sm font-medium text-lapis-dark">
-          Source review
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.03em]">
+        <p className="eyebrow">Source review</p>
+        <h1 className="mt-2 title-page">
           Start with a source you trust.
         </h1>
-        <p className="mt-4 max-w-[62ch] leading-7 text-ink-soft">
-          Museion first normalizes the source, fixes page boundaries and hashes
-          every page. Nothing is compiled until you can inspect that record.
+        <p className="mt-3 max-w-[62ch] text-body leading-6 text-ink-soft">
+          Bring your notes, a document or a topic you want to understand.
+          Review the material, choose your goal and build a course around it.
         </p>
-        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-lapis/15 bg-lapis-soft/55 px-4 py-3 text-sm">
-          <span className="font-semibold text-lapis-dark">Source → validated course</span>
-          <span className="text-ink-soft">When live AI is connected, Museion designs the course in staged passes and publishes only after deterministic checks pass.</span>
-          <Link href="/settings" className="font-semibold text-lapis-dark underline underline-offset-4">Check connection</Link>
-        </div>
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        {/* Check connection gates the whole live-compile path, so it takes a
+            real press rather than a text link — secondary, because the studio's
+            one full-fill press belongs to Compile. */}
+        <Card tint="var(--color-lapis-soft)" className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-lapis/15 px-4 py-3 text-body-sm">
+          <span className="font-semibold text-lapis-dark">{compilerStatus === "available" ? "Course building is connected" : compilerStatus === "checking" ? "Checking course building…" : compilerStatus === "unknown" ? "Course-building connection could not be checked" : "Course building isn’t connected yet"}</span>
+          <span className="text-ink-soft">{compilerStatus === "available" ? "Review your material, then build and check your course." : "You can still organise your material and choose a learning goal. Museion Originals are ready in your library."}</span>
+          <Pressable href="/settings" variant="secondary" size="compact">Course-building settings</Pressable>
+          {compilerStatus !== "available" && <Link href="/library" className="min-h-9 py-2 font-semibold text-lapis-dark underline underline-offset-4">Explore Originals</Link>}
+        </Card>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm">
           <span
             role="status"
             aria-live="polite"
@@ -522,49 +622,39 @@ export default function SourceCreator() {
           >
             <span
               aria-hidden="true"
-              className={`h-2 w-2 rounded-full ${draftStatus === "error" ? "bg-wrong" : draftStatus === "saving" || draftStatus === "loading" ? "bg-gold" : draftStatus === "empty" ? "bg-ink/25" : "bg-correct"}`}
+              className={`h-2 w-2 rounded-full ${draftStatus === "error" ? "bg-wrong" : draftStatus === "saving" || draftStatus === "loading" ? "bg-gold" : draftStatus === "empty" ? "bg-ink/25" : ""}`.trimEnd()}
+              // A saved draft is a satisfied precondition, not an engine
+              // verdict — it speaks in the studio accent, never correct-green.
+              style={draftStatus === "error" || draftStatus === "saving" || draftStatus === "loading" || draftStatus === "empty" ? undefined : { backgroundColor: STUDIO_ACCENT }}
             />
             {draftStatusLabel}
           </span>
           {clearConfirmation ? (
             <span className="inline-flex items-center gap-3">
-              <button type="button" disabled={activeJob} onClick={clearDraft} className="font-semibold text-wrong underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40">Confirm clear</button>
-              <button type="button" onClick={() => setClearConfirmation(false)} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink">Keep draft</button>
+              <button type="button" disabled={activeJob} onClick={clearDraft} className="min-h-9 font-semibold text-wrong underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40">Confirm clear</button>
+              <button type="button" onClick={() => setClearConfirmation(false)} className="min-h-9 font-medium text-ink-soft underline underline-offset-4 hover:text-ink">Keep draft</button>
             </span>
           ) : (
-            <button type="button" disabled={activeJob} onClick={() => setClearConfirmation(true)} className="font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
+            <button type="button" disabled={activeJob} onClick={() => setClearConfirmation(true)} className="min-h-9 font-medium text-ink-soft underline underline-offset-4 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">Clear draft</button>
           )}
-          <span className="text-xs text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
+          <span className="text-label text-ink-soft">Text and learning preferences save on this device. Uploaded file bytes do not.</span>
         </div>
       </div>
 
-      <ol aria-label="Creator progress" className="mt-8 grid gap-2 rounded-2xl border border-ink/10 bg-surface/80 p-2 sm:grid-cols-3">
-        {[
-          { label: "1. Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", ready: Boolean(document), current: !document },
-          { label: "2. Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", ready: Boolean(document && learningBriefReady), current: Boolean(document && !learningBriefReady) },
-          { label: "3. Compile", detail: activeJob ? "In progress" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : "Needs review", ready: activeJob || readyToCompile, current: Boolean(document && learningBriefReady && !sourceReady) },
-        ].map((step) => (
-          <li
-            key={step.label}
-            aria-current={step.current ? "step" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-4 py-3 ${step.ready ? "bg-correct-soft" : step.current ? "bg-lapis-soft/70 shadow-[inset_0_0_0_1.5px_var(--color-lapis)]" : "bg-paper"}`}
-          >
-            <span
-              aria-hidden="true"
-              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.7rem] font-bold ${step.ready ? "bg-correct text-white" : step.current ? "bg-lapis text-white" : "bg-ink/10 text-ink-soft"}`}
-            >
-              {step.ready ? "✓" : step.label.charAt(0)}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold">{step.label}</span>
-              <span className="mt-0.5 block truncate text-xs text-ink-soft">{step.detail}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
+      {/* Every spine state is read off real runtime state, never decoration.
+          The spine speaks in the studio accent rather than correct-green:
+          green stays reserved for outcomes the engine checked, and a complete
+          form is a satisfied precondition, not a verdict. */}
+      <StudioSpine
+        steps={[
+          { label: "Source", detail: document ? "Normalized" : busy ? "Normalizing" : "Add and inspect", state: document ? "done" : "current" },
+          { label: "Learning design", detail: !document ? "After source review" : learningBriefReady ? TEMPLATE_NAMES[templateId] : "Complete the brief", state: document && learningBriefReady ? "done" : document ? "current" : "upcoming" },
+          { label: "Compile", detail: activeJob ? "In progress" : !canCompileThisSource ? compilerStatus === "checking" ? "Checking connection" : "Not connected" : job?.status === "failed" ? "Ready to retry" : readyToCompile ? "Ready" : document && learningBriefReady ? "Needs review" : "After learning design", state: document && learningBriefReady ? "current" : "upcoming" },
+        ]}
+      />
 
       {error && (
-        <div role="alert" className="mt-7 flex items-start justify-between gap-4 rounded-xl border border-wrong/20 bg-wrong-soft px-4 py-3 text-sm text-wrong">
+        <div role="alert" className="mt-7 flex items-start justify-between gap-4 rounded-xl border border-wrong/20 bg-wrong-soft px-4 py-3 text-body-sm text-wrong">
           <p>{error}</p>
           <button type="button" onClick={() => setError(null)} className="shrink-0 font-semibold underline underline-offset-4">
             Dismiss
@@ -572,15 +662,16 @@ export default function SourceCreator() {
         </div>
       )}
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Suspense fallback={<section className="premium-surface rounded-[1.6rem] p-7 text-sm text-ink-soft" role="status">Loading Source Pack editor…</section>}>
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Suspense fallback={<section className="surface-card p-6 text-body-sm text-ink-soft" role="status">Loading Source Pack editor…</section>}>
           <SourcePackEditor
             title={title}
             materials={materials}
             rightsBasis={rightsBasis}
             sourceAuthorized={sourceAuthorized}
             busy={busy}
-            disabled={activeJob}
+            disabled={!draftReady || activeJob}
+            normalized={Boolean(document)}
             canNormalize={canNormalize}
             onTitle={(value) => { invalidateNormalizedSource(); setTitle(value); }}
             onUpdate={updateMaterial}
@@ -594,64 +685,72 @@ export default function SourceCreator() {
           />
         </Suspense>
 
-        <section
+        <Card
+          as="section"
           aria-live="polite"
           aria-busy={busy}
-          className="premium-surface min-w-0 rounded-2xl border border-white/80 p-6 sm:p-7"
+          aria-labelledby="normalized-record-title"
+          className="min-w-0 p-6 sm:p-7"
         >
-          <h2 className="font-display text-xl font-semibold">Normalized record</h2>
+          <SectionHeader
+            id="normalized-record-title"
+            title="Your material, ready to use"
+            meta={document ? `${document.pages.length} ${document.pages.length === 1 ? "page" : "pages"}` : undefined}
+          />
           {!document || !page ? (
-            <div className="mt-5 grid place-items-center gap-3 rounded-xl bg-paper px-5 py-10 text-center">
+            <div className="grid place-items-center gap-3 rounded-xl bg-paper px-5 py-10 text-center">
               <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-2xl bg-lapis-soft text-lapis">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" /><path strokeLinecap="round" d="M14 3v5h5M9.5 13h5M9.5 16.5h5" /></svg>
               </span>
-              <p className="max-w-[32ch] text-sm leading-6 text-ink-soft">
+              <p className="max-w-[32ch] text-body-sm leading-6 text-ink-soft">
                 Add a source to inspect its canonical pages, warnings and hashes.
               </p>
             </div>
           ) : (
             <>
-              <dl className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+              <dl className="grid grid-cols-2 gap-3 text-body-sm sm:grid-cols-3">
                 <div className="rounded-lg bg-paper p-3">
-                  <dt className="text-ink-soft">Pages</dt>
-                  <dd className="mt-1 font-semibold">{document.pages.length}</dd>
+                  <dt className="text-label text-ink-soft">Pages</dt>
+                  <dd className="mt-1 font-semibold tabular-nums">{document.pages.length}</dd>
                 </div>
                 <div className="col-span-2 rounded-lg bg-paper p-3 sm:col-span-1">
-                  <dt className="text-ink-soft">Source type</dt>
+                  <dt className="text-label text-ink-soft">Source type</dt>
                   <dd className="mt-1 truncate font-semibold" title={document.originalFileName ?? document.mediaType}>
                     {document.originalFileName ?? (document.mediaType === "text/markdown" ? "Pasted Markdown" : "Pasted text")}
                   </dd>
                 </div>
                 <div className="rounded-lg bg-paper p-3">
-                  <dt className="text-ink-soft">Characters</dt>
-                  <dd className="mt-1 font-semibold">{document.charCount.toLocaleString()}</dd>
+                  <dt className="text-label text-ink-soft">Characters</dt>
+                  <dd className="mt-1 font-semibold tabular-nums">{document.charCount.toLocaleString()}</dd>
                 </div>
               </dl>
-              {sourcePack && <div className="mt-4 rounded-xl border border-lapis/15 bg-lapis-soft/45 p-4 text-sm">
-                <div className="flex items-center justify-between gap-3"><p className="font-semibold">{sourcePack.materials.length} normalized {sourcePack.materials.length === 1 ? "material" : "materials"}</p><span className="font-mono text-[0.65rem] text-ink-soft">pack {sourcePack.sha256.slice(0, 10)}…</span></div>
-                <ul className="mt-3 space-y-2">{sourcePack.materials.map((material, index) => <li key={material.id} className="rounded-lg bg-surface/80 px-3 py-2"><div className="flex items-center justify-between gap-3"><span className="min-w-0 truncate font-medium">{index + 1}. {material.title}</span><span className="shrink-0 text-xs capitalize text-ink-soft">{material.role.replaceAll("-", " ")}</span></div>{material.document.sourceReference ? <a href={material.document.sourceReference.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs font-medium text-lapis-dark underline underline-offset-4">{material.document.sourceReference.kind.replaceAll("_", " ")} reference</a> : <span className="mt-1 block text-xs text-ink-soft">No external reference</span>}</li>)}</ul>
-                <p className="mt-3 text-xs leading-5 text-ink-soft">Every material hash and reference is bound to this pack. Course claims still derive only from the normalized evidence pages shown below.</p>
+              {sourcePack && <div className="mt-4 rounded-xl border border-lapis/15 bg-lapis-soft/45 p-4 text-body-sm">
+                <div className="flex items-center justify-between gap-3"><p className="font-semibold">{sourcePack.materials.length} normalized {sourcePack.materials.length === 1 ? "material" : "materials"}</p><span className="font-mono text-micro text-ink-soft">pack {sourcePack.sha256.slice(0, 10)}…</span></div>
+                <ul className="mt-3 space-y-2">{sourcePack.materials.map((material, index) => <li key={material.id} className="rounded-lg bg-surface/80 px-3 py-2"><div className="flex items-center justify-between gap-3"><span className="min-w-0 truncate font-medium">{index + 1}. {material.title}</span><span className="shrink-0 text-label capitalize text-ink-soft">{material.role.replaceAll("-", " ")}</span></div>{material.document.sourceReference ? <a href={material.document.sourceReference.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-label font-medium text-lapis-dark underline underline-offset-4">{material.document.sourceReference.kind.replaceAll("_", " ")} reference</a> : <span className="mt-1 block text-label text-ink-soft">No external reference</span>}</li>)}</ul>
+                <p className="mt-3 text-label leading-5 text-ink-soft">Every material hash and reference is bound to this pack. Course claims still derive only from the normalized evidence pages shown below.</p>
               </div>}
-              <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-3 text-xs">
+              <div className="mt-4 min-w-0 rounded-lg border border-ink/10 px-3 py-3 text-label">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-ink-soft">Document SHA-256</p>
                   <button type="button" onClick={() => void copyHash()} className="font-semibold text-lapis-dark underline underline-offset-4">Copy hash</button>
                 </div>
-                <code className="mt-2 block overflow-x-auto font-mono">{document.sha256}</code>
+                <code tabIndex={0} className="mt-2 block overflow-x-auto font-mono focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis">{document.sha256}</code>
                 {copyNotice && <p role="status" aria-live="polite" className="mt-2 text-ink-soft">{copyNotice}</p>}
               </div>
 
+              {/* Gold is attention: these warnings are unresolved until the
+                  creator acknowledges them, and acknowledging them is a gate. */}
               {document.warnings.length > 0 && (
                 <div className="mt-4 rounded-lg bg-gold-soft px-4 py-3">
-                  <h3 className="text-sm font-semibold">Review warnings</h3>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                  <h3 className="text-body-sm font-semibold">Review warnings</h3>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-body-sm">
                     {document.warnings.map((warning, index) => (
                       <li key={`${warning.code}-${warning.pageNumber}-${index}`}>
                         Page {warning.pageNumber}: {warning.message}
                       </li>
                     ))}
                   </ul>
-                  <label className="mt-4 flex items-start gap-3 border-t border-gold/25 pt-3 text-sm font-medium">
+                  <label className="mt-4 flex items-start gap-3 border-t border-gold/25 pt-3 text-body-sm font-medium">
                     <input type="checkbox" checked={warningsAccepted} onChange={(event) => setWarningsAccepted(event.target.checked)} className="mt-1" />
                     I reviewed these warnings and want Museion to treat the source as data, not instructions.
                   </label>
@@ -665,7 +764,7 @@ export default function SourceCreator() {
                     type="button"
                     aria-pressed={sourcePage.pageNumber === selectedPage}
                     onClick={() => setSelectedPage(sourcePage.pageNumber)}
-                    className={`min-h-10 min-w-10 rounded-lg border px-3 py-2 text-sm font-medium ${
+                    className={`min-h-10 min-w-10 rounded-lg border px-3 py-2 text-body-sm font-medium tabular-nums ${
                       sourcePage.pageNumber === selectedPage
                         ? "border-lapis bg-lapis text-white"
                         : "border-ink/15 hover:border-lapis"
@@ -676,34 +775,43 @@ export default function SourceCreator() {
                 ))}
               </div>
               <div className="mt-4 rounded-lg border border-ink/10 bg-paper p-4">
-                <div className="flex flex-wrap justify-between gap-2 text-xs text-ink-soft">
+                <div className="flex flex-wrap justify-between gap-2 text-label text-ink-soft">
                   <span>Page {page.pageNumber}</span>
                   <span>{page.charCount.toLocaleString()} characters</span>
                 </div>
-                <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
+                <pre tabIndex={0} role="region" aria-label="Source text" className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words font-sans text-body-sm leading-relaxed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis">
                   {page.text}
                 </pre>
               </div>
-              <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-sm text-ink-soft">Loading learning design…</div>}>
+              <Suspense fallback={<div role="status" className="mt-5 rounded-xl bg-paper p-5 text-body-sm text-ink-soft">Loading learning design…</div>}>
                 <SourceLearningDesign templateId={templateId} level={level} language={language} targetMinutes={targetMinutes} learnerGoal={learnerGoal} onTemplate={setTemplateId} onLevel={setLevel} onLanguage={setLanguage} onMinutes={setTargetMinutes} onGoal={setLearnerGoal} />
               </Suspense>
-              {document.sha256 === GOLDEN_SOURCE_SHA256 && <Link href="/create/review" className="mt-5 block w-full rounded-lg border border-lapis px-5 py-2.5 text-center font-medium text-lapis">Open checked golden review</Link>}
-              {activeJob && job && <div className="mt-5 rounded-2xl bg-ink p-5 text-white" aria-live="polite">
-                <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">3. Compile</p><p className="mt-1 font-semibold">Building a grounded course</p><p className="mt-1 text-xs text-white/55">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-sm">{job.completedStages}/{job.totalStages}</span></div>
+              {activeJob && job && <Card tone="tinted" tint="var(--color-ink)" className="mt-5 p-5 text-white" aria-live="polite">
+                <div className="flex items-center justify-between gap-3"><div><p className="text-label font-semibold uppercase tracking-[0.08em] text-white/60">3. Compile</p><p className="mt-1 text-body font-semibold">Building a grounded course</p><p className="mt-1 text-label text-white/60">Elapsed {elapsedLabel(job.createdAt)} · safe to refresh</p></div><span className="font-mono text-body-sm tabular-nums">{job.completedStages}/{job.totalStages}</span></div>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${Math.max(7, (job.completedStages / job.totalStages) * 100)}%` }} /></div>
-                <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/40"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-xs">{stage.model}</span></li>; })}</ol>
-                <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
-              </div>}
-              <button type="button" disabled={compiling || activeJob || !readyToCompile} onClick={() => void compile()} className="sticky bottom-20 mt-3 w-full rounded-lg bg-ink px-5 py-3 font-medium text-white shadow-[var(--shadow-2)] transition hover:bg-lapis disabled:cursor-not-allowed disabled:opacity-45 lg:static lg:shadow-none">
-                {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create verified replay run" : job?.retryable ? "Retry compilation" : "Compile this source"}
-              </button>
-              {!sourceAuthorized && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Confirm source authorization to continue.</p>}
-              {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-xs font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
-              {sourceReady && !learningBriefReady && <p className="mt-2 text-center text-xs font-medium text-wrong">Complete the language, duration and learner goal before compiling.</p>}
-              <p className="mt-1 text-center text-xs text-ink-soft">Golden hashes use deterministic replay. Other sources require the configured live compiler; failures never publish a partial artifact.</p>
+                <ol className="mt-4 space-y-2">{COMPILE_STAGES.map((stage, index) => { const active = job.stage === stage.id || (job.stage === "critic_after_repair" && stage.id === "critic"); const done = index < job.completedStages; return <li key={stage.id} className={`flex items-center justify-between gap-3 text-body-sm ${active ? "text-white" : done ? "text-white/75" : "text-white/60"}`}><span>{done ? "✓" : active ? "→" : "·"} {stage.label}</span><span className="font-mono text-label">{stage.model}</span></li>; })}</ol>
+                <button type="button" disabled={cancelBusy} onClick={() => void cancelCompilation()} className="mt-4 text-body-sm font-semibold text-white/75 underline hover:text-white disabled:opacity-45">{cancelBusy ? "Cancelling…" : "Cancel compilation"}</button>
+              </Card>}
+              {/* The studio's loudest moment: the page's one full-fill press,
+                  in the studio accent. While the compiler is deciding, the key
+                  stays down — .pressable-held — instead of pretending the
+                  press already worked. Edge, not blur: this is a key. */}
+              <Pressable
+                accent={STUDIO_ACCENT}
+                edge={STUDIO_DEEP}
+                disabled={compiling || activeJob || !readyToCompile || !canCompileThisSource}
+                onClick={() => void compile()}
+                className={`sticky bottom-20 mt-3 min-h-12 w-full lg:static ${compiling || activeJob ? "pressable-held" : ""}`.trimEnd()}
+              >
+                {activeJob ? "Compilation running…" : compiling ? "Starting compilation…" : document.sha256 === GOLDEN_SOURCE_SHA256 ? "Create example course" : !canCompileThisSource ? "Course building not connected" : job?.retryable ? "Retry compilation" : "Create my course"}
+              </Pressable>
+              {!sourceAuthorized && <p className="mt-2 text-center text-label font-medium text-ink-soft">Confirm source authorization to continue.</p>}
+              {sourceAuthorized && !warningsAccepted && <p className="mt-2 text-center text-label font-medium text-ink-soft">Review and acknowledge the source warnings to continue.</p>}
+              {sourceReady && !learningBriefReady && <p className="mt-2 text-center text-label font-medium text-wrong">Complete the language, duration and learner goal before compiling.</p>}
+              <p className="mt-1 text-center text-label text-ink-soft">{document.sha256 === GOLDEN_SOURCE_SHA256 ? "The included example can be built without a model connection." : !canCompileThisSource ? "Your material stays ready here. Connect course building in Settings when you want to continue." : "Only checked courses are saved."}</p>
             </>
           )}
-        </section>
+        </Card>
       </div>
       <button
         ref={architectTrigger}
@@ -713,10 +821,10 @@ export default function SourceCreator() {
         onClick={() => setArchitectOpen(true)}
         className="fixed bottom-20 right-4 z-40 flex items-center gap-3 rounded-2xl border border-lapis/15 bg-surface px-3 py-2.5 shadow-[var(--shadow-2)] transition hover:-translate-y-0.5 hover:border-lapis/35 sm:bottom-5 sm:right-6"
       >
-        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft font-display text-sm font-semibold tracking-[-0.04em] text-lapis-dark">CA</span>
-        <span className="text-left"><span className="block font-display font-semibold">Course Architect</span><span className="block text-xs text-ink-soft">Build from my material</span></span>
+        <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-lapis-soft text-body-sm font-semibold tracking-title text-lapis-dark">CA</span>
+        <span className="text-left"><span className="block text-body-sm font-semibold">Course Architect</span><span className="block text-label text-ink-soft">Build from my material</span></span>
       </button>
-      {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 shadow-xl">Opening Course Architect…</div>}><CourseArchitectPanel
+      {architectOpen && <Suspense fallback={<div role="status" className="fixed bottom-3 right-3 z-50 rounded-xl bg-surface px-5 py-4 text-body-sm shadow-[var(--shadow-3)]">Opening Course Architect…</div>}><CourseArchitectPanel
         document={document}
         textLength={materials.reduce((total, material) => total + material.content.length, 0)}
         materialCount={materials.length}

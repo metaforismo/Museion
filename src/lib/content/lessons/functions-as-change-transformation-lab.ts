@@ -32,14 +32,14 @@ const lesson = {
       misconceptions: [
         {
           id: "h-sign-read-literally",
-          triggerAnswers: ["1", "3 left and 2 up"],
+          triggerAnswers: ["3 left and 2 up"],
           description: "The learner read the minus sign inside the parentheses as a shift to the left.",
           remediationFocus: "Inside the parentheses the transformation works on the input, so its effect is reversed: x − 3 shifts right.",
           highlight: { kind: "term", text: "(x − 3)²" },
         },
         {
           id: "h-k-swapped",
-          triggerAnswers: ["2", "2 right and 3 up"],
+          triggerAnswers: ["2 right and 3 up"],
           description: "The learner swapped the roles of the inside and outside numbers.",
           remediationFocus: "The number inside the parentheses moves the graph horizontally; the number added outside moves it vertically.",
           highlight: { kind: "term", text: "+ 2" },

@@ -6,9 +6,13 @@ import { BoundedTtlCache } from "@/lib/server/bounded-cache";
 import { log } from "@/lib/server/log";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import { getOwnedSession } from "@/lib/server/session-access";
+import { currentActor } from "@/lib/server/actor";
+import { consumeUsage } from "@/lib/server/usage";
+import { maiaAvailable } from "@/lib/maia/tutor";
+import { runtimeValue } from "@/lib/sites/runtime";
+import { persistSession } from "@/lib/server/session-repository";
+import { RuntimeActionSchema } from "@/lib/runtime/contracts";
 
-/** Max learner turns per session — past this, more talk is avoidance. */
-const MAX_LEARNER_TURNS = 30;
 /** Short-window limit: bounds bursts and API spend per session. */
 const BURST_LIMIT = 6;
 const BURST_WINDOW_MS = 60_000;
@@ -29,10 +33,15 @@ const ActivitySchema = z.discriminatedUnion("kind", [
     kind: z.literal("recursion"),
     slots: z.record(z.string().min(1).max(60), z.string().min(1).max(60)),
   }).strict(),
+  z.object({
+    kind: z.literal("runtime"),
+    blockId: z.string().min(1).max(160),
+    action: RuntimeActionSchema,
+  }).strict(),
 ]);
 
 const MaiaCommandSchema = z.object({
-  message: z.string().trim().min(1).max(2_000),
+  message: z.string().trim().min(1),
   expectedStepId: z.string().min(1).max(200),
   expectedVersion: z.number().int().nonnegative(),
   idempotencyKey: z.string().uuid(),
@@ -75,6 +84,10 @@ export async function POST(
     return NextResponse.json({ error: error instanceof Error ? error.message : "Session conflict" }, { status: 409 });
   }
 
+  if (session.activeStep.assistancePolicy === "none") {
+    return NextResponse.json({ error: "Assistance is unavailable during the independent challenge" }, { status: 409 });
+  }
+
   const burst = checkRateLimit(`maia:${sessionId}`, BURST_LIMIT, BURST_WINDOW_MS);
   if (!burst.allowed) {
     log.warn("maia_rate_limited", {
@@ -93,22 +106,17 @@ export async function POST(
   }
 
   const learnerTurns = session.chatHistory.filter((m) => m.role === "user").length;
-  if (learnerTurns >= MAX_LEARNER_TURNS) {
-    return NextResponse.json(
-      {
-        error:
-          "We've talked a lot this session — time to trust your own reasoning. Try the step with what you've got.",
-      },
-      { status: 429 },
-    );
-  }
-
-  log.info("maia_turn_started", { sessionId, learnerTurns });
-  const pending = maiaRespond(session, body.data.message, undefined, request.signal, body.data.activity ?? null)
+  const actor = await currentActor();
+  const liveAllowed = actor.kind === "account" && runtimeValue("MUSEION_LIVE_AI_ENABLED") !== "0" && maiaAvailable() && await consumeUsage(actor.ownerId, "maia");
+  const deterministicProvider = { id: "deterministic" as const, available: () => false, generate: async () => { throw new Error("Deterministic provider does not call a model"); } };
+  log.info("maia_turn_started", { sessionId, learnerTurns, liveAllowed });
+  const pending = maiaRespond(session, body.data.message, liveAllowed ? undefined : deterministicProvider, request.signal, body.data.activity ?? null)
     .then((delivery) => ({ ...delivery, sessionVersion: session.version }));
   maiaCommands.set(commandKey, pending);
   try {
-    return NextResponse.json(await pending, { headers: { "Cache-Control": "no-store" } });
+    const result = await pending;
+    await persistSession(session, actor.ownerId, body.data.expectedVersion);
+    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     maiaCommands.delete(commandKey);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Maia request failed" }, { status: 409 });

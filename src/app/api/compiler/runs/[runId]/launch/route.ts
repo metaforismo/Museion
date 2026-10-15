@@ -1,28 +1,26 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { buildSessionState } from "@/lib/api-types";
+import { toPublicLesson } from "@/lib/content";
+import { generatedLessonId, ownedGeneratedLesson } from "@/lib/compiler/lesson-adapter";
+import { LearnerSession } from "@/lib/engine/session";
+import { currentActor } from "@/lib/server/actor";
+import { learnerProfile, persistSession, courseEvidenceSessionFor } from "@/lib/server/session-repository";
 
-import { JudgeCreateRequestSchema } from "@/lib/judge";
-import { createJudgeSession } from "@/lib/judge";
-import { getPrivateCompilerRun } from "@/lib/compiler";
-import { readLearnerId } from "@/lib/server/learner";
+const LaunchRequest = z.object({ clientRunId: z.string().uuid() }).strict();
 
-const SUPPORTED = new Set(["explanation", "prediction-choice", "sequence-builder", "range-explorer", "state-trace"]);
-
+/** Retained launch endpoint shares the standard lesson session as well. */
 export async function POST(request: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
-  const parsed = JudgeCreateRequestSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "INVALID_LAUNCH_REQUEST" }, { status: 400 });
-  try {
-    const record = await getPrivateCompilerRun((await params).runId, ownerId);
-    const lessonBlockIds = record.result.artifact.lessons.flatMap((lesson) => lesson.blockIds);
-    if (record.result.artifact.lessons.length !== 1 || lessonBlockIds.some((id) => !SUPPORTED.has(record.result.artifact.blocks[id]?.kind))) {
-      return NextResponse.json({ error: "GENERATED_ROUTE_UNSUPPORTED_BLOCKS" }, { status: 409 });
-    }
-    return NextResponse.json(await createJudgeSession(ownerId, parsed.data.clientRunId, record.result.artifact));
-  } catch (error) {
-    if (error instanceof Error && error.message === "JUDGE_SESSION_QUOTA_EXCEEDED") {
-      return NextResponse.json({ error: error.message }, { status: 429 });
-    }
-    return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
+  const actor = await currentActor();
+  if (actor.kind !== "account") return NextResponse.json({ error: "SIGN_IN_REQUIRED" }, { status: 401 });
+  if (!LaunchRequest.safeParse(await request.json().catch(() => null)).success) return NextResponse.json({ error: "INVALID_LAUNCH_REQUEST" }, { status: 400 });
+  const lesson = await ownedGeneratedLesson(generatedLessonId((await params).runId), actor.ownerId).catch(() => undefined);
+  if (!lesson) return NextResponse.json({ error: "COMPILER_RUN_NOT_FOUND" }, { status: 404 });
+  let session = await courseEvidenceSessionFor(actor.ownerId, lesson.id, "lesson");
+  if (!session) {
+    const profile = await learnerProfile(actor.ownerId);
+    session = new LearnerSession(lesson, "lesson", profile!.mastery);
+    await persistSession(session, actor.ownerId);
   }
+  return NextResponse.json(buildSessionState(session, toPublicLesson(session.lesson)), { headers: { "Cache-Control": "no-store" } });
 }

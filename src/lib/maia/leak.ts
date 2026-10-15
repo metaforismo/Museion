@@ -6,8 +6,9 @@
  * assertion of the red-team suite. Detection is intentionally
  * conservative-but-honest: for numeric steps any numerically equivalent
  * token counts as a leak (including fraction forms), so steps whose
- * answer also appears in the prompt can produce false positives — these
- * are logged as `possible`, never hard-blocked.
+ * answer also appears in the prompt can produce false positives. The delivery
+ * gate rejects suspected leaks and tries one repair before authored guidance.
+ * This heuristic is not a proof that all obfuscated disclosures are caught.
  */
 
 import type { Step } from "../content/types";
@@ -107,6 +108,21 @@ function revealsSpelledNumber(value: number, text: string): boolean {
 /** True when `text` contains the step's final answer in some form. */
 export function revealsAnswer(step: Step, text: string): boolean {
   const spec = step.answer;
+  const runtime = step.runtimeBlock;
+  if (runtime) {
+    if (runtime.kind === "sequence-builder") {
+      const labels = runtime.correctOrder.map((id) => runtime.items.find((item) => item.id === id)?.label ?? id);
+      const normalized = normalize(text);
+      if (normalized.includes(normalize(labels.join(" "))) || normalized.includes(normalize(runtime.correctOrder.join(",")))) return true;
+      // Naming an item as first/next supplies the move instead of coaching it.
+      if (labels.some((label) => new RegExp(`(?:first|next|start with|then|prima|poi)\\s+${escapePattern(label)}`, "iu").test(text))) return true;
+    } else if (runtime.kind === "range-explorer" || runtime.kind === "state-trace") {
+      // Any proposed numeric boundary/midpoint is a private move. General
+      // comparison and attention cues remain available without assigning it.
+      if (/\b(?:low|high|mid|midpoint|boundary|index)\s*(?:=|is|to|should be|:)?\s*-?\d+/i.test(text)) return true;
+    }
+    return false;
+  }
 
   switch (spec.kind) {
     case "numeric": {

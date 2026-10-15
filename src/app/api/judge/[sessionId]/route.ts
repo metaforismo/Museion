@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { deleteJudgeSession, getJudgeSession } from "@/lib/judge";
-import { readLearnerId } from "@/lib/server/learner";
+import { currentActor } from "@/lib/server/actor";
 
 function unavailable() {
   return NextResponse.json({ error: "Unknown judge session" }, { status: 404 });
@@ -11,8 +11,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) return unavailable();
+  const ownerId = (await currentActor()).ownerId;
   try {
     const { sessionId } = await params;
     const response = NextResponse.json(await getJudgeSession(sessionId, ownerId));
@@ -27,8 +26,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
-  const ownerId = await readLearnerId();
-  if (!ownerId) return unavailable();
+  const ownerId = (await currentActor()).ownerId;
   try {
     const { sessionId } = await params;
     await deleteJudgeSession(sessionId, ownerId);

@@ -27,7 +27,7 @@ const lesson = {
       misconceptions: [
         {
           id: "antibiotic-induces-resistance",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The antibiotic caused those particular bacteria to mutate so that they could survive it"],
           description:
             "The learner treated the antibiotic as causing or directing the resistance mutation, rather than merely selecting among mutations that already existed by chance.",
           remediationFocus:
@@ -35,7 +35,7 @@ const lesson = {
         },
         {
           id: "bacteria-learn-resistance",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The bacteria learned to resist the antibiotic through repeated exposure to small amounts of it"],
           description:
             "The learner described resistance as something bacteria learn through exposure, treating it like a behavior an individual organism acquires, rather than a pre-existing heritable trait that is selected for.",
           remediationFocus:
@@ -95,14 +95,14 @@ const lesson = {
       misconceptions: [
         {
           id: "unfalsifiable-non-differentiating-test",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Confirm that the surviving bacteria are able to grow in the presence of the antibiotic"],
           description: "The learner chose an observation that is consistent with both competing explanations, so it could not falsify either one.",
           remediationFocus:
             "A useful test must produce different predicted outcomes under each explanation; ask what each hypothesis predicts differently before selecting an observation.",
         },
         {
           id: "bacteria-learn-resistance",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Show that resistance only appeared after the bacteria were exposed to the antibiotic, and count that as proof the bacteria learned it"],
           description:
             "The learner treated resistance appearing after exposure as proof that bacteria learned or acquired it, rather than as evidence consistent with survival of pre-existing resistant variants.",
           remediationFocus:
@@ -136,13 +136,13 @@ const lesson = {
       misconceptions: [
         {
           id: "lamarckian-use-and-pass-on",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Finches' beaks growing tougher from cracking hard seeds during the drought, then passing that toughness to their chicks"],
           description: "The learner had finches' beaks toughening through use during the drought and passing that toughening on to chicks.",
           remediationFocus: "Ask whether this beak-depth difference existed before or only after the drought began.",
         },
         {
           id: "directed-need-teleology",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The population needing tougher beaks to survive the drought"],
           description: "The learner treated the population as generating tougher beaks because it needed them, rather than selection acting on pre-existing variation.",
           remediationFocus: "Selection can only act on variation a population already has.",
         },

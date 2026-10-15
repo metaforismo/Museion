@@ -55,13 +55,13 @@ const lesson = {
       misconceptions: [
         {
           id: "extends-to-all-learners",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Exactly 60% of every learner everywhere uses worksheets."],
           description: "The learner expanded a defined sample estimate to every learner in every setting.",
           remediationFocus: "Name the sampled group and avoid changing it into a universal population without supporting design.",
         },
         {
           id: "guarantees-individual-future-outcome",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Every future workshop attendee will use the worksheet."],
           description: "The learner treated a group proportion as a prediction for every future person.",
           remediationFocus: "A percentage summarizes a group; it does not determine an individual outcome.",
         },
@@ -91,13 +91,13 @@ const lesson = {
       misconceptions: [
         {
           id: "infers-causation-from-volunteer-card",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The voluntary responses prove the worksheet caused attendance."],
           description: "The learner claimed a causal effect that the voluntary feedback design did not test.",
           remediationFocus: "Separate a response proportion from a controlled comparison of causes.",
         },
         {
           id: "discards-observation-entirely",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Because volunteers responded, no count from the card can be reported."],
           description: "The learner treated a representativeness limit as if it erased the observed volunteer responses.",
           remediationFocus: "Report the observed group accurately while limiting the conclusion to what that group can support.",
         },
@@ -157,13 +157,13 @@ const lesson = {
       misconceptions: [
         {
           id: "universalizes-contextual-sample",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Every garden plot in every city uses mulch 60% of the time."],
           description: "The learner changed a local sample estimate into a universal claim.",
           remediationFocus: "Keep the setting, sampled units, and observation period in the conclusion.",
         },
         {
           id: "predicts-every-individual",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Each individual plot will use mulch next year."],
           description: "The learner treated a group estimate as a certainty for one future unit.",
           remediationFocus: "Percentages summarize groups and uncertainty; they do not guarantee individual outcomes.",
         },
@@ -193,13 +193,13 @@ const lesson = {
       misconceptions: [
         {
           id: "treats-optional-poll-as-census",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Exactly 60% of all park users prefer the schedule."],
           description: "The learner treated an optional respondent group as if every park user had been measured.",
           remediationFocus: "Name who responded and preserve the gap between respondents and the wider group.",
         },
         {
           id: "infers-happiness-causation",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The new schedule caused every respondent to be happier."],
           description: "The learner claimed an unmeasured causal effect from a preference poll.",
           remediationFocus: "State the question actually asked; do not substitute a different outcome or cause claim.",
         },

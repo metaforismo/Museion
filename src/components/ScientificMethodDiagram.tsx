@@ -11,10 +11,10 @@ export default function ScientificMethodDiagram() {
     <figure className="relative overflow-hidden rounded-[1.75rem] border border-ink/10 bg-surface p-6 shadow-[0_24px_70px_rgba(19,28,49,0.08)] sm:p-8">
       <div className="flex items-center justify-between gap-4 border-b border-ink/10 pb-5">
         <div>
-          <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-lapis-dark">Learning protocol</p>
+          <p className="font-mono text-micro font-semibold uppercase tracking-[0.1em] text-lapis-dark">Learning protocol</p>
           <figcaption className="mt-2 text-lg font-semibold">One cycle. Five observable moves.</figcaption>
         </div>
-        <span className="method-live-indicator inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper px-3 py-1.5 text-xs font-medium text-ink-soft">
+        <span className="method-live-indicator inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper px-3 py-1.5 text-label font-medium text-ink-soft">
           <span aria-hidden="true" className="h-2 w-2 rounded-full bg-correct" />
           Active trace
         </span>
@@ -38,16 +38,16 @@ export default function ScientificMethodDiagram() {
               style={{ animationDelay: `${index * 90}ms` }}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-[0.65rem] font-semibold text-lapis-dark">{number}</span>
+                <span className="font-mono text-micro font-semibold text-lapis-dark">{number}</span>
                 <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${index === 4 ? "bg-gold" : "bg-lapis"}`} />
               </div>
-              <h3 className="mt-5 text-sm font-semibold">{title}</h3>
-              <p className="mt-1.5 text-xs leading-5 text-ink-soft">{body}</p>
+              <h3 className="mt-5 text-body-sm font-semibold">{title}</h3>
+              <p className="mt-1.5 text-label leading-5 text-ink-soft">{body}</p>
             </li>
           ))}
         </ol>
       </div>
-      <p className="mt-7 border-l-2 border-gold pl-4 text-sm leading-6 text-ink-soft">
+      <p className="mt-7 border-l-2 border-gold pl-4 text-body-sm leading-6 text-ink-soft">
         The loop can produce an observation. It cannot, by itself, prove durable mastery.
       </p>
     </figure>

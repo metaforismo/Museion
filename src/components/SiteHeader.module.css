@@ -1,0 +1,30 @@
+.header { position: sticky; top: 0; z-index: 40; padding: 8px 12px; background: #f7fbffe6; backdrop-filter: blur(16px); }
+.inner { max-width: 1152px; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: auto; padding: 8px 22px; border-radius: 999px; border: 1px solid #1018270d; background: #ffffffed; box-shadow: 0 3px 10px #26375708, 0 1px 2px #26375708; }
+.brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; font-size: 1.05rem; font-weight: 650; letter-spacing: -.03em; }
+.navigation { display: flex; min-width: 0; align-items: center; gap: 6px; }
+.navLink { display: flex; min-height: 44px; align-items: center; padding: 8px 12px; color: var(--color-ink-soft); font-size: .875rem; font-weight: 550; border-radius: 999px; }
+.start { display: flex; min-height: 44px; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 999px; background: var(--color-ink); color: #fff; padding: 10px 20px; font-size: .875rem; font-weight: 600; transition: transform 160ms cubic-bezier(.22,1,.36,1), background-color 160ms; }
+.start:active { transform: scale(.97); }
+.menu { position: relative; display: none; }
+.menu summary { display: grid; place-items: center; list-style: none; width: 44px; min-height: 44px; border-radius: 50%; cursor: pointer; border: 1px solid #10182712; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu summary > span { display: grid; gap: 5px; }
+.menu i { display: block; height: 1.5px; width: 16px; border-radius: 2px; background: currentColor; }
+.menuPanel { position: absolute; top: calc(100% + 15px); right: 0; width: min(300px, calc(100vw - 36px)); padding: 16px; border-radius: 20px; background: #fff; border: 1px solid #dfe5ee; box-shadow: 0 14px 40px #213a651a; }
+.menuPanel p { margin: 2px 8px 10px; font-size: .7rem; font-weight: 650; color: #566580; letter-spacing: .065em; text-transform: uppercase; }
+.menuPanel a { display: flex; align-items: center; justify-content: space-between; min-height: 44px; border-radius: 10px; padding: 10px; font-size: .9rem; }
+@media (hover: hover) and (pointer: fine) { .navLink:hover, .menuPanel a:hover, .menu summary:hover { background: #edf2fa; color: var(--color-ink); } .start:hover { background: var(--color-lapis-dark); } }
+@media (max-width: 900px) { .navLink { display: none; } .menu { display: block; } .inner { padding-inline: 16px; } }
+@media (max-width: 560px) { .header { padding-inline: 8px; } .inner { gap: 5px; padding-inline: 12px; } .navigation { gap: 4px; } .start { padding-inline: 12px; font-size: .78rem; } .brand { gap: 6px; font-size: .95rem; } .navigation > :global(.auth-account) { min-width: 0; } }
+@media (max-width: 370px) { .brand > span { display: none; } }
+@media (prefers-reduced-motion: reduce) { .start { transition: none; } .start:active { transform: none; } }
+.accountControls { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.accountButton { display: inline-flex; min-height: 44px; flex-shrink: 0; align-items: center; justify-content: center; white-space: nowrap; padding: 8px 14px; border: 1px solid #10182726; border-radius: 999px; background: #fff; color: var(--color-ink); font-size: .875rem; font-weight: 600; transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 160ms ease; }
+.accountButton:active { transform: scale(.97); }
+.accountButton:disabled { cursor: wait; opacity: .6; }
+.accountName { display: inline-block; max-width: 8rem; overflow: hidden; color: var(--color-ink-soft); font-size: .875rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.header :is(a, button, summary):focus-visible { outline: 3px solid #2868ae; outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .accountButton:hover { background: #edf2fa; } .accountName:hover { color: var(--color-ink); } }
+@media (max-width: 1100px) { .accountName { display: none; } }
+@media (max-width: 560px) { .accountButton { padding-inline: 10px; font-size: .78rem; } }
+@media (prefers-reduced-motion: reduce) { .accountButton { transition: none; } .accountButton:active { transform: none; } }

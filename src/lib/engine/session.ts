@@ -14,10 +14,16 @@
  */
 
 import type { Lesson, MisconceptionHighlight, Step } from "../content/types";
+import { RuntimeActionSchema } from "../runtime/contracts";
+import { initializeBlock, reduceBlock, type RuntimeState, type RuntimeAction } from "../runtime";
 import { MasteryModel, type ScaffoldingLevel } from "./mastery";
 import { verify, type VerificationResult } from "./verifier";
 
 export interface StepOutcome {
+  intermediate?: boolean;
+  runtimeState?: RuntimeState;
+  runtimeAccepted?: boolean;
+  runtimeMessage?: string;
   stepId: string;
   correct: boolean;
   attemptsOnStep: number;
@@ -60,6 +66,9 @@ export interface StepRecord {
   attempts: VerificationResult[];
   hintsUsed: number;
   completed: boolean;
+  runtimeState?: RuntimeState;
+  lastRuntimeAction?: RuntimeAction;
+  independentObservation?: { answer: string; correct: boolean; sessionVersion: number };
 }
 
 export interface SessionEvent {
@@ -74,6 +83,7 @@ export interface ChatMessage {
 }
 
 export interface SessionStats {
+  independentTransfer?: { stepId: string; firstResponseCorrect: boolean }[];
   steps: number;
   totalAttempts: number;
   firstTryCorrect: number;
@@ -95,6 +105,22 @@ export interface SessionSnapshot {
 
 export type SessionMode = "lesson" | "practice";
 
+export interface LearnerSessionState {
+  sessionId: string;
+  lesson: Lesson;
+  mode: SessionMode;
+  mastery: [string, number][];
+  events: SessionEvent[];
+  chatHistory: ChatMessage[];
+  stepIndex: number;
+  awaitingAdvance: boolean;
+  version: number;
+  records: [string, StepRecord][];
+  answerResults: [string, StepOutcome][];
+  advanceResults: [string, AdvanceOutcome][];
+  hintResults: [string, HintOutcome][];
+}
+
 export class LearnerSession {
   readonly sessionId: string;
   readonly lesson: Lesson;
@@ -115,11 +141,45 @@ export class LearnerSession {
     lesson: Lesson,
     mode: SessionMode = "lesson",
     mastery: MasteryModel = new MasteryModel(),
+    restored?: LearnerSessionState,
   ) {
-    this.sessionId = crypto.randomUUID();
+    this.sessionId = restored?.sessionId ?? crypto.randomUUID();
     this.lesson = lesson;
     this.mode = mode;
     this.mastery = mastery;
+    if (restored) {
+      this.events.push(...restored.events);
+      this.chatHistory.push(...restored.chatHistory);
+      this.stepIndex = restored.stepIndex;
+      this.awaitingAdvance = restored.awaitingAdvance;
+      this.version = restored.version;
+      this.records = new Map(restored.records);
+      this.answerResults = new Map(restored.answerResults);
+      this.advanceResults = new Map(restored.advanceResults);
+      this.hintResults = new Map(restored.hintResults);
+    }
+  }
+
+  static fromState(state: LearnerSessionState): LearnerSession {
+    return new LearnerSession(state.lesson, state.mode, MasteryModel.fromEntries(state.mastery), state);
+  }
+
+  toState(): LearnerSessionState {
+    return {
+      sessionId: this.sessionId,
+      lesson: this.lesson,
+      mode: this.mode,
+      mastery: this.mastery.entries(),
+      events: [...this.events],
+      chatHistory: [...this.chatHistory],
+      stepIndex: this.stepIndex,
+      awaitingAdvance: this.awaitingAdvance,
+      version: this.version,
+      records: [...this.records.entries()],
+      answerResults: [...this.answerResults.entries()],
+      advanceResults: [...this.advanceResults.entries()],
+      hintResults: [...this.hintResults.entries()],
+    };
   }
 
   get complete(): boolean {
@@ -196,8 +256,33 @@ export class LearnerSession {
     // Verify against the variant the learner was actually shown.
     const step = this.activeStep;
     const record = this.recordFor(step);
-    const result = verify(step, rawAnswer);
+    let runtimeAccepted: boolean | undefined;
+    let runtimeMessage: string | undefined;
+    let result = verify(step, rawAnswer);
+    if (step.runtimeBlock) {
+      let action: unknown;
+      try { action = JSON.parse(rawAnswer); } catch { throw new Error("Invalid activity action"); }
+      const checked = reduceBlock(step.runtimeBlock, record.runtimeState ?? initializeBlock(step.runtimeBlock), action);
+      record.runtimeState = checked.state;
+      const parsedAction = importRuntimeAction(action);
+      if (parsedAction) record.lastRuntimeAction = parsedAction;
+      runtimeAccepted = checked.accepted;
+      runtimeMessage = checked.message;
+      const complete = checked.state.kind === "range-explorer" ? checked.state.status !== "active" : checked.state.complete;
+      result = { correct: checked.correct && complete, normalizedAnswer: JSON.stringify(action), misconception: step.misconceptions.find((item) => item.id === checked.misconceptionId) ?? null };
+      if (checked.correct && !complete) {
+        this.version += 1;
+        this.log("activity_action_checked", { stepId: step.id, action, correct: true });
+        const outcome: StepOutcome = { stepId: step.id, intermediate: true, runtimeState: checked.state, correct: true, attemptsOnStep: record.attempts.length, lessonComplete: false, misconceptionId: null, mastery: this.mastery.mastery(step.concept), scaffolding: this.mastery.scaffoldingLevel(step.concept), awaitingAdvance: false, sessionVersion: this.version, finalStepSolved: false, activeVariantIndex: 0, misconceptionHighlight: null };
+        if (guard) this.answerResults.set(guard.idempotencyKey, outcome);
+        return outcome;
+      }
+    }
     record.attempts.push(result);
+    if (step.assistancePolicy === "none" && !record.independentObservation) {
+      record.independentObservation = { answer: result.normalizedAnswer, correct: result.correct, sessionVersion: this.version };
+      this.log("independent_transfer_scored", { stepId: step.id, ...record.independentObservation });
+    }
 
     const firstAttempt = record.attempts.length === 1;
     const mastery = this.mastery.recordAttempt(
@@ -223,6 +308,9 @@ export class LearnerSession {
     }
     this.version += 1;
     const outcome = {
+      runtimeState: record.runtimeState,
+      runtimeAccepted,
+      runtimeMessage,
       stepId: step.id,
       correct: result.correct,
       attemptsOnStep: record.attempts.length,
@@ -274,6 +362,7 @@ export class LearnerSession {
     this.assertGuard(guard);
     if (this.awaitingAdvance) throw new Error("Hints are unavailable after the step is solved");
     const step = this.activeStep;
+    if (step.assistancePolicy === "none") return { hint: null, sessionVersion: this.version };
     const record = this.recordFor(step);
     const depthAllowed = Math.min(
       this.mastery.maxHintDepth(step.concept),
@@ -301,9 +390,9 @@ export class LearnerSession {
     const last = record.attempts.at(-1);
     return {
       lessonTitle: this.lesson.title,
-      stepPrompt: step.prompt,
+      stepPrompt: [step.prompt, ...(step.explanation ?? []).map((item) => item.body), step.runtimeBlock ? `Activity: ${JSON.stringify(record.runtimeState ?? initializeBlock(step.runtimeBlock))}` : ""].filter(Boolean).join("\n"),
       options: step.answer.kind === "multipleChoice" ? step.answer.options : null,
-      verifiedSolution: step.solution,
+      verifiedSolution: step.runtimeBlock ? JSON.stringify(step.runtimeBlock) : step.solution,
       attempts: record.attempts.map((a) => a.normalizedAnswer),
       lastMisconception: last?.misconception
         ? {
@@ -346,7 +435,9 @@ export class LearnerSession {
     for (const concept of this.lesson.concepts) {
       conceptMastery[concept] = this.mastery.mastery(concept);
     }
+    const independentTransfer = this.lesson.steps.flatMap((step) => { const observation = this.records.get(step.id)?.independentObservation; return observation ? [{ stepId: step.id, firstResponseCorrect: observation.correct }] : []; });
     return {
+      ...(independentTransfer.length ? { independentTransfer } : {}),
       steps: this.lesson.steps.length,
       totalAttempts,
       firstTryCorrect,
@@ -359,3 +450,5 @@ export class LearnerSession {
     this.events.push({ kind, ts: Date.now(), ...payload });
   }
 }
+
+function importRuntimeAction(value: unknown): RuntimeAction | null { const parsed = RuntimeActionSchema.safeParse(value); return parsed.success ? parsed.data : null; }

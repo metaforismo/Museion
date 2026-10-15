@@ -135,3 +135,43 @@ describe("verify: graph", () => {
     }
   });
 });
+
+/**
+ * Regression: the UI submits a multiple-choice answer as the option index, and
+ * `verify` accepts an index as correct on purpose — but authored
+ * triggerAnswers are option text, so passing the raw index to
+ * matchMisconception meant no multiple-choice misconception could ever fire.
+ * 63 authored MC steps, all carrying misconceptions, silently unable to name
+ * one. Correctness must be unchanged; only the naming is restored.
+ */
+describe("multiple-choice misconception matching by index", () => {
+  const step = {
+    id: "probe",
+    kind: "multipleChoice",
+    prompt: "Which is an expression?",
+    answer: { kind: "multipleChoice", options: ["3n + 5", "3n = 5"], correctIndex: 0 },
+    misconceptions: [
+      { id: "reads-equation-as-expression", label: "Reads an equation as an expression", triggerAnswers: ["3n = 5"] },
+    ],
+  } as unknown as Parameters<typeof verify>[0];
+
+  it("names the misconception when the wrong option arrives as an index", () => {
+    const result = verify(step, "1");
+    expect(result.correct).toBe(false);
+    expect(result.misconception?.id).toBe("reads-equation-as-expression");
+  });
+
+  it("still names it when the wrong option arrives as text", () => {
+    expect(verify(step, "3n = 5").misconception?.id).toBe("reads-equation-as-expression");
+  });
+
+  it("leaves correctness by index and by text untouched", () => {
+    expect(verify(step, "0").correct).toBe(true);
+    expect(verify(step, "3n + 5").correct).toBe(true);
+    expect(verify(step, "1").correct).toBe(false);
+  });
+
+  it("does not invent a misconception for an out-of-range index", () => {
+    expect(verify(step, "9").misconception).toBeNull();
+  });
+});

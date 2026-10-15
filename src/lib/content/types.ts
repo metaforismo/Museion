@@ -1,3 +1,6 @@
+import type { InteractiveBlock } from "@/lib/runtime";
+import type { PublicLearningBlock } from "@/lib/compiler/public-artifact";
+
 /**
  * Content types: the deterministic ground truth of Museion.
  *
@@ -29,6 +32,9 @@ export interface Misconception {
   remediationFocus: string;
   /** Where the environment points attention after this misconception. */
   highlight?: MisconceptionHighlight;
+  /** Optional existing activity surface to mark only after this diagnosis.
+   * Validated against the renderer registry; never a value or submit control. */
+  attentionTargetId?: string;
 }
 
 export interface NumericAnswer {
@@ -148,11 +154,17 @@ export interface Step {
    * never appear here.
    */
   hints: string[];
+  /** Validated generated interactive data stays private; public config is
+   * projected separately. The shared engine reduces each learner action. */
+  runtimeBlock?: InteractiveBlock;
+  explanation?: { title: string; body: string }[];
+  citations?: { label: string; quote: string }[];
+  assistancePolicy?: "none";
   /** Authored micro-variations served after repeated wrong attempts. */
   variants?: StepVariant[];
 }
 
-export type Track = "Algebra" | "Arithmetic" | "Computer Science" | "Research Methods" | "Physics" | "Biology";
+export type Track = "Algebra" | "Arithmetic" | "Computer Science" | "Research Methods" | "Physics" | "Biology" | "Your sources";
 
 export interface Lesson {
   id: string;
@@ -161,6 +173,7 @@ export interface Lesson {
   description: string;
   concepts: string[];
   steps: Step[];
+  generatedFrom?: { runId: string; sourceTitle: string; mode: "live" | "replay" };
   /**
    * Optional exercise bank for practice mode: extra steps served in
    * random order with no hint ladder (retrieval practice — the testing
@@ -184,6 +197,10 @@ export interface PublicStep {
   };
   /** Recursion lab config (public by design; no option marked correct). */
   lab?: RecursionLab;
+  runtime?: Extract<PublicLearningBlock, { kind: "sequence-builder" | "range-explorer" | "state-trace" | "prediction-choice" }>;
+  explanation?: Step["explanation"];
+  citations?: Step["citations"];
+  assistancePolicy?: "none";
   /** Public surface of authored variants (prompts and options, never answers). */
   variants?: {
     prompt: string;
@@ -201,6 +218,7 @@ export interface PublicLesson {
   concepts: string[];
   steps: PublicStep[];
   practiceAvailable: boolean;
+  generatedFrom?: Lesson["generatedFrom"];
 }
 
 export function toPublicLesson(lesson: Lesson): PublicLesson {
@@ -210,6 +228,7 @@ export function toPublicLesson(lesson: Lesson): PublicLesson {
     track: lesson.track,
     description: lesson.description,
     concepts: lesson.concepts,
+    generatedFrom: lesson.generatedFrom,
     practiceAvailable: (lesson.practice?.length ?? 0) > 0,
     steps: lesson.steps.map((step) => ({
       id: step.id,
@@ -227,6 +246,10 @@ export function toPublicLesson(lesson: Lesson): PublicLesson {
             }
           : undefined,
       lab: step.lab,
+      runtime: step.runtimeBlock ? publicRuntimeBlock(step.runtimeBlock) : undefined,
+      explanation: step.explanation,
+      citations: step.citations,
+      assistancePolicy: step.assistancePolicy,
       variants: step.variants?.map((variant) => ({
         prompt: variant.prompt,
         kind: variant.answer.kind,
@@ -243,4 +266,15 @@ export function toPublicLesson(lesson: Lesson): PublicLesson {
       })),
     })),
   };
+}
+
+/** Never spread private blocks: correct order/trace/rules must stay server-side. */
+function publicRuntimeBlock(block: InteractiveBlock): NonNullable<PublicStep["runtime"]> {
+  const common = { id: block.id, objectiveIds: block.objectiveIds, conceptIds: block.conceptIds, citations: block.citations, estimatedSeconds: block.estimatedSeconds, accessibilityLabel: block.accessibilityLabel };
+  switch (block.kind) {
+    case "prediction-choice": return { ...common, kind: block.kind, prompt: block.prompt, options: block.options };
+    case "sequence-builder": return { ...common, kind: block.kind, prompt: block.prompt, items: block.items };
+    case "range-explorer": return { ...common, kind: block.kind, prompt: block.prompt, values: block.values, target: block.target, initialState: block.initialState, learnerTask: block.learnerTask, midpointPolicy: block.midpointPolicy };
+    case "state-trace": return { ...common, kind: block.kind, prompt: block.prompt, values: block.values, target: block.target, initialState: block.initialState, responseMode: block.responseMode };
+  }
 }

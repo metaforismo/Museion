@@ -27,13 +27,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-designer-opinion",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Ask the sign designer whether the revised sign is clearer."],
           description: "The learner chose a creator’s opinion rather than an outcome comparison.",
           remediationFocus: "Collect the stated outcome from users under both conditions.",
         },
         {
           id: "documents-without-testing",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Photograph the revised sign after it is installed."],
           description: "The learner documented the intervention but did not compare its claimed effect.",
           remediationFocus: "A test needs a measure that could differ between a baseline and a revised condition.",
         },
@@ -63,13 +63,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-feature-not-outcome",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The revised sign uses a new colour."],
           description: "The learner named a design feature rather than evidence about the claimed effect.",
           remediationFocus: "Connect the possible result to the exact outcome word in the claim.",
         },
         {
           id: "uses-belief-not-test",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The team still hopes the sign will help."],
           description: "The learner chose a belief that cannot challenge or support the measured claim.",
           remediationFocus: "Ask what result would make a reasonable investigator reconsider the claim.",
         },
@@ -99,13 +99,13 @@ const lesson = {
       misconceptions: [
         {
           id: "changes-task-difficulty",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Let the revised-map group choose an easier destination."],
           description: "The learner allowed a condition besides the map to vary between groups.",
           remediationFocus: "Keep the task alike so the intended difference is not mixed with an easier challenge.",
         },
         {
           id: "reveals-answer",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Show the revised-map group the answer before timing begins."],
           description: "The learner gave one group information that directly changes the outcome.",
           remediationFocus: "Avoid supplying a group with an advantage unrelated to the condition being compared.",
         },
@@ -137,13 +137,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-illustrator-opinion",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Ask the card illustrator whether the card is memorable."],
           description: "The learner selected an opinion about the intervention rather than the claimed outcome.",
           remediationFocus: "Measure the behavior named in the claim under both relevant conditions.",
         },
         {
           id: "counts-unrelated-feature",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Count how many colours appear on the card."],
           description: "The learner measured a visual feature unrelated to missed meetings.",
           remediationFocus: "Distinguish properties of an intervention from evidence about its effect.",
         },
@@ -173,13 +173,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-colour-as-evidence",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The instruction is printed in blue."],
           description: "The learner selected a feature that does not measure form errors.",
           remediationFocus: "Identify the outcome predicted by the claim and look for a result in the opposite direction.",
         },
         {
           id: "uses-author-belief",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The writer is proud of the instruction."],
           description: "The learner treated confidence as if it could test an outcome claim.",
           remediationFocus: "A test turns on observations that could disagree with the prediction, not on commitment to it.",
         },
@@ -209,13 +209,13 @@ const lesson = {
       misconceptions: [
         {
           id: "adds-unequal-demonstration",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Give one group a demonstration and the other group no instructions."],
           description: "The learner added unequal instruction, so any difference could be due to the demonstration.",
           remediationFocus: "Keep assistance levels alike when the label is the condition being tested.",
         },
         {
           id: "changes-measurement-method",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Let one group use a ruler and the other group estimate by sight."],
           description: "The learner varied the way the outcome is measured between groups.",
           remediationFocus: "Use one outcome rule for both groups so their records mean the same thing.",
         },

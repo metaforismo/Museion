@@ -63,9 +63,11 @@ export const DashboardSnapshotSchema = z.object({
     conceptsObserved: z.number().int().nonnegative(),
   }).strict(),
   runtime: z.object({
-    provider: z.enum(["offline", "codex", "openai-api"]),
+    provider: z.enum(["offline", "codex", "openai-api", "openrouter-free"]),
     label: z.string(),
-    persistence: z.enum(["process-local", "hybrid"]),
+    // Every backend branch in snapshot.ts must have a matching persistence
+    // value. Local SQLite durability never implies cloud synchronization.
+    persistence: z.enum(["process-local", "local-durable", "hybrid", "synced"]),
   }).strict(),
   limitations: z.array(z.string()),
   generatedAt: z.string().datetime(),

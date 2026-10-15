@@ -72,8 +72,27 @@ export function verify(step: Step, rawAnswer: string): VerificationResult {
   return {
     correct,
     normalizedAnswer: norm,
-    misconception: correct ? null : matchMisconception(step, norm),
+    misconception: correct ? null : matchMisconception(step, misconceptionProbe(spec, norm)),
   };
+}
+
+/**
+ * What to match a wrong answer against when hunting for its misconception.
+ *
+ * A multiple-choice answer arrives from the UI as the option *index* — the
+ * correctness branch above accepts that deliberately — but authored
+ * `triggerAnswers` are option *text*. Handing the raw index to
+ * `matchMisconception` meant no multiple-choice misconception could ever fire:
+ * the engine checked the move and then had nothing to name, which is half of
+ * what the product claims to do. Resolving the index back to its option text
+ * closes that gap without changing what counts as correct.
+ */
+function misconceptionProbe(spec: Step["answer"], norm: string): string {
+  if (spec.kind !== "multipleChoice") return norm;
+  if (!/^\d+$/.test(norm)) return norm;
+  const index = Number(norm);
+  const option = spec.options[index];
+  return option === undefined ? norm : normalize(option);
 }
 
 /** Parse "a=1,h=-3,k=2" (normalized form) into parameters; null if malformed. */

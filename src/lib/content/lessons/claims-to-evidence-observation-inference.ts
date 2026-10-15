@@ -27,13 +27,13 @@ const lesson = {
       misconceptions: [
         {
           id: "turns-count-into-cause",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The room layout definitely causes people to read better."],
           description: "The learner treated an observed count as proof of a causal explanation.",
           remediationFocus: "First state the count and conditions exactly; explanations are separate inferences.",
         },
         {
           id: "generalizes-to-all-future-visitors",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Every future visitor will find articles quickly."],
           description: "The learner expanded a finite record into a universal prediction.",
           remediationFocus: "Keep the scope of a conclusion tied to the group and time actually observed.",
         },
@@ -63,7 +63,7 @@ const lesson = {
       misconceptions: [
         {
           id: "labels-recorded-average-as-inference",
-          triggerAnswers: ["0", "2"],
+          triggerAnswers: ["The window group’s recorded average was 9 cm.","The cupboard group’s recorded average was 2 cm."],
           description: "The learner confused a measured summary with an explanation for it.",
           remediationFocus: "Ask whether the statement reports a value, or supplies a reason the value might differ.",
         },
@@ -93,13 +93,13 @@ const lesson = {
       misconceptions: [
         {
           id: "universalizes-pilot",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The revised checklist proves it will reduce every omission everywhere."],
           description: "The learner converted a limited comparison into an all-settings guarantee.",
           remediationFocus: "State what happened in the observed comparison before extending a conclusion beyond it.",
         },
         {
           id: "assigns-total-causation",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The old checklist caused all omissions in the pilot."],
           description: "The learner claimed one condition caused every outcome despite unmeasured alternatives.",
           remediationFocus: "Separate a group difference from a complete causal account.",
         },
@@ -131,13 +131,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-value-judgment",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Buses are the best way for everyone to travel."],
           description: "The learner replaced a reportable count with a broad preference claim.",
           remediationFocus: "Repeat the recorded group, number, and question before interpreting it.",
         },
         {
           id: "asserts-survey-causation",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The transit survey changed how respondents travel."],
           description: "The learner inferred a behavior change from a survey response alone.",
           remediationFocus: "Identify whether a statement is a measurement or an untested explanation.",
         },
@@ -167,7 +167,7 @@ const lesson = {
       misconceptions: [
         {
           id: "mistakes-count-for-explanation",
-          triggerAnswers: ["0", "2"],
+          triggerAnswers: ["The first table had 18 pickups.","The second table had 9 pickups."],
           description: "The learner chose a direct count instead of a possible explanation.",
           remediationFocus: "Look for language that adds a reason, not merely a recorded value.",
         },
@@ -197,13 +197,13 @@ const lesson = {
       misconceptions: [
         {
           id: "claims-durable-universal-learning",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["The note format guarantees long-term memory for every student."],
           description: "The learner treated an immediate small observation as a universal long-term guarantee.",
           remediationFocus: "Name the time, group, and outcome actually measured before making a conclusion.",
         },
         {
           id: "assigns-unmeasured-motive",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Students who did not recall all four terms did not try hard enough."],
           description: "The learner invented an explanation about individual effort without evidence.",
           remediationFocus: "Do not turn an outcome record into a claim about a learner’s motive or character.",
         },

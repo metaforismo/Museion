@@ -3,9 +3,14 @@ import path from "node:path";
 
 const staticDir = path.resolve(".next/static");
 const budgets = {
-  // 3 MiB of app assets plus ~0.35 MiB of self-hosted display/UI fonts
-  // (Fraunces 500/600 + Inter). JavaScript budgets stay unchanged.
-  totalBytes: Math.round(3.35 * 1024 * 1024),
+  // 3 MiB of app assets plus a retained ~0.21 MiB ceiling for self-hosted Inter.
+  // Current delivery ships Latin, Latin Extended, Greek, Greek Extended and
+  // common Cyrillic; additional scripts use the existing system-font fallback.
+  // Fraunces was retired, so the font allowance no longer carries its payload:
+  // leaving the old 0.35 MiB in place would have been ~0.14 MiB of permanent
+  // slack that any future regression could hide in. JavaScript budgets are
+  // unchanged.
+  totalBytes: Math.round(3.21 * 1024 * 1024),
   largestJavaScriptBytes: 550 * 1024,
   pdfWorkerBytes: 1400 * 1024,
 };

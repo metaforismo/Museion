@@ -5,8 +5,9 @@ import { hasPractice } from "@/lib/engine/practice";
 import { listCompilerRuns } from "@/lib/compiler/runs";
 import { listJudgeSessions } from "@/lib/judge/store";
 import { stateBackend } from "@/lib/server/durable-state";
+import { learnerProfile, sessionsFor } from "@/lib/server/session-repository";
 import { planRevisits } from "@/lib/revisit/scheduler";
-import { getProfile, listSessionsForLearner } from "@/lib/store";
+import type { LearnerSession } from "@/lib/engine/session";
 
 import { DashboardSnapshotSchema, type DashboardSnapshot } from "./contracts";
 
@@ -14,11 +15,20 @@ function titleCase(value: string) {
   return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+/** Course-specific authored lessons have one unambiguous trail to return to.
+ * Foundation lessons and any shared lesson remain standalone. */
+function authoredLessonHref(lessonId: string) {
+  const practice = lessonId.endsWith("::practice");
+  const authoredId = practice ? lessonId.slice(0, -"::practice".length) : lessonId;
+  const containing = coursePaths.filter((course) => course.lessonIds.includes(authoredId));
+  return `/lessons/${authoredId}${practice ? "/practice" : ""}${containing.length === 1 ? `?course=${containing[0].id}` : ""}`;
+}
+
 function assistanceLabel(value: "novice" | "developing" | "proficient") {
   return value === "novice" ? "more" as const : value === "developing" ? "some" as const : "light" as const;
 }
 
-function answeredConcepts(sessions: ReturnType<typeof listSessionsForLearner>) {
+function answeredConcepts(sessions: readonly LearnerSession[]) {
   const guided = new Set<string>();
   const practiced = new Set<string>();
 
@@ -34,13 +44,22 @@ function answeredConcepts(sessions: ReturnType<typeof listSessionsForLearner>) {
   return { guided, practiced };
 }
 
-export async function buildDashboardSnapshot(learnerId: string): Promise<DashboardSnapshot> {
-  const profile = getProfile(learnerId);
-  const authoredSessions = listSessionsForLearner(learnerId);
-  const [generatedSessions, compilerRuns] = await Promise.all([
+export async function buildDashboardSnapshot(learnerId: string, preferences: { suggestedCourseId?: string } = {}): Promise<DashboardSnapshot> {
+  const [profile, authoredSessions, storedGeneratedSessions, compilerRuns] = await Promise.all([
+    learnerProfile(learnerId, false),
+    sessionsFor(learnerId),
     listJudgeSessions(learnerId).catch(() => []),
     listCompilerRuns(learnerId).catch(() => []),
   ]);
+
+  // Retired hackathon sessions have no product course to return to. Only
+  // compiler-backed sessions belong in the signed-in learning space.
+  const generatedRuns = new Map<string, string>();
+  for (const run of compilerRuns) {
+    if (!generatedRuns.has(run.artifact.id)) generatedRuns.set(run.artifact.id, run.runId);
+  }
+  const generatedSessions = storedGeneratedSessions.filter((session) => generatedRuns.has(session.artifact.id));
+  const generatedHref = (artifactId: string) => `/learn/${generatedRuns.get(artifactId)}`;
 
   const activeLearning = [
     ...generatedSessions
@@ -51,7 +70,7 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
         kind: "generated" as const,
         progress: session.completedBlockIds.length / Math.max(1, Object.keys(session.blockStates).length + 1),
         detail: session.transfer.status === "active" ? "Independent check in progress" : "Interactive course",
-        href: "/judge",
+        href: generatedHref(session.artifact.id),
         updatedAt: session.updatedAt,
       })),
     ...authoredSessions
@@ -62,7 +81,7 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
         kind: "authored" as const,
         progress: session.stepIndex / Math.max(1, session.lesson.steps.length),
         detail: `${session.stepIndex + 1} of ${session.lesson.steps.length} learning moves`,
-        href: `/lessons/${session.lesson.id}`,
+        href: authoredLessonHref(session.lesson.id),
         updatedAt: session.events.at(-1)?.ts ? new Date(session.events.at(-1)!.ts).toISOString() : null,
       })),
   ]
@@ -85,7 +104,7 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
         label: misconception.description,
         status: laterCorrect ? "corrected-in-session" : "observed",
         observedAt: new Date(event.ts).toISOString(),
-        href: `/lessons/${session.lesson.id}`,
+        href: authoredLessonHref(session.lesson.id),
       });
     }
   }
@@ -160,13 +179,15 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
   const authoredIncomplete = authoredSessions.find((session) => !session.complete);
   const failedTransfer = generatedSessions.find((session) => session.transfer.status === "scored" && session.transfer.correct === false);
   const freshCourse = compilerRuns.find((run) => !generatedSessions.some((session) => session.artifact.id === run.artifact.id));
-  const firstLesson = lessons[0];
+  const preferredStarter = coursePaths.find((course) => course.id === preferences.suggestedCourseId);
+  const starterCourse = preferredStarter ?? coursePaths[0];
+  const firstLesson = lessons.find((lesson) => lesson.id === starterCourse?.lessonIds[0]) ?? lessons[0];
   const nextAction = transferActive
-    ? { kind: "resume" as const, title: `Finish ${transferActive.artifact.title}`, description: "Complete the independent check without tutor help.", href: "/judge", reason: "An independent check is already active." }
+    ? { kind: "resume" as const, title: `Finish ${transferActive.artifact.title}`, description: "Complete the independent check without tutor help.", href: generatedHref(transferActive.artifact.id), reason: "An independent check is already active." }
     : generatedIncomplete
-      ? { kind: "resume" as const, title: `Continue ${generatedIncomplete.artifact.title}`, description: "Return to the next unfinished interactive block.", href: "/judge", reason: "This is your most recent incomplete generated course." }
+      ? { kind: "resume" as const, title: `Continue ${generatedIncomplete.artifact.title}`, description: "Return to the next unfinished interactive block.", href: generatedHref(generatedIncomplete.artifact.id), reason: "This is your most recent incomplete generated course." }
       : authoredIncomplete
-        ? { kind: "resume" as const, title: `Continue ${authoredIncomplete.lesson.title}`, description: `Resume at learning move ${authoredIncomplete.stepIndex + 1}.`, href: `/lessons/${authoredIncomplete.lesson.id}`, reason: "This is your most recent incomplete authored lesson." }
+        ? { kind: "resume" as const, title: `Continue ${authoredIncomplete.lesson.title}`, description: `Resume at learning move ${authoredIncomplete.stepIndex + 1}.`, href: authoredLessonHref(authoredIncomplete.lesson.id), reason: "This is your most recent incomplete authored lesson." }
         : failedTransfer
           ? { kind: "review" as const, title: `Review ${failedTransfer.artifact.title}`, description: "Revisit the underlying rule before another independent check.", href: "/review", reason: "The latest immediate transfer observation was not correct." }
           : reviewQueue[0]
@@ -174,7 +195,7 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
             : freshCourse
               ? { kind: "launch" as const, title: `Start ${freshCourse.artifact.title}`, description: "Open the newly validated course.", href: `/learn/${freshCourse.runId}`, reason: "This validated course has not been launched yet." }
               : authoredSessions.length === 0
-                ? { kind: "launch" as const, title: `Start ${firstLesson.title}`, description: "Make your first checked learning move.", href: `/lessons/${firstLesson.id}`, reason: "There is no learning record yet." }
+                ? { kind: "launch" as const, title: `Start ${starterCourse?.title ?? firstLesson.title}`, description: starterCourse?.tagline ?? firstLesson.description, href: authoredLessonHref(firstLesson.id), reason: preferredStarter ? "Your onboarding preference selected this starting course." : "There is no learning record yet." }
                 : { kind: "create" as const, title: "Create a course from a source", description: "Bring a document you want to understand.", href: "/create", reason: "There is no unfinished or high-priority review item." };
 
   // Real per-course progress from completed lessons — nothing invented.
@@ -216,15 +237,15 @@ export async function buildDashboardSnapshot(learnerId: string): Promise<Dashboa
     journey,
     runtime: {
       provider: settings.provider,
-      label: settings.provider === "codex" ? "ChatGPT via Codex" : settings.provider === "offline" ? "Offline demo" : "OpenAI API",
-      // Authored lesson state is process-local today even when generated jobs
-      // use Supabase. Never imply that the whole learning record is synced.
-      persistence: stateBackend().kind === "supabase" ? "hybrid" : "process-local",
+      label: settings.provider === "codex" ? "ChatGPT via Codex" : settings.provider === "offline" ? "Built-in guidance" : settings.provider === "openrouter-free" ? "OpenRouter free tutor" : "OpenAI API",
+      // Local SQLite is durable on this device; only the cloud database
+      // represents a record synchronized beyond this server.
+      persistence: stateBackend().kind === "sqlite" ? "local-durable" : stateBackend().kind === "d1" ? "synced" : stateBackend().kind === "supabase" ? "hybrid" : "process-local",
     },
     limitations: [
       "Guided work and hint-free practice are session observations, not proof of retained mastery.",
       "Retention is not measured until a delayed check is completed.",
-      stateBackend().kind === "memory" ? "Local learning records expire and are not shared across servers." : "Generated sessions and compiler runs have bounded retention windows.",
+      stateBackend().kind === "memory" ? "Local learning records expire and are not shared across servers." : stateBackend().kind === "sqlite" ? "Your learning record and saved courses stay in the local database until you reset or delete them. Lesson sessions are retained for 30 days." : stateBackend().kind === "d1" ? "Signed-in learning records remain until you delete your account data." : "Generated sessions and compiler runs have bounded retention windows.",
     ],
     generatedAt: new Date().toISOString(),
   });

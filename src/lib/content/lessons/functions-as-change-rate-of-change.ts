@@ -51,13 +51,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-rate-as-start",
-          triggerAnswers: ["0"],
+          triggerAnswers: ["3"],
           description: "The learner identified the coefficient 3 as the starting value.",
           remediationFocus: "The coefficient tells how the output changes per input; evaluate at input zero to find the start.",
         },
         {
           id: "adds-coefficient-and-constant",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["15"],
           description: "The learner combined parts of the rule rather than evaluating it at zero.",
           remediationFocus: "Substitute the requested input before interpreting the result.",
         },
@@ -120,7 +120,7 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-intercept-as-rate",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["it decreases by 2"],
           description: "The learner interpreted the constant term as a per-input change.",
           remediationFocus: "Look for the quantity multiplying x to identify the constant rate.",
         },

@@ -27,13 +27,13 @@ const lesson = {
       misconceptions: [
         {
           id: "narrows-to-early-arrivals",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Only students who arrive before 7:30 a.m."],
           description: "The learner selected a timing-based subgroup rather than the whole group named in the question.",
           remediationFocus: "State who the conclusion is meant to describe before looking at how data are collected.",
         },
         {
           id: "narrows-to-survey-team",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Only members of the travel-survey team."],
           description: "The learner confused the people collecting a survey with the people the survey is about.",
           remediationFocus: "Separate the investigators from the population described by the claim.",
         },
@@ -63,13 +63,13 @@ const lesson = {
       misconceptions: [
         {
           id: "confuses-target-with-frame",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["All students at the school."],
           description: "The learner named the intended population instead of the reachable group.",
           remediationFocus: "Ask who has a real opportunity to be selected by the stated collection method.",
         },
         {
           id: "overextends-frame",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Every student in the country."],
           description: "The learner extended the reach of a local chat beyond its actual members.",
           remediationFocus: "Use the collection method, not the topic’s possible importance, to define reach.",
         },
@@ -99,13 +99,13 @@ const lesson = {
       misconceptions: [
         {
           id: "assumes-dishonesty",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Robotics-club responses are always dishonest."],
           description: "The learner attributed a coverage problem to respondent character rather than the collection method.",
           remediationFocus: "Focus on who had a chance to be included, not on an unsupported claim about honesty.",
         },
         {
           id: "treats-all-small-samples-as-worthless",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["A small group can never provide any useful information."],
           description: "The learner confused a limit on generalization with a claim that no small-group evidence can inform anything.",
           remediationFocus: "Describe what the observed group can support while keeping its coverage limit visible.",
         },
@@ -137,13 +137,13 @@ const lesson = {
       misconceptions: [
         {
           id: "uses-convenient-location",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Only visitors sitting near the front desk."],
           description: "The learner selected a convenient subset defined by location.",
           remediationFocus: "Start from the full group named in the question rather than the easiest people to observe.",
         },
         {
           id: "uses-staff-instead-of-visitors",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Only library employees."],
           description: "The learner confused a group working in a setting with the group the question names.",
           remediationFocus: "Check whether the selected people are the people whose behavior the claim describes.",
         },
@@ -173,13 +173,13 @@ const lesson = {
       misconceptions: [
         {
           id: "extends-reach-to-city",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Every resident of the city."],
           description: "The learner treated a local posting route as if it reached all residents.",
           remediationFocus: "Define a frame from the actual invitation path, not from the topic’s geographic area.",
         },
         {
           id: "uses-designers-not-recipients",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["Only the people who designed the posters."],
           description: "The learner named people who created the invitation rather than people who can receive it.",
           remediationFocus: "Ask who can realistically be selected through the invitation method.",
         },
@@ -209,13 +209,13 @@ const lesson = {
       misconceptions: [
         {
           id: "dismisses-respondents",
-          triggerAnswers: ["1"],
+          triggerAnswers: ["Online respondents cannot answer any question accurately."],
           description: "The learner treated an incomplete frame as evidence that reachable respondents are inaccurate.",
           remediationFocus: "Separate who is missing from whether the included respondents can report their own experience.",
         },
         {
           id: "turns-coverage-into-ranking",
-          triggerAnswers: ["2"],
+          triggerAnswers: ["The survey proves that online appointments are best."],
           description: "The learner drew a value ranking that was not measured by the survey reach.",
           remediationFocus: "Name the coverage limit without adding an unsupported comparative conclusion.",
         },

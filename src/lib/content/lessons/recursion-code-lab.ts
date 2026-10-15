@@ -34,13 +34,13 @@ const lesson = {
       misconceptions: [
         {
           id: "assumes-it-computes-powers",
-          triggerAnswers: ["1", "it returns 32"],
+          triggerAnswers: ["it returns 32"],
           description: "The learner computed what the function was probably meant to do, not what its definition actually does.",
           remediationFocus: "Trace the definition literally: what input does the recursive call receive?",
         },
         {
           id: "assumes-doubling-once",
-          triggerAnswers: ["2", "it returns 10"],
+          triggerAnswers: ["it returns 10"],
           description: "The learner applied the doubling a single time instead of following the recursion.",
           remediationFocus: "Each call defers to another call. Follow where the chain of calls leads before computing anything.",
         },
@@ -87,18 +87,21 @@ const lesson = {
       misconceptions: [
         {
           id: "no-progress-argument",
+          attentionTargetId: "recursion:slot:next",
           triggerAnswers: ["base=0,basereturn=0,head=n,next=n", "base=1,basereturn=1,head=n,next=n"],
           description: "The learner recursed on the same value, so no call moves toward the base case.",
           remediationFocus: "Watch the trace: every call shows the same number. What smaller input would move the function toward the base case?",
         },
         {
           id: "counts-instead-of-sums",
+          attentionTargetId: "recursion:slot:head",
           triggerAnswers: ["base=0,basereturn=0,head=1,next=n-1"],
           description: "The learner added 1 per call instead of adding the current value of n, computing the count of calls rather than the sum.",
           remediationFocus: "Compare the failing test: sum_to(3) should be 6, not 3. What should each call contribute?",
         },
         {
           id: "wrong-direction",
+          attentionTargetId: "recursion:slot:next",
           triggerAnswers: ["base=0,basereturn=0,head=n,next=n+1"],
           description: "The learner recursed on n + 1, moving away from the base case.",
           remediationFocus: "The trace climbs instead of descending. Progress means the argument gets closer to the base value.",
@@ -145,18 +148,21 @@ const lesson = {
       misconceptions: [
         {
           id: "same-day-forever",
+          attentionTargetId: "recursion:slot:next",
           triggerAnswers: ["base=1,basereturn=1,head=2,next=day"],
           description: "The learner recursed on the same day — the classic runaway trace from the prediction step, now in their own code.",
           remediationFocus: "The output panel shows the same call repeating. Ask: which smaller input would move the function toward day 1?",
         },
         {
           id: "multiplies-by-day",
+          attentionTargetId: "recursion:slot:head",
           triggerAnswers: ["base=1,basereturn=1,head=day,next=day-1"],
           description: "The learner multiplied by the day number instead of doubling, computing a factorial-like value.",
           remediationFocus: "Check the failing test: coins(3) should be 4, not 6. Doubling means multiplying by the same fixed number each day.",
         },
         {
           id: "zero-base-kills-product",
+          attentionTargetId: "recursion:slot:baseReturn",
           triggerAnswers: ["base=1,basereturn=0,head=2,next=day-1", "base=0,basereturn=0,head=2,next=day-1"],
           description: "The learner anchored the product at 0, which makes every product 0.",
           remediationFocus: "A product chain needs a neutral anchor. What must the base case return so the doubling survives?",
@@ -188,7 +194,7 @@ const lesson = {
       misconceptions: [
         {
           id: "assumes-auto-stop-at-zero",
-          triggerAnswers: ["2", "it stops by itself at 0"],
+          triggerAnswers: ["it stops by itself at 0"],
           description: "The learner assumed recursion halts at zero automatically.",
           remediationFocus: "Nothing stops a recursion except an explicit base case; zero is not special unless the code says so.",
         },

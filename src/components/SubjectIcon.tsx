@@ -8,7 +8,8 @@ import {
   TestTube01Icon,
 } from "@hugeicons/core-free-icons";
 
-import { subjectColor } from "@/lib/curriculum/subjects";
+import { subjectColor, subjectTint } from "@/lib/curriculum/subjects";
+import { subjectObjectSrc } from "@/lib/design/assets";
 
 const SUBJECT_ICONS: Record<string, typeof Atom01Icon> = {
   algebra: FunctionSquareIcon,
@@ -20,18 +21,49 @@ const SUBJECT_ICONS: Record<string, typeof Atom01Icon> = {
 };
 
 /**
- * A subject marker. Cards use the tinted tile for quick scanning; compact
- * navigation can opt into the quieter, monochrome line treatment.
+ * A subject marker. `object` renders the clay illustration for grids and the
+ * sidebar; `tinted` is the glyph on its subject tint; `plain` is the quiet
+ * monochrome line treatment.
  */
-export default function SubjectIcon({ subject, size = 40, iconSize = 20, className, variant = "tinted" }: { subject: string; size?: number; iconSize?: number; className?: string; variant?: "tinted" | "plain" }) {
+export default function SubjectIcon({
+  subject,
+  size = 40,
+  iconSize = 20,
+  className,
+  variant = "tinted",
+}: {
+  subject: string;
+  size?: number;
+  iconSize?: number;
+  className?: string;
+  variant?: "tinted" | "plain" | "object";
+}) {
+  if (variant === "object") {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- fixed-size decorative clay asset; next/image adds no value at this scale
+      <img
+        src={subjectObjectSrc(subject)}
+        alt=""
+        aria-hidden="true"
+        width={size}
+        height={size}
+        className={`shrink-0 object-contain ${className ?? ""}`}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
   const icon = SUBJECT_ICONS[subject.trim().toLowerCase()] ?? FunctionSquareIcon;
-  const accent = subjectColor(subject);
   const tinted = variant === "tinted";
   return (
     <span
       aria-hidden="true"
       className={`grid shrink-0 place-items-center ${tinted ? "rounded-xl" : "text-current"} ${className ?? ""}`}
-      style={{ width: size, height: size, ...(tinted ? { backgroundColor: `color-mix(in srgb, ${accent} 12%, transparent)`, color: accent } : {}) }}
+      style={{
+        width: size,
+        height: size,
+        ...(tinted ? { backgroundColor: subjectTint(subject), color: subjectColor(subject) } : {}),
+      }}
     >
       <HugeiconsIcon icon={icon} size={iconSize} strokeWidth={1.8} />
     </span>

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getOwnedSession } from "@/lib/server/session-access";
+import { currentActor } from "@/lib/server/actor";
+import { persistSession } from "@/lib/server/session-repository";
 
 const HintCommandSchema = z.object({ expectedStepId: z.string().min(1).max(200), expectedVersion: z.number().int().nonnegative(), idempotencyKey: z.string().uuid() }).strict();
 
@@ -18,6 +20,7 @@ export async function POST(
   if (!body.success) return NextResponse.json({ error: "Invalid hint command" }, { status: 400 });
   try {
     const outcome = session.requestHintOutcome(body.data);
+    await persistSession(session, (await currentActor()).ownerId, body.data.expectedVersion);
     return NextResponse.json({
       ...outcome,
       granted: outcome.hint !== null,

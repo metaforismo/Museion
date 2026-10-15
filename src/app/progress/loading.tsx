@@ -4,7 +4,9 @@ export default function ProgressLoading() {
       <div className="flex flex-col gap-5 border-b border-ink/10 pb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="h-3 w-20 rounded bg-ink/10" />
-          <div className="mt-4 h-10 w-72 rounded bg-ink/10" />
+          {/* Fluid, not fixed: a 20rem placeholder inside a padded card pushed
+              the 320px viewport into horizontal scroll before the page loaded. */}
+          <div className="mt-4 h-10 w-full max-w-72 rounded bg-ink/10" />
           <div className="mt-4 h-4 max-w-xl rounded bg-ink/5" />
         </div>
         <div className="h-11 w-32 rounded-lg bg-ink/10" />
@@ -12,7 +14,7 @@ export default function ProgressLoading() {
       <div className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,.6fr)]">
         <div className="rounded-[1.5rem] border border-ink/10 bg-surface p-6 sm:p-8">
           <div className="h-3 w-28 rounded bg-ink/10" />
-          <div className="mt-4 h-8 w-80 rounded bg-ink/10" />
+          <div className="mt-4 h-8 w-full max-w-80 rounded bg-ink/10" />
           <div className="mt-4 h-4 max-w-lg rounded bg-ink/5" />
           <div className="mt-8 grid grid-cols-4 gap-2">
             {[0, 1, 2, 3].map((item) => <div key={item} className="h-8 rounded bg-ink/5" />)}

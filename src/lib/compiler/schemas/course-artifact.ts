@@ -228,7 +228,7 @@ export function validateArtifactReferences(
     });
     lesson.blockIds.forEach((id) => {
       if (!artifact.blocks[id]) issues.push({ code: "dangling_reference", path: `lessons[${lessonIndex}].blockIds`, message: `Unknown block ${id}`, severity: "blocking" });
-      if (artifact.source.origin === "source_graph" && (artifact.blocks[id]?.kind === "guided-response" || artifact.blocks[id]?.kind === "transfer-challenge")) {
+      if (artifact.source.origin === "source_graph" && artifact.blocks[id]?.kind === "transfer-challenge") {
         issues.push({ code: "unsupported_learner_structure", path: `lessons[${lessonIndex}].blockIds`, message: `${artifact.blocks[id].kind} must not appear in the guided lesson sequence`, severity: "blocking" });
       }
     });

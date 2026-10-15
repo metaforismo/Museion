@@ -1,3 +1,4 @@
+import { RuntimeActionSchema, type RuntimeAction } from "../runtime/contracts";
 /**
  * Live widget state for Maia's eyes: what the learner's canvas shows
  * RIGHT NOW, before anything is submitted. The client reports it with a
@@ -11,12 +12,25 @@
 import type { Step } from "../content/types";
 
 export type LabActivity =
+  | { kind: "runtime"; blockId: string; action: RuntimeAction }
   | { kind: "graph"; a: number; h: number; k: number }
   | { kind: "recursion"; slots: Record<string, string> };
 
 const trim = (value: number) => String(Number(value.toFixed(2)));
 
 export function describeActivity(step: Step, activity: LabActivity): string | null {
+  if (activity.kind === "runtime") {
+    const block = step.runtimeBlock;
+    const action = RuntimeActionSchema.safeParse(activity.action);
+    if (!block || activity.blockId !== block.id || !action.success) return null;
+    const candidate = action.data;
+    if (block.kind === "sequence-builder") {
+      if (candidate.kind !== "sequence_submit" || candidate.order.length !== block.items.length || new Set(candidate.order).size !== block.items.length || candidate.order.some((id) => !block.items.some((item) => item.id === id))) return null;
+    } else if (block.kind === "range-explorer") {
+      if (candidate.kind !== "range_update" && candidate.kind !== "range_confirm_found") return null;
+    } else if (block.kind === "state-trace" && candidate.kind !== "trace_submit") return null;
+    return `The learner's current unchecked activity controls: ${JSON.stringify(candidate)}. These values have not been checked.`;
+  }
   if (activity.kind === "graph") {
     if (step.answer.kind !== "graph") return null;
     const { a, h, k } = activity;
@@ -41,6 +55,7 @@ export function describeActivity(step: Step, activity: LabActivity): string | nu
 export function describeActivityInline(step: Step, activity: LabActivity): string | null {
   const full = describeActivity(step, activity);
   if (!full) return null;
+  if (activity.kind === "runtime") return "I can see the activity controls you are working with.";
   if (activity.kind === "graph") {
     return `I can see your canvas: a=${trim(activity.a)}, h=${trim(activity.h)}, k=${trim(activity.k)}.`;
   }

@@ -1,4 +1,3 @@
-import type { Step } from "../content/types";
 import { describeActivity, describeActivityInline, type LabActivity } from "./activity";
 import type { LearnerSession } from "../engine/session";
 import { log } from "../server/log";
@@ -8,19 +7,23 @@ import type {
   TutorProviderResult,
   TutorTurn,
 } from "./contracts";
-import { TutorTurnSchema } from "./contracts";
-import { revealsAnswer } from "./leak";
+import { tutorSafetyIssues } from "./safety";
+import { allowedAuthoredUiTargets } from "./ui-targets";
 import { OpenAITutorProvider } from "./openai-provider";
 import { CodexTutorProvider } from "./codex-provider";
 import { getAiSettings } from "../ai/settings";
+import { OpenRouterTutorProvider } from "./openrouter-provider";
+import { boundedTutorInput } from "./context";
+import { tutorProviderErrorDiagnostic } from "./provider-error";
 
 const OFFLINE_NOTICE =
-  "Maia is offline, so I’m using the lesson’s verified hint ladder.";
+  "Live tutoring isn't available right now. We can still work through this with lesson hints.";
 
 function provider(): TutorProvider {
   const settings = getAiSettings();
   if (settings.provider === "codex") return new CodexTutorProvider(settings.familyFallback);
   if (settings.provider === "openai-api") return new OpenAITutorProvider();
+  if (settings.provider === "openrouter-free") return new OpenRouterTutorProvider();
   return {
     id: "deterministic",
     available: () => false,
@@ -32,24 +35,7 @@ export function maiaAvailable(): boolean {
   return provider().available();
 }
 
-export function tutorSafetyIssues(
-  step: Step,
-  turn: TutorTurn,
-  allowedUiTargetIds: readonly string[],
-): string[] {
-  const issues: string[] = [];
-  if (!TutorTurnSchema.safeParse(turn).success) issues.push("invalid_schema");
-  const learnerVisibleText = [
-    turn.message,
-    ...turn.uiActions.flatMap((action) => action.text ? [action.text] : []),
-  ].join("\n");
-  if (revealsAnswer(step, learnerVisibleText)) issues.push("answer_leak_detected");
-  const allowed = new Set(allowedUiTargetIds);
-  if (turn.uiActions.some((action) => !allowed.has(action.targetId))) {
-    issues.push("invalid_ui_target");
-  }
-  return issues;
-}
+export { tutorSafetyIssues } from "./safety";
 
 function deterministicFallback(session: LearnerSession, activityInline: string | null): TutorTurn {
   if (session.awaitingAdvance) {
@@ -62,11 +48,11 @@ function deterministicFallback(session: LearnerSession, activityInline: string |
   const hint = session.requestHint();
   // Even offline, Maia has eyes: acknowledge the learner's live widget
   // state (their own values only) before the authored hint.
-  const seen = activityInline ? ` ${activityInline}` : "";
+  const firstFallback = !session.events.some((event) => event.kind === "maia_fallback");
+  const prefix = [firstFallback ? OFFLINE_NOTICE : null, activityInline].filter(Boolean).join(" ");
+  const guidance = hint ?? "We've used the hints for this step. What do you know so far? Try one small move and see what happens.";
   return {
-    message: hint
-      ? `${OFFLINE_NOTICE}${seen} ${hint}`
-      : `${OFFLINE_NOTICE}${seen} No more hints are available at this level. Explain what you know about the current step, then try one small move.`,
+    message: prefix ? `${prefix} ${guidance}` : guidance,
     pedagogicalMove: hint ? "give-conceptual-hint" : "request-self-explanation",
     uiActions: [],
   };
@@ -117,16 +103,19 @@ export async function maiaRespond(
 ): Promise<TutorDelivery> {
   // The active variant decides the answer the leak gate must protect.
   const step = session.activeStep;
+  if (step.assistancePolicy === "none") throw new Error("INDEPENDENT_CHALLENGE");
   const stepId = step.id;
   const startVersion = session.version;
-  const allowedUiTargetIds: string[] = [];
+  const allowedUiTargetIds = allowedAuthoredUiTargets(step);
   // Rendered only when the report matches the active step's widget —
   // a stale or malformed report is dropped, never trusted.
   const liveActivity = activity ? describeActivity(step, activity) : null;
   if (liveActivity) session.log("maia_activity_observed", { stepId });
 
   if (tutorProvider.available()) {
-    const input = {
+    const requestTimeout = AbortSignal.timeout(25_000);
+    const requestSignal = signal ? AbortSignal.any([signal, requestTimeout]) : requestTimeout;
+    const rawInput = {
       snapshot: session.snapshot(),
       history: [...session.chatHistory],
       learnerMessage,
@@ -134,7 +123,9 @@ export async function maiaRespond(
       liveActivity,
     };
     try {
-      let result = await tutorProvider.generate(input, { signal });
+      const input = boundedTutorInput(rawInput);
+      let result = await tutorProvider.generate(input, { signal: requestSignal });
+      requestSignal.throwIfAborted();
       let issues = tutorSafetyIssues(step, result.turn, allowedUiTargetIds);
       let repaired = false;
 
@@ -142,9 +133,10 @@ export async function maiaRespond(
         repaired = true;
         session.log("maia_turn_rejected", { stepId, issues, attempt: 1 });
         result = await tutorProvider.generate(input, {
-          signal,
+          signal: requestSignal,
           repairIssues: issues,
         });
+        requestSignal.throwIfAborted();
         issues = tutorSafetyIssues(step, result.turn, allowedUiTargetIds);
       }
 
@@ -157,7 +149,7 @@ export async function maiaRespond(
         session.version += 1;
         return {
           turn: result.turn,
-          source: tutorProvider.id === "openai-codex" ? "openai-codex" : "openai-api",
+          source: tutorProvider.id === "openai-codex" ? "openai-codex" : tutorProvider.id === "openrouter-free" ? "openrouter-free" : "openai-api",
           repaired,
           requestedModel: result.requestedModel,
           resolvedModel: result.resolvedModel,
@@ -169,16 +161,17 @@ export async function maiaRespond(
         attempt: repaired ? 2 : 1,
       });
     } catch (error) {
-      if (signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+      if (signal?.aborted) {
         throw error;
       }
+      const diagnostic = tutorProviderErrorDiagnostic(error);
       session.log("maia_provider_error", {
         stepId,
-        errorName: error instanceof Error ? error.name : "UnknownError",
+        ...diagnostic,
       });
       log.warn("maia_provider_error", {
         sessionId: session.sessionId,
-        errorName: error instanceof Error ? error.name : "UnknownError",
+        ...diagnostic,
       });
     }
   }

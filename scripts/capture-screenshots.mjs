@@ -13,6 +13,7 @@ const launchOptions = process.env.MUSEION_BROWSER_PATH
   : { channel: "chrome", headless: true };
 const browser = await chromium.launch(launchOptions).catch(() => chromium.launch({ headless: true }));
 const errors = [];
+let captured = 0;
 
 // Devpost recommends a 3:2 gallery. Keep the canonical desktop captures at
 // 1440×960 so the same truthful product images work in both the repository
@@ -28,6 +29,10 @@ async function capture({ name, route, width = 1440, height = 960, waitFor = "mai
   page.on("response", (response) => { if (response.status() >= 500) errors.push(`${name}: HTTP ${response.status()} ${response.url()}`); });
   await page.goto(`${baseURL}${route}`, { waitUntil: "domcontentloaded" });
   await page.locator(waitFor).waitFor({ state: "visible", timeout: 15_000 });
+  // Visible markup is not an interactive page: the Source Pack editor is lazily
+  // loaded, so its handlers attach after its server-rendered fields appear, and
+  // a `prepare` step that fires first is silently ignored.
+  await page.waitForLoadState("networkidle").catch(() => {});
   if (prepare) await prepare(page);
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -35,6 +40,7 @@ async function capture({ name, route, width = 1440, height = 960, waitFor = "mai
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
   await page.screenshot({ path: path.join(outputDir, `${name}.png`), fullPage: false });
+  captured += 1;
   await context.close();
 }
 
@@ -50,6 +56,10 @@ async function seedWrongAnswer(page) {
 try {
   await capture({ name: "landing-desktop", route: "/" });
   await capture({ name: "landing-mobile", route: "/", width: 375, height: 812 });
+  await capture({ name: "judge-demo-desktop", route: "/judge", prepare: async (page) => {
+    await page.getByText("Sample lesson", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+    await page.getByText("No account needed · answers checked by code").waitFor({ state: "visible" });
+  } });
   await capture({ name: "onboarding-desktop", route: "/welcome", firstVisit: true });
   await capture({ name: "dashboard-desktop", route: "/dashboard", prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" }); } });
   await capture({ name: "dashboard-mobile", route: "/dashboard", width: 375, height: 812, prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded" }); } });
@@ -77,18 +87,30 @@ try {
     await page.getByText("youtube playlist reference", { exact: true }).waitFor({ state: "visible" });
     await page.getByText("Saved on this device", { exact: true }).waitFor({ state: "visible" });
   } });
-  await capture({ name: "course-review-desktop", route: "/create", prepare: async (page) => {
-    await page.getByText("No local draft", { exact: true }).waitFor({ state: "visible" });
-    await page.locator("#source-file").setInputFiles(pdfFixture);
-    await page.getByText("File ready for normalization").waitFor({ state: "visible" });
-    await page.getByLabel("Rights basis").selectOption("creator-owned");
-    await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
-    await page.getByRole("button", { name: "Normalize 1 material" }).click();
-    await page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }).waitFor({ state: "visible" });
-    await page.getByRole("button", { name: "Create verified replay run" }).click();
-    await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
-    await page.getByRole("heading", { name: "Coverage by supplied material" }).waitFor({ state: "visible" });
-  } });
+  // The replay-run review requires /api/compiler/runs, which only serves a
+  // ChatGPT Sites account actor — locally it returns 401, so this capture
+  // cannot complete outside the deployment. Skip it with a warning (keeping
+  // the committed screenshot) rather than aborting the ten captures after it.
+  try {
+    await capture({ name: "course-review-desktop", route: "/create", prepare: async (page) => {
+      await page.getByText("No local draft", { exact: true }).waitFor({ state: "visible" });
+      await page.locator("#source-file").setInputFiles(pdfFixture);
+      await page.getByText("File ready for normalization").waitFor({ state: "visible" });
+      await page.getByLabel("Rights basis").selectOption("creator-owned");
+      await page.getByLabel("I am allowed to use every material in this Source Pack.").check();
+      await page.getByRole("button", { name: "Normalize 1 material" }).click();
+      await page.getByLabel("Source pages").getByRole("button", { name: "6", exact: true }).waitFor({ state: "visible" });
+      await page.getByRole("button", { name: "Create verified replay run" }).click();
+      await page.waitForURL((url) => url.pathname.startsWith("/create/review/"));
+      await page.getByRole("heading", { name: "Coverage by supplied material" }).waitFor({ state: "visible" });
+    } });
+  } catch (error) {
+    console.warn(`SKIPPED course-review-desktop (stale screenshot kept): ${error.message.split("\n")[0]}`);
+    // The aborted flow's own 401 noise is part of the skip, not a defect.
+    for (let i = errors.length - 1; i >= 0; i -= 1) {
+      if (errors[i].startsWith("course-review-desktop:")) errors.splice(i, 1);
+    }
+  }
   await capture({ name: "review-desktop", route: "/review" });
   await capture({ name: "misconception-lab-desktop", route: "/review", prepare: async (page) => { await seedWrongAnswer(page); await page.goto(`${baseURL}/review`, { waitUntil: "domcontentloaded" }); } });
   await capture({
@@ -134,4 +156,4 @@ if (errors.length) {
   throw new Error(`Screenshot browser errors:\n${errors.join("\n")}`);
 }
 
-console.log(`Captured 20 Museion product screenshots in ${outputDir}`);
+console.log(`Captured ${captured} of 21 Museion product screenshots in ${outputDir}`);

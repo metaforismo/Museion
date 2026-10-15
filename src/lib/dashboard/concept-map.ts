@@ -1,5 +1,5 @@
 import type { Track } from "@/lib/content/types";
-import { getProfile, listSessionsForLearner } from "@/lib/store";
+import { learnerProfile, sessionsFor } from "@/lib/server/session-repository";
 
 /**
  * The competence map: every concept the learner has actually answered,
@@ -27,12 +27,12 @@ function titleCase(value: string) {
   return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function buildConceptMap(learnerId: string): { groups: ConceptMapGroup[]; revisit: ConceptMapEntry[] } {
-  const profile = getProfile(learnerId);
+export async function buildConceptMap(learnerId: string): Promise<{ groups: ConceptMapGroup[]; revisit: ConceptMapEntry[] }> {
+  const [profile, sessions] = await Promise.all([learnerProfile(learnerId, false), sessionsFor(learnerId)]);
   if (!profile) return { groups: [], revisit: [] };
 
   const entries = new Map<string, ConceptMapEntry>();
-  for (const session of listSessionsForLearner(learnerId)) {
+  for (const session of sessions) {
     for (const event of session.events) {
       if (event.kind !== "answer_submitted" || typeof event.stepId !== "string") continue;
       const step = [...session.lesson.steps, ...(session.lesson.practice ?? [])].find(({ id }) => id === event.stepId);

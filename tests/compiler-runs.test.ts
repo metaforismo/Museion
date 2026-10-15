@@ -21,8 +21,17 @@ const audience = {
   learnerGoal: "Trace inclusive binary search and justify every boundary update.",
 };
 
+/**
+ * Waits on the job's terminal state, not on a wall-clock guess. The deadline
+ * is a generous backstop only — the loop exits the moment the run leaves
+ * queued/running, so a healthy run pays nothing for it. The original 2s
+ * deadline made this file flaky under full-suite CPU contention: a compile
+ * that ran long returned here still `running`, the un-terminal job could not
+ * be pruned, and downstream assertions failed on state the test itself had
+ * abandoned.
+ */
 async function waitForCompletedRun(runId: string, ownerId: string) {
-  const deadline = Date.now() + 2_000;
+  const deadline = Date.now() + 30_000;
   let view = await getCompilerRunStatus(runId, ownerId);
   while ("status" in view && ["queued", "running"].includes(view.status) && Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -132,6 +141,26 @@ describe("compiler run lifecycle", () => {
     await expect(createCompilerRun("creator-a", document, audience)).rejects.toThrow("LIVE_COMPILER_NOT_CONFIGURED");
   });
 
+  it("never falls through to a paid compiler when the free tutor is selected", async () => {
+    process.env.OPENAI_API_KEY = "must-not-be-used";
+    updateAiSettings({ provider: "openrouter-free" });
+    const document = await ingestTextSource({ title: "Free-tutor source", text: "A triangle has three sides.", mediaType: "text/plain" });
+    await expect(createCompilerRun("creator-free-tutor", document, audience)).rejects.toThrow("LIVE_COMPILER_NOT_CONFIGURED");
+  });
+
+  it("honours an explicit live opt-out on the local runtime before any provider call", async () => {
+    const originalEnabled = process.env.MUSEION_LIVE_AI_ENABLED;
+    process.env.MUSEION_LIVE_AI_ENABLED = "0";
+    updateAiSettings({ provider: "openai-api" });
+    const document = await ingestTextSource({ title: "Disabled compiler", text: "A triangle has three sides.", mediaType: "text/plain" });
+    try {
+      await expect(createCompilerRun("creator-live-disabled", document, audience)).rejects.toThrow("LIVE_AI_DISABLED");
+    } finally {
+      if (originalEnabled === undefined) delete process.env.MUSEION_LIVE_AI_ENABLED;
+      else process.env.MUSEION_LIVE_AI_ENABLED = originalEnabled;
+    }
+  });
+
   it("queues once, rejects duplicate clicks, and exposes the completed golden result", async () => {
     const document = SourceDocumentSchema.parse(goldenDocumentJson);
     const queued = await enqueueCompilerRun("creator-a", document, audience, "exam-practice");
@@ -140,7 +169,7 @@ describe("compiler run lifecycle", () => {
     const view = await waitForCompletedRun(queued.runId, "creator-a");
     expect(view.status).toBe("succeeded");
     expect("templateId" in view && view.templateId).toBe("exam-practice");
-  });
+  }, 60_000);
 
   it("returns the same active job for an idempotent retry", async () => {
     const document = SourceDocumentSchema.parse(goldenDocumentJson);
@@ -153,7 +182,7 @@ describe("compiler run lifecycle", () => {
 
     const view = await waitForCompletedRun(requestId, "creator-a");
     expect(view.status).toBe("succeeded");
-  });
+  }, 60_000);
 
   it("caps retained compiler runs per owner", async () => {
     const document = SourceDocumentSchema.parse(goldenDocumentJson);
@@ -165,6 +194,10 @@ describe("compiler run lifecycle", () => {
     );
   });
 
+  // 220 sequential golden compiles: ~20s on an idle machine, several times
+  // that under full-suite CPU contention. The budget is sized for the loaded
+  // case — it was 30s, which is why this test flaked whenever the suite ran
+  // on a busy machine while passing in isolation.
   it("keeps the in-memory job map bounded across many distinct owners", async () => {
     const document = SourceDocumentSchema.parse(goldenDocumentJson);
     const runCount = MAX_COMPILER_JOBS + 20;
@@ -173,5 +206,5 @@ describe("compiler run lifecycle", () => {
       await waitForCompletedRun(queued.runId, `owner-${index}`);
     }
     expect(compilerJobCountForTests()).toBeLessThanOrEqual(MAX_COMPILER_JOBS);
-  }, 30_000);
+  }, 180_000);
 });

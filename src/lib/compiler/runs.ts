@@ -14,6 +14,7 @@ import {
 import { resetMemoryStateForTests, stateBackend } from "@/lib/server/durable-state";
 
 import { CompilerFailure, compileCourse, type CompileAudience, type CompileResult } from "./orchestrator";
+import { OpenRouterCompilerProvider } from "./providers/openrouter";
 import { OpenAICompilerProvider } from "./providers/openai";
 import { GoldenReplayCompilerProvider } from "./providers/replay";
 import { CodexCompilerProvider } from "./providers/codex";
@@ -22,6 +23,9 @@ import { CourseTemplateIdSchema, type CourseTemplateId } from "./templates";
 import { codexSelected, getAiSettings } from "@/lib/ai/settings";
 import type { CompilerStage } from "./contracts";
 import { computeMaterialCitationCoverage } from "./source-pack-coverage";
+import { sitesDatabase, sitesUploads } from "@/lib/sites/database";
+import { deleteRawUploadsForOwner } from "@/lib/server/upload-lifecycle";
+import { runtimeValue } from "@/lib/sites/runtime";
 
 const GOLDEN_SOURCE_SHA256 = "637c098ea73b6c2d4cde1dea3accb77e8059589a11d0d2cd996b363d6b326ed0";
 export const COMPILER_RUN_TTL_MS = 60 * 60 * 1_000;
@@ -120,28 +124,33 @@ export async function createCompilerRun(
     throw new Error("COMPILER_RUN_QUOTA_EXCEEDED");
   }
   const settings = getAiSettings();
+  if (document.sha256 !== GOLDEN_SOURCE_SHA256 && runtimeValue("MUSEION_LIVE_AI_ENABLED") === "0") {
+    throw new Error("LIVE_AI_DISABLED");
+  }
   if (document.sha256 !== GOLDEN_SOURCE_SHA256 && settings.provider === "offline") {
     throw new Error("LIVE_COMPILER_NOT_CONFIGURED");
   }
   const provider = document.sha256 === GOLDEN_SOURCE_SHA256
     ? new GoldenReplayCompilerProvider()
-    : codexSelected()
+    : settings.provider === "openrouter-free"
+      ? new OpenRouterCompilerProvider()
+      : codexSelected()
       ? new CodexCompilerProvider(settings.familyFallback)
       : new OpenAICompilerProvider();
-  if (provider instanceof OpenAICompilerProvider && !provider.available()) {
+  if ((provider instanceof OpenAICompilerProvider || provider instanceof OpenRouterCompilerProvider) && !provider.available()) {
     throw new Error("LIVE_COMPILER_NOT_CONFIGURED");
   }
   const result = await compileCourse(document, provider, {
     audience,
     templateId,
-    timeoutMs: provider instanceof CodexCompilerProvider ? 190_000 : 60_000,
+    timeoutMs: provider instanceof CodexCompilerProvider ? 190_000 : provider instanceof OpenRouterCompilerProvider ? 130_000 : 60_000,
     signal: execution.signal,
     onStage: execution.onStage,
   });
   const record: CompilerRunRecord = {
     id: execution.runId ?? crypto.randomUUID(),
     ownerId,
-    document,
+    document: { ...document, pages: document.pages.map((page) => ({ ...page, text: "[raw source deleted after compilation]" })) },
     audience,
     templateId,
     sourcePackManifest,
@@ -157,6 +166,13 @@ export async function createCompilerRun(
     createdAt: record.createdAt,
     updatedAt: record.createdAt,
   });
+  const db = sitesDatabase();
+  if (db) {
+    const artifactKey = `artifacts/${ownerId}/${record.id}.json`;
+    await sitesUploads().put(artifactKey, JSON.stringify(record), { httpMetadata: { contentType: "application/json" }, customMetadata: { ownerId, kind: "generated-course" } });
+    await db.prepare("INSERT INTO generated_courses(id,owner_id,title,artifact_key,revision,deleted_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,artifact_key=excluded.artifact_key,revision=generated_courses.revision+1,updated_at=excluded.updated_at WHERE generated_courses.owner_id=excluded.owner_id")
+      .bind(record.id, ownerId, result.artifact.title, artifactKey, 0, null, record.createdAt, record.createdAt).run();
+  }
   return compilerRunView(record);
 }
 
@@ -177,6 +193,25 @@ interface CompilerJobView {
 interface CompilerJob extends CompilerJobView {
   ownerId: string;
   controller: AbortController;
+}
+
+interface DurableCompilerPayload {
+  document: SourceDocument;
+  audience: CompileAudience;
+  templateId: CourseTemplateId;
+  sourcePackManifest?: SourcePackManifest;
+}
+
+interface DurableCompilerRow {
+  id: string;
+  owner_id: string;
+  status: CompilerJobStatus;
+  stage: CompilerStage | "critic_after_repair" | null;
+  revision: number;
+  payload_json: string;
+  error_code: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const jobsGlobal = globalThis as unknown as { __museionCompilerJobs?: Map<string, CompilerJob> };
@@ -229,6 +264,22 @@ export async function enqueueCompilerRun(
   requestId?: string,
   sourcePackManifest?: SourcePackManifest,
 ): Promise<CompilerJobView> {
+  const db = sitesDatabase();
+  if (db) {
+    const runId = requestId ?? crypto.randomUUID();
+    const existing = await db.prepare("SELECT id,owner_id,status,stage,revision,payload_json,error_code,created_at,updated_at FROM compiler_runs WHERE id=? LIMIT 1").bind(runId).first<DurableCompilerRow>();
+    if (existing) {
+      if (existing.owner_id !== ownerId) throw new Error("COMPILER_JOB_ALREADY_RUNNING");
+      return durableJobView(existing);
+    }
+    const active = await db.prepare("SELECT id FROM compiler_runs WHERE owner_id=? AND status IN ('queued','running') AND expires_at>? LIMIT 1").bind(ownerId, new Date().toISOString()).first<{ id: string }>();
+    if (active) throw new Error("COMPILER_JOB_ALREADY_RUNNING");
+    const now = new Date().toISOString();
+    const payload: DurableCompilerPayload = { document, audience, templateId, sourcePackManifest };
+    await db.prepare("INSERT INTO compiler_runs(id,owner_id,status,stage,revision,lease_until,payload_json,error_code,expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+      .bind(runId, ownerId, "queued", null, 0, null, JSON.stringify(payload), null, new Date(Date.now() + COMPILER_JOB_TTL_MS).toISOString(), now, now).run();
+    return { runId, status: "queued", stage: null, completedStages: 0, totalStages: 5, error: null, retryable: false, createdAt: now, updatedAt: now };
+  }
   pruneCompilerJobs();
   if (requestId) {
     const existing = compilerJobs.get(requestId);
@@ -284,7 +335,68 @@ export async function enqueueCompilerRun(
   return jobView(job);
 }
 
+function durableJobView(row: DurableCompilerRow): CompilerJobView {
+  const completedStages = row.status === "succeeded" ? 5 : Math.min(4, Math.max(0, row.revision));
+  return {
+    runId: row.id,
+    status: row.status,
+    stage: row.stage,
+    completedStages,
+    totalStages: 5,
+    error: row.error_code,
+    retryable: row.status === "failed" || row.status === "cancelled",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** Acquire a short D1 lease and advance the persisted compiler to a terminal state. */
+export async function advanceCompilerRun(runId: string, ownerId: string): Promise<CompilerJobView> {
+  const db = sitesDatabase();
+  if (!db) return getCompilerRunStatus(runId, ownerId) as Promise<CompilerJobView>;
+  const now = new Date();
+  const leaseUntil = new Date(now.getTime() + 70_000).toISOString();
+  const leased = await db.prepare("UPDATE compiler_runs SET status='running',lease_until=?,error_code=NULL,updated_at=? WHERE id=? AND owner_id=? AND status IN ('queued','failed') AND (lease_until IS NULL OR lease_until<?) RETURNING id,owner_id,status,stage,revision,payload_json,error_code,created_at,updated_at")
+    .bind(leaseUntil, now.toISOString(), runId, ownerId, now.toISOString()).first<DurableCompilerRow>();
+  if (!leased) {
+    const existing = await db.prepare("SELECT id,owner_id,status,stage,revision,payload_json,error_code,created_at,updated_at FROM compiler_runs WHERE id=? AND owner_id=? LIMIT 1").bind(runId, ownerId).first<DurableCompilerRow>();
+    if (!existing) throw new Error("COMPILER_RUN_NOT_FOUND");
+    return durableJobView(existing);
+  }
+  const input = JSON.parse(leased.payload_json) as DurableCompilerPayload;
+  const stageWrites: Promise<unknown>[] = [];
+  try {
+    await createCompilerRun(ownerId, input.document, input.audience, input.templateId, {
+      runId,
+      sourcePackManifest: input.sourcePackManifest,
+      onStage: (stage) => {
+        stageWrites.push(db.prepare("UPDATE compiler_runs SET stage=?,revision=revision+1,updated_at=? WHERE id=? AND owner_id=? AND status='running'")
+          .bind(stage, new Date().toISOString(), runId, ownerId).run());
+      },
+    });
+    await Promise.all(stageWrites);
+    const finished = new Date().toISOString();
+    await db.prepare("UPDATE compiler_runs SET status='succeeded',stage=NULL,revision=5,lease_until=NULL,payload_json='{}',error_code=NULL,updated_at=? WHERE id=? AND owner_id=?").bind(finished, runId, ownerId).run();
+    await deleteRawUploadsForOwner(ownerId);
+    return { runId, status: "succeeded", stage: null, completedStages: 5, totalStages: 5, error: null, retryable: false, createdAt: leased.created_at, updatedAt: finished };
+  } catch (error) {
+    await Promise.allSettled(stageWrites);
+    const code = compilerFailurePayload(error).error;
+    const failed = new Date().toISOString();
+    await db.prepare("UPDATE compiler_runs SET status='failed',lease_until=NULL,payload_json='{}',error_code=?,updated_at=? WHERE id=? AND owner_id=?").bind(code, failed, runId, ownerId).run();
+    await deleteRawUploadsForOwner(ownerId);
+    return { runId, status: "failed", stage: null, completedStages: leased.revision, totalStages: 5, error: code, retryable: true, createdAt: leased.created_at, updatedAt: failed };
+  }
+}
+
 export async function getCompilerRunStatus(runId: string, ownerId: string) {
+  const db = sitesDatabase();
+  if (db) {
+    const row = await db.prepare("SELECT id,owner_id,status,stage,revision,payload_json,error_code,created_at,updated_at FROM compiler_runs WHERE id=? AND owner_id=? LIMIT 1").bind(runId, ownerId).first<DurableCompilerRow>();
+    if (!row) throw new Error("COMPILER_RUN_NOT_FOUND");
+    if (row.status !== "succeeded") return durableJobView(row);
+    return getCompilerRun(runId, ownerId);
+  }
   const job = compilerJobs.get(runId);
   if (job) {
     if (job.ownerId !== ownerId) throw new Error("COMPILER_RUN_NOT_FOUND");
@@ -293,7 +405,15 @@ export async function getCompilerRunStatus(runId: string, ownerId: string) {
   return getCompilerRun(runId, ownerId);
 }
 
-export function cancelCompilerRun(runId: string, ownerId: string): boolean {
+export async function cancelCompilerRun(runId: string, ownerId: string): Promise<boolean> {
+  const db = sitesDatabase();
+  if (db) {
+    const result = await db.prepare("UPDATE compiler_runs SET status='cancelled',lease_until=NULL,payload_json='{}',error_code='COMPILATION_CANCELLED',updated_at=? WHERE id=? AND owner_id=? AND status IN ('queued','running')")
+      .bind(new Date().toISOString(), runId, ownerId).run();
+    const cancelled = Number(result.meta?.changes ?? 0) > 0;
+    if (cancelled) await deleteRawUploadsForOwner(ownerId);
+    return cancelled;
+  }
   const job = compilerJobs.get(runId);
   if (!job || job.ownerId !== ownerId || !["queued", "running"].includes(job.status)) return false;
   job.status = "cancelled";
@@ -310,6 +430,15 @@ export async function getCompilerRun(runId: string, ownerId: string): Promise<Co
 
 /** Recent validated courses for an owner. Private source bytes stay omitted. */
 export async function listCompilerRuns(ownerId: string): Promise<CompilerRunView[]> {
+  const db = sitesDatabase();
+  if (db) {
+    const rows = await db.prepare("SELECT artifact_key FROM generated_courses WHERE owner_id=? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 20").bind(ownerId).all<{ artifact_key: string }>();
+    const records = await Promise.all((rows.results ?? []).map(async ({ artifact_key }) => {
+      const object = await sitesUploads().get(artifact_key);
+      return object ? await new Response(object.body).json() as CompilerRunRecord : null;
+    }));
+    return records.filter((record): record is CompilerRunRecord => record !== null).map(compilerRunView);
+  }
   const records = await stateBackend().list<CompilerRunRecord>("compiler_run", ownerId);
   return records
     .map(({ payload }) => payload)
@@ -319,16 +448,25 @@ export async function listCompilerRuns(ownerId: string): Promise<CompilerRunView
 
 export async function getPrivateCompilerRun(runId: string, ownerId: string): Promise<CompilerRunRecord> {
   const stored = await stateBackend().get<CompilerRunRecord>("compiler_run", runId, ownerId);
-  if (!stored) throw new Error("COMPILER_RUN_NOT_FOUND");
-  return stored.payload;
+  if (stored) return stored.payload;
+  const db = sitesDatabase();
+  if (db) {
+    const row = await db.prepare("SELECT artifact_key FROM generated_courses WHERE id=? AND owner_id=? AND deleted_at IS NULL LIMIT 1").bind(runId, ownerId).first<{ artifact_key: string }>();
+    if (row) {
+      const object = await sitesUploads().get(row.artifact_key);
+      if (object) return await new Response(object.body).json() as CompilerRunRecord;
+    }
+  }
+  throw new Error("COMPILER_RUN_NOT_FOUND");
 }
 
 export function compilerFailurePayload(error: unknown) {
   if (error instanceof CompilerFailure) {
+    if (error.providerDiagnostic) return { error: error.providerDiagnostic.errorCode === "provider_invalid_response" ? "COMPILER_PROVIDER_INVALID_RESPONSE" : "COMPILER_PROVIDER_UNAVAILABLE", stage: error.stage, provider: error.providerDiagnostic, telemetry: error.telemetry };
     return { error: "COMPILATION_REJECTED", stage: error.stage, issues: error.issues, telemetry: error.telemetry };
   }
   const code = error instanceof Error ? error.message : "COMPILATION_FAILED";
-  return { error: ["LIVE_COMPILER_NOT_CONFIGURED", "COMPILER_RUN_QUOTA_EXCEEDED", "COMPILER_JOB_ALREADY_RUNNING"].includes(code) ? code : "COMPILATION_FAILED" };
+  return { error: ["LIVE_COMPILER_NOT_CONFIGURED", "LIVE_AI_DISABLED", "COMPILER_RUN_QUOTA_EXCEEDED", "COMPILER_JOB_ALREADY_RUNNING"].includes(code) ? code : "COMPILATION_FAILED" };
 }
 
 export async function pruneCompilerRuns(now = Date.now()): Promise<void> {

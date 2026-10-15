@@ -15,7 +15,7 @@
 import { allLessons } from "@/lib/content";
 import { hasPractice } from "@/lib/engine/practice";
 import type { LearnerSession } from "@/lib/engine/session";
-import { listSessionsForLearner } from "@/lib/store";
+import { sessionsFor } from "@/lib/server/session-repository";
 
 export const REVISIT_INTERVALS_DAYS = [1, 3, 7, 14, 30] as const;
 /** Minimum spacing for a retrieval to climb the ladder. */
@@ -143,6 +143,6 @@ export function planRevisits(sessions: readonly LearnerSession[], now: number): 
 }
 
 /** Store-backed entry point for pages. */
-export function buildRevisitPlan(learnerId: string, now: number = Date.now()): RevisitItem[] {
-  return planRevisits(listSessionsForLearner(learnerId), now);
+export async function buildRevisitPlan(learnerId: string, now: number = Date.now()): Promise<RevisitItem[]> {
+  return planRevisits(await sessionsFor(learnerId), now);
 }

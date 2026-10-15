@@ -1,0 +1,15 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import PublicPage from "@/components/PublicPage";
+export const metadata: Metadata = { title: "Help", description: "Getting started, account verification, Maia hints, learning progress, and source material.", alternates: { canonical: "/help" } };
+export default function HelpPage() {
+  return <PublicPage path="/help" eyebrow="A little direction" title="Good questions start here." intro="Find your way into a course, get help from Maia, and keep the work you have already done." sections={[
+    { id: "begin", title: "Where do I begin?", body: <p><Link href="/signup">Create an account</Link>, choose your interests and study pace, then open the course suggested in your dashboard. You can explore other Museion Originals from the Library whenever you want.</p> },
+    { id: "code", title: "Where is my verification code?", body: <><p>This local installation delivers the code to a private file on the operator’s machine. The verification screen shows a reference you can give the operator. Email delivery is not connected yet.</p><p>A code lasts ten minutes. You can request another after the countdown; the previous code then stops working. Use the most recent code. If the attempt limit is reached, return to signup to begin again.</p></> },
+    { id: "hint", title: "How does Maia help?", body: <p>Maia starts with the current activity and your attempts. Ask for a hint when a step is unclear. She offers a question, a useful connection, or one small next move so you can keep reasoning. In an independent check, the hint ladder stays out of the way.</p> },
+    { id: "progress", title: "Can I return to a lesson?", body: <p>Your account keeps saved lessons and submitted progress. Use Continue in the dashboard or open the course in your Library. An independent check records one unassisted attempt; a later practice session gives you another observation.</p> },
+    { id: "material", title: "Can I use my own material?", body: <p>The Create area accepts supported files and pasted source text. Use content you have permission to process. Inspect the source pack and citations before accepting a generated course. Source-based generation depends on the configured provider; the free tutor testing mode currently supports the authored courses and does not enable paid course generation.</p> },
+    { id: "connection", title: "What if live AI is unavailable?", body: <p>Authored lessons can still use their own hint ladders and activity checks. If the configured model is unavailable or a response fails validation, the interface uses lesson guidance and identifies its source. It does not silently switch to a paid provider.</p> },
+    { id: "account", title: "How do I manage my account?", body: <p>Open <Link href="/account">Account</Link> to export learning records, reset progress, or delete your account. Sign out when you finish on a shared computer. Password recovery by email is not connected in this local build; contact the installation’s operator if you lose access.</p> },
+  ]}/>;
+}
