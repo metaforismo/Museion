@@ -5,12 +5,16 @@ export async function extractSelectablePdfPages(
 ): Promise<string[]> {
   let destroyLoadingTask: (() => Promise<void>) | null = null;
   try {
-    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    // Keep Node's required compatibility layer on the server; modern browsers
+    // do not need those polyfills in their parser or PDF worker.
+    const pdfjs = typeof window === "undefined"
+      ? await import("pdfjs-dist/legacy/build/pdf.mjs")
+      : await import("pdfjs-dist");
     if (typeof window !== "undefined") {
       // Resolve the worker only in the browser. Evaluating this package URL at
       // Worker module startup is invalid in the managed Sites runtime.
       pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+        "pdfjs-dist/build/pdf.worker.min.mjs",
         import.meta.url,
       ).toString();
     }

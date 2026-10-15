@@ -223,6 +223,15 @@ async function learnerFlow(viewport, label) {
       await visible(page.locator("main h1"));
       await inspect(page, `${label}-${route.slice(1).replaceAll("/", "-")}`);
     }
+    await page.goto(`${origin.origin}/create`);
+    await page.getByLabel("Add files", { exact: true }).setInputFiles(path.resolve("tests/fixtures/binary-search-golden-source.pdf"));
+    await page.getByRole("checkbox", { name: /^I am allowed to use every material/ }).check();
+    await page.getByRole("button", { name: "Normalize 1 material", exact: true }).click();
+    await visible(page.locator('[aria-label="Source pages"]'));
+    assert(await page.locator('[aria-label="Source pages"] button').count() === 6, "PDF worker must extract every canonical page");
+    const canonical = JSON.parse(await readFile("tests/fixtures/binary-search-source-document.json", "utf8"));
+    assert(await page.locator("main pre").first().textContent() === canonical.pages[0].text, "Browser PDF extraction must preserve the reviewed source text");
+    await inspect(page, `${label}-pdf-source`);
     await page.goto(`${origin.origin}/lessons/linear-equations-intro`);
     await visible(page.getByRole("textbox", { name: "Your answer", exact: true }));
     const composer = page.getByRole("textbox", { name: "Message for Maia", exact: true });
